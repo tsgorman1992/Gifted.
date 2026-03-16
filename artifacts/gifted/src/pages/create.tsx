@@ -6,8 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Video, Music, Image as ImageIcon, DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2, Plus } from "lucide-react";
+import {
+  ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
+  DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2,
+} from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PhotoItem {
   id: string;
@@ -21,11 +27,6 @@ interface PhotoUploadingItem {
   localPreview: string;
 }
 
-const MAX_PHOTOS = 6;
-const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
-const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
-const ACCEPTED_PHOTO_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.heic,.heif";
-
 interface Experience {
   id: string;
   name: string;
@@ -35,7 +36,10 @@ interface Experience {
   gradientVia: string;
   gradientTo: string;
   premium: boolean;
+  Icon: React.ComponentType<{ className?: string }>;
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const EXPERIENCES: Experience[] = [
   {
@@ -47,6 +51,7 @@ const EXPERIENCES: Experience[] = [
     gradientVia: "#FFD93D",
     gradientTo: "#6BCB77",
     premium: false,
+    Icon: Gift,
   },
   {
     id: "golden-hour",
@@ -57,6 +62,7 @@ const EXPERIENCES: Experience[] = [
     gradientVia: "#E8A87C",
     gradientTo: "#D4813A",
     premium: false,
+    Icon: Sparkles,
   },
   {
     id: "garden-bloom",
@@ -67,6 +73,7 @@ const EXPERIENCES: Experience[] = [
     gradientVia: "#C7CEEA",
     gradientTo: "#B5EAD7",
     premium: false,
+    Icon: Flower2,
   },
   {
     id: "midnight-stars",
@@ -77,6 +84,7 @@ const EXPERIENCES: Experience[] = [
     gradientVia: "#302b63",
     gradientTo: "#24243e",
     premium: false,
+    Icon: Star,
   },
   {
     id: "rose-petal",
@@ -87,6 +95,7 @@ const EXPERIENCES: Experience[] = [
     gradientVia: "#FF8FAB",
     gradientTo: "#E8A7B1",
     premium: false,
+    Icon: Heart,
   },
   {
     id: "snow-flurry",
@@ -97,6 +106,7 @@ const EXPERIENCES: Experience[] = [
     gradientVia: "#A2D2FF",
     gradientTo: "#CDB4DB",
     premium: false,
+    Icon: Snowflake,
   },
   {
     id: "sunrise",
@@ -107,12 +117,19 @@ const EXPERIENCES: Experience[] = [
     gradientVia: "#FF9A8B",
     gradientTo: "#FF6A88",
     premium: false,
+    Icon: Sun,
   },
 ];
 
 const INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Birthday money", "Baby fund", "Take a break"];
 const AMOUNTS = ["25", "50", "100", "250"];
 const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Other"];
+
+const MAX_PHOTOS = 6;
+const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
+const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+
+// ─── AI note streaming ────────────────────────────────────────────────────────
 
 async function streamAINote(
   payload: {
@@ -135,10 +152,7 @@ async function streamAINote(
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok || !response.body) {
-    onError("Request failed");
-    return;
-  }
+  if (!response.ok || !response.body) { onError("Request failed"); return; }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -147,11 +161,9 @@ async function streamAINote(
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
     buffer = lines.pop() ?? "";
-
     for (const line of lines) {
       if (line.startsWith("data: ")) {
         try {
@@ -159,109 +171,242 @@ async function streamAINote(
           if (parsed.content) onChunk(parsed.content);
           if (parsed.done) onDone();
           if (parsed.error) onError(parsed.error);
-        } catch {
-          // ignore malformed chunks
-        }
+        } catch { /* ignore */ }
       }
     }
   }
 }
 
+// ─── Step variants ────────────────────────────────────────────────────────────
+
+const stepVariants = {
+  enter: (dir: number) => ({ x: dir > 0 ? 48 : -48, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir > 0 ? -48 : 48, opacity: 0 }),
+};
+
+// ─── Progress indicator ───────────────────────────────────────────────────────
+
+const STEP_LABELS = ["Set the scene", "Write the moment", "Complete the gift"];
+
+function ProgressBar({ step }: { step: number }) {
+  return (
+    <div className="mb-10">
+      <div className="flex items-center gap-0 mb-3">
+        {STEP_LABELS.map((label, i) => {
+          const stepNum = i + 1;
+          const isActive = stepNum === step;
+          const isDone = stepNum < step;
+          return (
+            <React.Fragment key={i}>
+              <div className="flex flex-col items-center gap-1.5">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${
+                    isDone
+                      ? "bg-primary text-primary-foreground"
+                      : isActive
+                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                      : "bg-border text-muted-foreground"
+                  }`}
+                >
+                  {isDone ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : (
+                    stepNum
+                  )}
+                </div>
+                <span
+                  className={`text-[11px] font-medium hidden sm:block transition-colors duration-300 ${
+                    isActive ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </span>
+              </div>
+              {i < STEP_LABELS.length - 1 && (
+                <div className="flex-1 mx-2 mb-4">
+                  <div className="h-px bg-border relative overflow-hidden">
+                    <motion.div
+                      className="absolute inset-y-0 left-0 bg-primary"
+                      initial={{ width: 0 }}
+                      animate={{ width: isDone ? "100%" : "0%" }}
+                      transition={{ duration: 0.5, ease: "easeInOut" }}
+                    />
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Live preview card ────────────────────────────────────────────────────────
+
+function PreviewCard({
+  experience,
+  recipientName,
+}: {
+  experience: Experience;
+  recipientName: string;
+}) {
+  const { Icon } = experience;
+  const isDark = experience.id === "midnight-stars";
+
+  return (
+    <div className="hidden lg:block w-64 flex-shrink-0">
+      <div className="sticky top-8">
+        <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest mb-3 text-center">
+          Their reveal
+        </p>
+        <div
+          className="w-full rounded-[2rem] overflow-hidden shadow-2xl"
+          style={{ aspectRatio: "9/16", background: `linear-gradient(155deg, ${experience.gradientFrom}, ${experience.gradientVia}, ${experience.gradientTo})` }}
+        >
+          {/* Top area */}
+          <div className="flex flex-col items-center justify-center h-full px-5 text-center">
+            <motion.div
+              key={experience.id}
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 22 }}
+              className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
+              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
+            >
+              <Icon className={`w-7 h-7 ${isDark ? "text-indigo-200" : "text-white"}`} />
+            </motion.div>
+
+            <p className={`text-xs mb-1.5 font-medium ${isDark ? "text-white/50" : "text-white/70"}`}>
+              A gift for
+            </p>
+            <motion.h2
+              key={recipientName}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className={`font-serif text-3xl leading-tight mb-8 ${isDark ? "text-white" : "text-white"}`}
+              style={{ textShadow: "0 2px 20px rgba(0,0,0,0.15)" }}
+            >
+              {recipientName || "Someone special"}
+            </motion.h2>
+
+            <div
+              className="w-full rounded-full py-2.5 px-4 text-center text-sm font-medium"
+              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.85)" : "white" }}
+            >
+              Tap to open
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 text-center">
+          <p className={`text-xs font-semibold ${isDark ? "text-foreground" : "text-foreground"}`}>
+            {experience.name}
+          </p>
+          <p className="text-[11px] text-muted-foreground">{experience.tagline}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function CreatePage() {
   const [, setLocation] = useLocation();
+
+  // Step state
+  const [step, setStep] = useState(1);
+  const [direction, setDirection] = useState(1);
+  const [stepError, setStepError] = useState<string | null>(null);
+
+  // Gift state
   const getSuggestedExperience = (occ: string) =>
     EXPERIENCES.find((e) => e.suggestedFor.includes(occ))?.id ?? "confetti-burst";
+
   const [selectedExperience, setSelectedExperience] = useState(() => getSuggestedExperience("Birthday"));
   const [amount, setAmount] = useState("");
   const [intent, setIntent] = useState("");
   const [occasion, setOccasion] = useState("Birthday");
-  const [recipientName, setRecipientName] = useState("Sarah");
-  const [senderName, setSenderName] = useState("Jamie");
-  const [giftTitle, setGiftTitle] = useState("Happy Birthday, Sarah! 🎂");
-  const [personalNote, setPersonalNote] = useState(
-    "I couldn't be there in person, but I wanted to make sure you felt celebrated today. Use this to treat yourself to something nice. Miss you!"
-  );
+  const [recipientName, setRecipientName] = useState("");
+  const [senderName, setSenderName] = useState("");
+  const [giftTitle, setGiftTitle] = useState("");
+  const [personalNote, setPersonalNote] = useState("");
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
 
+  // Media state
   const [videoObjectPath, setVideoObjectPath] = useState<string | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
-
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [photosUploading, setPhotosUploading] = useState<PhotoUploadingItem[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const currentExperience = EXPERIENCES.find((e) => e.id === selectedExperience) ?? EXPERIENCES[0];
 
   useEffect(() => {
     localStorage.removeItem("gifted_video_path");
     localStorage.removeItem("gifted_photo_paths");
   }, []);
 
+  // Suggest a title when recipient + occasion are both set
+  useEffect(() => {
+    if (recipientName && occasion && !giftTitle) {
+      const suggestions: Record<string, string> = {
+        Birthday: `Happy Birthday, ${recipientName}!`,
+        Anniversary: `Here's to you, ${recipientName}.`,
+        Graduation: `Proud of you, ${recipientName}.`,
+        "New Baby": `Welcome to the world, little one.`,
+        Holiday: `Happy holidays, ${recipientName}!`,
+        "Just Because": `Thinking of you, ${recipientName}.`,
+        Wedding: `Wishing you both the best.`,
+        Other: `This one's for you, ${recipientName}.`,
+      };
+      setGiftTitle(suggestions[occasion] ?? `For ${recipientName}.`);
+    }
+  }, [recipientName, occasion]);
+
+  // Video upload
   const { uploadFile, isUploading, progress, error: uploadError } = useUpload({
     basePath: `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage`,
     onSuccess: (response) => {
       setVideoObjectPath(response.objectPath);
-      const servingUrl = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage${response.objectPath}`;
-      setVideoPreviewUrl(servingUrl);
+      setVideoPreviewUrl(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage${response.objectPath}`);
     },
   });
 
   const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const maxSize = 100 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert("Video must be under 100 MB.");
-      return;
-    }
-
-    if (!file.type.startsWith("video/")) {
-      alert("Please select a video file.");
-      return;
-    }
-
+    if (file.size > 100 * 1024 * 1024) { alert("Video must be under 100 MB."); return; }
+    if (!file.type.startsWith("video/")) { alert("Please select a video file."); return; }
     await uploadFile(file);
     if (videoInputRef.current) videoInputRef.current.value = "";
   };
 
-  const handleRemoveVideo = () => {
-    setVideoObjectPath(null);
-    setVideoPreviewUrl(null);
-  };
+  const handleRemoveVideo = () => { setVideoObjectPath(null); setVideoPreviewUrl(null); };
 
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     if (photoInputRef.current) photoInputRef.current.value = "";
-
     setPhotoError(null);
     const slotsAvailable = MAX_PHOTOS - photos.length - photosUploading.length;
     const toUpload = files.slice(0, slotsAvailable);
-
-    if (toUpload.length < files.length) {
-      setPhotoError(`You can add up to ${MAX_PHOTOS} photos total.`);
-    }
-
+    if (toUpload.length < files.length) setPhotoError(`You can add up to ${MAX_PHOTOS} photos total.`);
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
     for (const file of toUpload) {
-      if (file.size > MAX_PHOTO_SIZE) {
-        setPhotoError(`"${file.name}" is over 20 MB.`);
-        continue;
-      }
-      if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
-        setPhotoError(`"${file.name}" must be a JPEG, PNG, WebP, or HEIC image.`);
-        continue;
-      }
-
+      if (file.size > MAX_PHOTO_SIZE) { setPhotoError(`"${file.name}" is over 20 MB.`); continue; }
+      if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) { setPhotoError(`"${file.name}" must be JPEG, PNG, WebP, or HEIC.`); continue; }
       const uploadId = crypto.randomUUID();
       const localPreview = URL.createObjectURL(file);
-
       setPhotosUploading((prev) => [...prev, { id: uploadId, progress: 0, localPreview }]);
-
       (async () => {
         try {
           const res = await fetch(`${base}/api/storage/uploads/request-url`, {
@@ -271,28 +416,20 @@ export default function CreatePage() {
           });
           if (!res.ok) throw new Error("Failed to get upload URL");
           const { uploadURL, objectPath } = await res.json();
-
-          setPhotosUploading((prev) =>
-            prev.map((p) => (p.id === uploadId ? { ...p, progress: 30 } : p))
-          );
-
+          setPhotosUploading((prev) => prev.map((p) => p.id === uploadId ? { ...p, progress: 30 } : p));
           await new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open("PUT", uploadURL, true);
             xhr.setRequestHeader("Content-Type", file.type);
             xhr.upload.onprogress = (ev) => {
               if (ev.lengthComputable) {
-                const pct = 30 + Math.round((ev.loaded / ev.total) * 65);
-                setPhotosUploading((prev) =>
-                  prev.map((p) => (p.id === uploadId ? { ...p, progress: pct } : p))
-                );
+                setPhotosUploading((prev) => prev.map((p) => p.id === uploadId ? { ...p, progress: 30 + Math.round((ev.loaded / ev.total) * 65) } : p));
               }
             };
             xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("Upload failed")));
             xhr.onerror = () => reject(new Error("Upload failed"));
             xhr.send(file);
           });
-
           const servingUrl = `${base}/api/storage${objectPath}`;
           setPhotos((prev) => [...prev, { id: uploadId, objectPath, previewUrl: servingUrl }]);
         } catch {
@@ -305,22 +442,13 @@ export default function CreatePage() {
     }
   };
 
-  const handleRemovePhoto = (id: string) => {
-    setPhotos((prev) => prev.filter((p) => p.id !== id));
-  };
+  const handleRemovePhoto = (id: string) => setPhotos((prev) => prev.filter((p) => p.id !== id));
 
-  const handlePreview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (videoObjectPath) {
-      localStorage.setItem("gifted_video_path", videoObjectPath);
-    } else {
-      localStorage.removeItem("gifted_video_path");
-    }
-    if (photos.length > 0) {
-      localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
-    } else {
-      localStorage.removeItem("gifted_photo_paths");
-    }
+  const handlePreview = () => {
+    if (videoObjectPath) localStorage.setItem("gifted_video_path", videoObjectPath);
+    else localStorage.removeItem("gifted_video_path");
+    if (photos.length > 0) localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
+    else localStorage.removeItem("gifted_photo_paths");
     localStorage.setItem("gifted_experience", selectedExperience);
     localStorage.setItem("gifted_occasion", occasion);
     setLocation("/preview");
@@ -328,42 +456,21 @@ export default function CreatePage() {
 
   const handleAI = async (mode: "rewrite" | "regenerate") => {
     if (!recipientName || !senderName || !occasion) {
-      setAiError("Please fill in the recipient, sender, and occasion first.");
+      setAiError("Please fill in the recipient and sender names on the previous step first.");
       setTimeout(() => setAiError(null), 4000);
       return;
     }
     setAiLoading(mode);
     setAiError(null);
     setShowAiGlow(false);
-
     let generated = "";
     setPersonalNote("");
-
     try {
       await streamAINote(
-        {
-          currentNote: mode === "rewrite" ? personalNote : undefined,
-          occasion,
-          recipientName,
-          senderName,
-          intent: intent || undefined,
-          giftTitle: giftTitle || undefined,
-          mode,
-        },
-        (chunk) => {
-          generated += chunk;
-          setPersonalNote(generated);
-        },
-        () => {
-          setAiLoading(null);
-          setShowAiGlow(true);
-          setTimeout(() => setShowAiGlow(false), 2000);
-        },
-        (err) => {
-          setAiError(err);
-          setAiLoading(null);
-          if (!generated) setPersonalNote("I couldn't be there in person, but I wanted to make sure you felt celebrated today.");
-        }
+        { currentNote: mode === "rewrite" ? personalNote : undefined, occasion, recipientName, senderName, intent: intent || undefined, giftTitle: giftTitle || undefined, mode },
+        (chunk) => { generated += chunk; setPersonalNote(generated); },
+        () => { setAiLoading(null); setShowAiGlow(true); setTimeout(() => setShowAiGlow(false), 2000); },
+        (err) => { setAiError(err); setAiLoading(null); if (!generated) setPersonalNote(""); }
       );
     } catch {
       setAiError("Something went wrong. Please try again.");
@@ -371,435 +478,628 @@ export default function CreatePage() {
     }
   };
 
+  // Navigation
+  const goNext = () => {
+    setStepError(null);
+    if (step === 1) {
+      if (!recipientName.trim()) { setStepError("Please enter the recipient's name."); return; }
+      if (!senderName.trim()) { setStepError("Please enter your name."); return; }
+    }
+    if (step === 2) {
+      if (!giftTitle.trim()) { setStepError("Please add a gift headline."); return; }
+      if (!personalNote.trim()) { setStepError("Please write a personal note."); return; }
+    }
+    setDirection(1);
+    setStep((s) => s + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const goBack = () => {
+    setStepError(null);
+    setDirection(-1);
+    setStep((s) => s - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Context pill shown in steps 2+
+  const ContextPill = () => (
+    <div
+      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium mb-8 border"
+      style={{
+        background: `linear-gradient(90deg, ${currentExperience.gradientFrom}25, ${currentExperience.gradientVia}20)`,
+        borderColor: `${currentExperience.gradientFrom}40`,
+      }}
+    >
+      <currentExperience.Icon className="w-3.5 h-3.5" />
+      {recipientName || "Someone special"} · {currentExperience.name}
+    </div>
+  );
+
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
-      <div className="mb-10">
-        <h1 className="font-serif text-4xl font-medium mb-3">Create a gift</h1>
-        <p className="text-muted-foreground text-lg">Build a moment they won't forget.</p>
-      </div>
+    <div className="min-h-screen relative">
 
-      <form onSubmit={handlePreview} className="space-y-12">
-        {/* Section 1: The Basics */}
-        <section className="bg-card p-8 rounded-3xl shadow-sm border border-border space-y-6">
-          <h2 className="text-xl font-bold border-b border-border pb-4">The Basics</h2>
+      {/* Background tint — cross-fades with experience */}
+      <AnimatePresence mode="sync">
+        <motion.div
+          key={selectedExperience}
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            zIndex: -1,
+            background: `linear-gradient(145deg, ${currentExperience.gradientFrom}, ${currentExperience.gradientVia}, ${currentExperience.gradientTo})`,
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.07 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1 }}
+        />
+      </AnimatePresence>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="recipient">Who is this for?</Label>
-              <Input
-                id="recipient"
-                placeholder="e.g. Sarah"
-                value={recipientName}
-                onChange={(e) => setRecipientName(e.target.value)}
-                className="h-12 rounded-xl text-base"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sender">Who is it from?</Label>
-              <Input
-                id="sender"
-                placeholder="e.g. Jamie"
-                value={senderName}
-                onChange={(e) => setSenderName(e.target.value)}
-                className="h-12 rounded-xl text-base"
-                required
-              />
-            </div>
-          </div>
+      <div className={`mx-auto px-6 py-12 transition-all duration-500 ${step === 1 ? "max-w-5xl" : "max-w-3xl"}`}>
 
-          <div className="space-y-2">
-            <Label htmlFor="occasion">Occasion</Label>
-            <Select value={occasion} onValueChange={(val) => { setOccasion(val); setSelectedExperience(getSuggestedExperience(val)); }}>
-              <SelectTrigger className="h-12 rounded-xl text-base">
-                <SelectValue placeholder="Select occasion" />
-              </SelectTrigger>
-              <SelectContent>
-                {OCCASIONS.map((occ) => (
-                  <SelectItem key={occ} value={occ}>{occ}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Progress */}
+        <ProgressBar step={step} />
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Gift Headline</Label>
-            <Input
-              id="title"
-              placeholder="e.g. Happy Birthday to my favorite person!"
-              value={giftTitle}
-              onChange={(e) => setGiftTitle(e.target.value)}
-              className="h-12 rounded-xl text-base font-medium"
-              required
-            />
-          </div>
+        {/* Step content */}
+        <AnimatePresence mode="wait" custom={direction}>
 
-          {/* Personal Note with AI */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="message">Personal Note</Label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={aiLoading !== null}
-                  onClick={() => handleAI("rewrite")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-primary/20"
-                >
-                  {aiLoading === "rewrite" ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5" />
-                  )}
-                  {aiLoading === "rewrite" ? "Rewriting..." : "Rewrite with AI"}
-                </button>
-                <button
-                  type="button"
-                  disabled={aiLoading !== null}
-                  onClick={() => handleAI("regenerate")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-border"
-                >
-                  {aiLoading === "regenerate" ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-3.5 h-3.5" />
-                  )}
-                  {aiLoading === "regenerate" ? "Generating..." : "Regenerate"}
-                </button>
-              </div>
-            </div>
+          {/* ── Step 1: Set the scene ── */}
+          {step === 1 && (
+            <motion.div
+              key="step1"
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="lg:flex lg:gap-12 lg:items-start">
 
-            <div className="relative">
-              <AnimatePresence>
-                {showAiGlow && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 pointer-events-none"
-                    style={{ filter: "blur(4px)" }}
-                  />
-                )}
-              </AnimatePresence>
-              <Textarea
-                id="message"
-                placeholder="Write something meaningful..."
-                className="min-h-[140px] rounded-xl text-base resize-none relative z-10 transition-all"
-                value={personalNote}
-                onChange={(e) => setPersonalNote(e.target.value)}
-                required
-              />
-              {aiLoading !== null && (
-                <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
-                  <Sparkles className="w-3 h-3 animate-pulse" />
-                  AI is writing...
-                </div>
-              )}
-            </div>
+                {/* Main content */}
+                <div className="lg:flex-1">
 
-            <AnimatePresence>
-              {aiError && (
-                <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="text-sm text-destructive"
-                >
-                  {aiError}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            <p className="text-xs text-muted-foreground">
-              Use AI to improve your note or generate a fresh one based on the occasion and intent you've set.
-            </p>
-          </div>
-        </section>
-
-        {/* Section 2: Add Meaning */}
-        <section className="bg-card p-8 rounded-3xl shadow-sm border border-border space-y-6">
-          <div className="border-b border-border pb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold">Add Meaning</h2>
-            <span className="text-sm text-muted-foreground">Optional</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <input
-              ref={videoInputRef}
-              type="file"
-              accept="video/*"
-              className="hidden"
-              onChange={handleVideoSelect}
-            />
-
-            {!videoPreviewUrl && !isUploading && (
-              <button
-                type="button"
-                onClick={() => videoInputRef.current?.click()}
-                className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group"
-              >
-                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                  <Video className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
-                </div>
-                <span className="font-medium">Add a Video</span>
-                <span className="text-xs text-muted-foreground mt-1">Record or upload</span>
-              </button>
-            )}
-
-            {isUploading && (
-              <div className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-primary/30 bg-primary/5">
-                <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
-                <span className="font-medium text-sm mb-2">Uploading video...</span>
-                <div className="w-full max-w-[200px] h-2 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-primary rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground mt-1.5">{progress}%</span>
-              </div>
-            )}
-
-            {videoPreviewUrl && !isUploading && (
-              <div className="relative rounded-2xl border-2 border-primary/30 bg-primary/5 overflow-hidden">
-                <video
-                  src={videoPreviewUrl}
-                  controls
-                  playsInline
-                  className="w-full aspect-video object-cover rounded-xl"
-                />
-                <div className="flex items-center justify-between px-4 py-2">
-                  <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Video added
+                  {/* Step header */}
+                  <div className="mb-8">
+                    <h1 className="font-serif text-4xl font-medium mb-2">How should this feel?</h1>
+                    <p className="text-muted-foreground">
+                      Choose the mood — it shapes every detail of their reveal experience.
+                    </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleRemoveVideo}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    Remove
-                  </button>
-                </div>
-              </div>
-            )}
 
-            {uploadError && (
-              <p className="text-sm text-destructive col-span-full">
-                Upload failed: {uploadError.message}
-              </p>
-            )}
+                  {/* Experience grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-10">
+                    {EXPERIENCES.map((exp) => {
+                      const isSelected = selectedExperience === exp.id;
+                      const isSuggested = exp.suggestedFor.includes(occasion);
+                      const isDark = exp.id === "midnight-stars";
+                      return (
+                        <button
+                          key={exp.id}
+                          type="button"
+                          onClick={() => setSelectedExperience(exp.id)}
+                          className={`relative rounded-2xl overflow-hidden text-left transition-all duration-200 focus:outline-none ${
+                            isSelected
+                              ? "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.03] shadow-xl"
+                              : "hover:scale-[1.02] hover:shadow-lg"
+                          }`}
+                        >
+                          <div
+                            className="w-full relative flex flex-col items-center justify-center py-6 gap-2"
+                            style={{
+                              background: `linear-gradient(135deg, ${exp.gradientFrom}, ${exp.gradientVia}, ${exp.gradientTo})`,
+                            }}
+                          >
+                            {/* Icon */}
+                            <exp.Icon
+                              className={`w-6 h-6 ${isDark ? "text-indigo-200" : "text-white/90"}`}
+                            />
 
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handlePhotoSelect}
-            />
+                            {/* Badges */}
+                            {isSuggested && !isSelected && (
+                              <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-white text-[9px] font-bold tracking-wide uppercase">
+                                Suggested
+                              </div>
+                            )}
+                            {isSelected && (
+                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                              </div>
+                            )}
+                          </div>
 
-            {photos.length === 0 && photosUploading.length === 0 && (
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group"
-              >
-                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                  <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
-                </div>
-                <span className="font-medium">Add Photos</span>
-                <span className="text-xs text-muted-foreground mt-1">Up to {MAX_PHOTOS} images</span>
-              </button>
-            )}
-          </div>
-
-          {(photos.length > 0 || photosUploading.length > 0) && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">
-                  {photos.length} of {MAX_PHOTOS} photos
-                </span>
-                {photos.length + photosUploading.length < MAX_PHOTOS && (
-                  <button
-                    type="button"
-                    onClick={() => photoInputRef.current?.click()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary hover:bg-secondary/80 transition-all border border-border"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add more
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {photos.map((photo) => (
-                  <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
-                    <img
-                      src={photo.previewUrl}
-                      alt="Uploaded photo"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePhoto(photo.id)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center transition-colors hover:bg-destructive"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                          <div className="px-3 py-2.5 bg-card border-x border-b border-border rounded-b-2xl">
+                            <p className="text-sm font-semibold leading-tight">{exp.name}</p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{exp.tagline}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
-                {photosUploading.map((item) => (
-                  <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
-                    <img
-                      src={item.localPreview}
-                      alt="Uploading"
-                      className="w-full h-full object-cover opacity-50"
-                    />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <Loader2 className="w-5 h-5 text-primary animate-spin mb-1.5" />
-                      <span className="text-xs font-medium text-primary">{item.progress}%</span>
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Then tell us who</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+
+                  {/* Names */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="recipient">Who is this for?</Label>
+                      <Input
+                        id="recipient"
+                        placeholder="Their name"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        className="h-12 rounded-xl text-base"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sender">Who is it from?</Label>
+                      <Input
+                        id="sender"
+                        placeholder="Your name"
+                        value={senderName}
+                        onChange={(e) => setSenderName(e.target.value)}
+                        className="h-12 rounded-xl text-base"
+                      />
                     </div>
                   </div>
-                ))}
+
+                  {/* Occasion */}
+                  <div className="space-y-2 mb-8">
+                    <Label htmlFor="occasion">What's the occasion?</Label>
+                    <Select
+                      value={occasion}
+                      onValueChange={(val) => {
+                        setOccasion(val);
+                        setSelectedExperience(getSuggestedExperience(val));
+                      }}
+                    >
+                      <SelectTrigger className="h-12 rounded-xl text-base">
+                        <SelectValue placeholder="Select occasion" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OCCASIONS.map((occ) => (
+                          <SelectItem key={occ} value={occ}>{occ}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      We'll suggest the matching experience, but you can always choose your own.
+                    </p>
+                  </div>
+
+                  {/* Step error */}
+                  <AnimatePresence>
+                    {stepError && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="text-sm text-destructive mb-4"
+                      >
+                        {stepError}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Navigation */}
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      size="lg"
+                      onClick={goNext}
+                      className="rounded-full h-13 px-8 text-base shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
+                    >
+                      Write the moment <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Live preview panel */}
+                <PreviewCard experience={currentExperience} recipientName={recipientName} />
               </div>
-            </div>
+            </motion.div>
           )}
 
-          {photoError && (
-            <p className="text-sm text-destructive">{photoError}</p>
-          )}
+          {/* ── Step 2: Write the moment ── */}
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <ContextPill />
 
-          <div className="space-y-2 mt-4">
-            <Label>Spotify or Apple Music Playlist</Label>
-            <div className="relative">
-              <Music className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder="Paste playlist URL here..."
-                className="h-12 rounded-xl text-base pl-12"
-                defaultValue="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Section 3: Add a Balance */}
-        <section className="bg-card p-8 rounded-3xl shadow-sm border border-border space-y-6">
-          <div className="border-b border-border pb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold">Add a Balance</h2>
-            <span className="text-sm text-muted-foreground">Optional</span>
-          </div>
-
-          <div className="space-y-4">
-            <Label>Gift Amount</Label>
-            <div className="flex flex-wrap gap-3">
-              {AMOUNTS.map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setAmount(amt)}
-                  className={`px-6 h-12 rounded-full font-bold text-lg border transition-all ${
-                    amount === amt
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary text-secondary-foreground border-transparent hover:border-border"
-                  }`}
-                >
-                  ${amt}
-                </button>
-              ))}
-              <div className="relative flex-1 min-w-[120px]">
-                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  type="number"
-                  placeholder="Custom"
-                  className="h-12 rounded-full text-lg font-bold pl-10"
-                  value={!AMOUNTS.includes(amount) && amount ? amount : ""}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
+              <div className="mb-8">
+                <h1 className="font-serif text-4xl font-medium mb-2">Write the moment.</h1>
+                <p className="text-muted-foreground">
+                  These are the words they'll read when they open your gift — write from the heart.
+                </p>
               </div>
-            </div>
-          </div>
 
-          <div className="space-y-4 pt-4">
-            <Label>What is the intention behind this balance?</Label>
-            <p className="text-xs text-muted-foreground -mt-2">
-              Setting an intention helps the AI write a more personal note for you.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {INTENTS.map((lbl) => (
-                <button
-                  key={lbl}
-                  type="button"
-                  onClick={() => setIntent(intent === lbl ? "" : lbl)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                    intent === lbl
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-background text-foreground border-border hover:border-foreground/30"
-                  }`}
-                >
-                  {lbl}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
+              <div className="space-y-6">
 
-        {/* Section 4: Choose an Experience */}
-        <section className="space-y-6">
-          <div className="px-2">
-            <h2 className="text-xl font-bold">Choose an Experience</h2>
-            <p className="text-sm text-muted-foreground mt-1">Pick the mood for your reveal — we suggested one based on the occasion.</p>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {EXPERIENCES.map((exp) => {
-              const isSelected = selectedExperience === exp.id;
-              const isSuggested = exp.suggestedFor.includes(occasion);
-              return (
-                <button
-                  key={exp.id}
-                  type="button"
-                  onClick={() => setSelectedExperience(exp.id)}
-                  className={`relative rounded-2xl overflow-hidden text-left transition-all duration-200 ${
-                    isSelected
-                      ? "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.02]"
-                      : "hover:scale-[1.02] hover:shadow-lg"
-                  }`}
+                {/* Gift headline */}
+                <div
+                  className="rounded-3xl p-6 border space-y-4"
+                  style={{ background: "hsl(var(--card))" }}
                 >
-                  <div
-                    className="aspect-[3/2] w-full relative"
-                    style={{
-                      background: `linear-gradient(135deg, ${exp.gradientFrom}, ${exp.gradientVia}, ${exp.gradientTo})`,
-                    }}
+                  <div>
+                    <Label htmlFor="title" className="text-base font-semibold">Gift Headline</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This appears as the bold hero text in their reveal — make it land.
+                    </p>
+                  </div>
+                  <Input
+                    id="title"
+                    placeholder="e.g. Happy Birthday to my favorite person!"
+                    value={giftTitle}
+                    onChange={(e) => setGiftTitle(e.target.value)}
+                    className="h-12 rounded-xl text-base font-medium"
+                  />
+                </div>
+
+                {/* Personal note */}
+                <div
+                  className="rounded-3xl p-6 border space-y-4"
+                  style={{ background: "hsl(var(--card))" }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <Label htmlFor="message" className="text-base font-semibold">Personal Note</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Styled beautifully in their reveal — yours to edit, or let AI help.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        disabled={aiLoading !== null}
+                        onClick={() => handleAI("rewrite")}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-primary/20"
+                      >
+                        {aiLoading === "rewrite" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        {aiLoading === "rewrite" ? "Rewriting..." : "Rewrite"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={aiLoading !== null}
+                        onClick={() => handleAI("regenerate")}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-border"
+                      >
+                        {aiLoading === "regenerate" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                        {aiLoading === "regenerate" ? "Generating..." : "Generate"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <AnimatePresence>
+                      {showAiGlow && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 pointer-events-none"
+                          style={{ filter: "blur(4px)" }}
+                        />
+                      )}
+                    </AnimatePresence>
+                    <Textarea
+                      id="message"
+                      placeholder="Write something meaningful..."
+                      className="min-h-[160px] rounded-xl text-base resize-none relative z-10"
+                      value={personalNote}
+                      onChange={(e) => setPersonalNote(e.target.value)}
+                    />
+                    {aiLoading !== null && (
+                      <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
+                        <Sparkles className="w-3 h-3 animate-pulse" />
+                        AI is writing...
+                      </div>
+                    )}
+                  </div>
+
+                  <AnimatePresence>
+                    {aiError && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="text-sm text-destructive"
+                      >
+                        {aiError}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Step error */}
+              <AnimatePresence>
+                {stepError && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="text-sm text-destructive mt-4"
                   >
-                    {isSuggested && !isSelected && (
-                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/30 backdrop-blur-sm text-white text-[10px] font-semibold tracking-wide uppercase">
-                        Suggested
-                      </div>
-                    )}
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4 text-primary" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-2.5 bg-card border-x border-b border-border rounded-b-2xl">
-                    <p className="text-sm font-semibold leading-tight">{exp.name}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{exp.tagline}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+                    {stepError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
 
-        {/* Submit */}
-        <div className="sticky bottom-6 z-20 flex justify-end">
-          <Button type="submit" size="lg" className="rounded-full h-14 px-8 text-lg shadow-xl shadow-primary/25 hover:-translate-y-1 transition-all">
-            Preview your gift <ArrowRight className="ml-2 w-5 h-5" />
-          </Button>
-        </div>
-      </form>
+              {/* Navigation */}
+              <div className="flex justify-between mt-8">
+                <Button type="button" variant="ghost" size="lg" onClick={goBack} className="rounded-full h-13 px-6 text-base">
+                  <ArrowLeft className="mr-2 w-4 h-4" /> Back
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={goNext}
+                  className="rounded-full h-13 px-8 text-base shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
+                >
+                  Complete the gift <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Step 3: Complete the gift ── */}
+          {step === 3 && (
+            <motion.div
+              key="step3"
+              custom={direction}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <ContextPill />
+
+              <div className="mb-8">
+                <h1 className="font-serif text-4xl font-medium mb-2">Complete the gift.</h1>
+                <p className="text-muted-foreground">
+                  Everything here is optional — add as much or as little as feels right.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+
+                {/* Make it personal — video, photos, playlist */}
+                <div className="rounded-3xl p-6 border space-y-5" style={{ background: "hsl(var(--card))" }}>
+                  <div className="flex items-center justify-between border-b border-border pb-4">
+                    <div>
+                      <h2 className="text-base font-semibold">Make it personal</h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Video messages and photos appear as a cinematic gallery during their reveal.
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">Optional</span>
+                  </div>
+
+                  {/* Video + Photos row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoSelect} />
+
+                    {!videoPreviewUrl && !isUploading && (
+                      <button
+                        type="button"
+                        onClick={() => videoInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                      >
+                        <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center mb-2.5 group-hover:bg-primary/15 transition-colors">
+                          <Video className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                        </div>
+                        <span className="font-medium text-sm">Add a Video</span>
+                        <span className="text-xs text-muted-foreground mt-0.5">Record or upload</span>
+                      </button>
+                    )}
+
+                    {isUploading && (
+                      <div className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-primary/30 bg-primary/5">
+                        <Loader2 className="w-7 h-7 text-primary animate-spin mb-2.5" />
+                        <span className="font-medium text-sm mb-2">Uploading...</span>
+                        <div className="w-full max-w-[180px] h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <motion.div className="h-full bg-primary rounded-full" initial={{ width: 0 }} animate={{ width: `${progress}%` }} />
+                        </div>
+                        <span className="text-xs text-muted-foreground mt-1">{progress}%</span>
+                      </div>
+                    )}
+
+                    {videoPreviewUrl && !isUploading && (
+                      <div className="relative rounded-2xl border-2 border-primary/30 bg-primary/5 overflow-hidden">
+                        <video src={videoPreviewUrl} controls playsInline className="w-full aspect-video object-cover rounded-xl" />
+                        <div className="flex items-center justify-between px-3 py-2">
+                          <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
+                            <CheckCircle2 className="w-4 h-4" /> Video added
+                          </div>
+                          <button type="button" onClick={handleRemoveVideo} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors">
+                            <X className="w-3.5 h-3.5" /> Remove
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <input ref={photoInputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.heic,.heif" multiple className="hidden" onChange={handlePhotoSelect} />
+
+                    {photos.length === 0 && photosUploading.length === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => photoInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                      >
+                        <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center mb-2.5 group-hover:bg-primary/15 transition-colors">
+                          <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                        </div>
+                        <span className="font-medium text-sm">Add Photos</span>
+                        <span className="text-xs text-muted-foreground mt-0.5">Up to {MAX_PHOTOS} images</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Photo grid */}
+                  {(photos.length > 0 || photosUploading.length > 0) && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">{photos.length} of {MAX_PHOTOS} photos</span>
+                        {photos.length + photosUploading.length < MAX_PHOTOS && (
+                          <button type="button" onClick={() => photoInputRef.current?.click()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary hover:bg-secondary/80 transition-all border border-border">
+                            <Plus className="w-3.5 h-3.5" /> Add more
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {photos.map((photo) => (
+                          <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
+                            <img src={photo.previewUrl} alt="Uploaded photo" className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => handleRemovePhoto(photo.id)} className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-destructive transition-colors">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {photosUploading.map((item) => (
+                          <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
+                            <img src={item.localPreview} alt="Uploading" className="w-full h-full object-cover opacity-50" />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <Loader2 className="w-5 h-5 text-primary animate-spin mb-1" />
+                              <span className="text-xs font-medium text-primary">{item.progress}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {photoError && <p className="text-sm text-destructive">{photoError}</p>}
+                  {uploadError && <p className="text-sm text-destructive">Upload failed: {uploadError.message}</p>}
+
+                  {/* Playlist */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Playlist <span className="text-muted-foreground font-normal">(Spotify or Apple Music)</span></Label>
+                    <div className="relative">
+                      <Music className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input placeholder="Paste playlist URL..." className="h-11 rounded-xl text-sm pl-10" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Plays in the background as they scroll through your gift.</p>
+                  </div>
+                </div>
+
+                {/* Give them something to spend */}
+                <div className="rounded-3xl p-6 border space-y-5" style={{ background: "hsl(var(--card))" }}>
+                  <div className="flex items-center justify-between border-b border-border pb-4">
+                    <div>
+                      <h2 className="text-base font-semibold">Give them something to spend</h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Setting an intention turns a transfer into a gesture.
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">Optional</span>
+                  </div>
+
+                  {/* Intention first */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">What's the intention?</Label>
+                    <p className="text-xs text-muted-foreground -mt-1">
+                      Name the purpose behind the balance — it changes how it lands.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {INTENTS.map((lbl) => (
+                        <button
+                          key={lbl}
+                          type="button"
+                          onClick={() => setIntent(intent === lbl ? "" : lbl)}
+                          className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                            intent === lbl
+                              ? "bg-foreground text-background border-foreground"
+                              : "bg-background text-foreground border-border hover:border-foreground/30"
+                          }`}
+                        >
+                          {lbl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Amount second */}
+                  <div className="space-y-3 pt-2">
+                    <Label className="text-sm font-semibold">How much?</Label>
+                    <div className="flex flex-wrap gap-2.5">
+                      {AMOUNTS.map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setAmount(amt)}
+                          className={`px-6 h-11 rounded-full font-bold text-base border transition-all ${
+                            amount === amt
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-secondary text-secondary-foreground border-transparent hover:border-border"
+                          }`}
+                        >
+                          ${amt}
+                        </button>
+                      ))}
+                      <div className="relative flex-1 min-w-[110px]">
+                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          placeholder="Custom"
+                          className="h-11 rounded-full text-base font-bold pl-9"
+                          value={!AMOUNTS.includes(amount) && amount ? amount : ""}
+                          onChange={(e) => setAmount(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Live preview of balance + intent */}
+                    {(amount || intent) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5 mt-2"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          {amount && <p className="text-sm font-bold text-foreground">${amount}</p>}
+                          {intent && <p className="text-xs text-muted-foreground">{intent}</p>}
+                          {!intent && amount && <p className="text-xs text-muted-foreground">Add an intention above to complete the gesture</p>}
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex justify-between mt-8">
+                <Button type="button" variant="ghost" size="lg" onClick={goBack} className="rounded-full h-13 px-6 text-base">
+                  <ArrowLeft className="mr-2 w-4 h-4" /> Back
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={handlePreview}
+                  className="rounded-full h-13 px-8 text-base shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all"
+                >
+                  Preview your gift <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
