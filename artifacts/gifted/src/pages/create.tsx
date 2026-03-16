@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -91,6 +91,10 @@ export default function CreatePage() {
   const [videoObjectPath, setVideoObjectPath] = useState<string | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    localStorage.removeItem("gifted_video_path");
+  }, []);
 
   const { uploadFile, isUploading, progress, error: uploadError } = useUpload({
     basePath: `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage`,
