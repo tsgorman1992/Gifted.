@@ -1,0 +1,22 @@
+packages:
+  "framer-motion": "For premium, smooth page transitions and the emotional reveal experience"
+  "canvas-confetti": "For the celebration delight moment on the reveal page"
+  "@types/canvas-confetti": "Type definitions for canvas-confetti"
+
+images:
+  - path: "artifacts/gifted/public/images/hero-abstract.png"
+    description: "A soft, elegant, abstract gradient background with warm tones like dusty rose, cream, and soft gold. Minimalist, premium startup aesthetic, blurred light leaks."
+    aspect_ratio: "16:9"
+  - path: "artifacts/gifted/public/images/theme-warm-glow.png"
+    description: "An elegant, abstract atmospheric background featuring soft warm glowing light, terracotta and peach tones, very minimal and premium."
+    aspect_ratio: "4:3"
+  - path: "artifacts/gifted/public/images/theme-midnight.png"
+    description: "An elegant, abstract atmospheric background featuring deep navy blue and subtle starlight or silver gradients, very minimal and premium."
+    aspect_ratio: "4:3"
+  - path: "artifacts/gifted/public/images/theme-garden.png"
+    description: "An elegant, abstract atmospheric background featuring soft sage green and muted botanical hues, blurred and soft, very minimal."
+    aspect_ratio: "4:3"
+
+notes:
+  - "App uses purely mock data for the MVP flow to demonstrate the UX without a backend."
+  - "framer-motion is heavily used for the reveal interactions."
