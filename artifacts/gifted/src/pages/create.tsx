@@ -513,7 +513,7 @@ export default function CreatePage() {
             <input
               ref={photoInputRef}
               type="file"
-              accept={ACCEPTED_PHOTO_EXTENSIONS}
+              accept="image/*"
               multiple
               className="hidden"
               onChange={handlePhotoSelect}
