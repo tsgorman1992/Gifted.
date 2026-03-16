@@ -6,8 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Video, Music, Image as ImageIcon, DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Video, Music, Image as ImageIcon, DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2, Plus } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
+
+interface PhotoItem {
+  id: string;
+  objectPath: string;
+  previewUrl: string;
+}
+
+interface PhotoUploadingItem {
+  id: string;
+  progress: number;
+  localPreview: string;
+}
+
+const MAX_PHOTOS = 6;
+const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
 
 const THEMES = [
   { id: "warm", name: "Warm Glow", img: "theme-warm-glow.png" },
@@ -92,8 +107,14 @@ export default function CreatePage() {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [photosUploading, setPhotosUploading] = useState<PhotoUploadingItem[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     localStorage.removeItem("gifted_video_path");
+    localStorage.removeItem("gifted_photo_paths");
   }, []);
 
   const { uploadFile, isUploading, progress, error: uploadError } = useUpload({
@@ -129,12 +150,94 @@ export default function CreatePage() {
     setVideoPreviewUrl(null);
   };
 
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    if (photoInputRef.current) photoInputRef.current.value = "";
+
+    setPhotoError(null);
+    const slotsAvailable = MAX_PHOTOS - photos.length - photosUploading.length;
+    const toUpload = files.slice(0, slotsAvailable);
+
+    if (toUpload.length < files.length) {
+      setPhotoError(`You can add up to ${MAX_PHOTOS} photos total.`);
+    }
+
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+    for (const file of toUpload) {
+      if (file.size > MAX_PHOTO_SIZE) {
+        setPhotoError(`"${file.name}" is over 20 MB.`);
+        continue;
+      }
+      if (!file.type.startsWith("image/")) {
+        setPhotoError(`"${file.name}" is not an image.`);
+        continue;
+      }
+
+      const uploadId = crypto.randomUUID();
+      const localPreview = URL.createObjectURL(file);
+
+      setPhotosUploading((prev) => [...prev, { id: uploadId, progress: 0, localPreview }]);
+
+      (async () => {
+        try {
+          const res = await fetch(`${base}/api/storage/uploads/request-url`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+          });
+          if (!res.ok) throw new Error("Failed to get upload URL");
+          const { uploadURL, objectPath } = await res.json();
+
+          setPhotosUploading((prev) =>
+            prev.map((p) => (p.id === uploadId ? { ...p, progress: 30 } : p))
+          );
+
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", uploadURL, true);
+            xhr.setRequestHeader("Content-Type", file.type);
+            xhr.upload.onprogress = (ev) => {
+              if (ev.lengthComputable) {
+                const pct = 30 + Math.round((ev.loaded / ev.total) * 65);
+                setPhotosUploading((prev) =>
+                  prev.map((p) => (p.id === uploadId ? { ...p, progress: pct } : p))
+                );
+              }
+            };
+            xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("Upload failed")));
+            xhr.onerror = () => reject(new Error("Upload failed"));
+            xhr.send(file);
+          });
+
+          const servingUrl = `${base}/api/storage${objectPath}`;
+          setPhotos((prev) => [...prev, { id: uploadId, objectPath, previewUrl: servingUrl }]);
+        } catch {
+          setPhotoError(`Failed to upload "${file.name}".`);
+        } finally {
+          setPhotosUploading((prev) => prev.filter((p) => p.id !== uploadId));
+          URL.revokeObjectURL(localPreview);
+        }
+      })();
+    }
+  };
+
+  const handleRemovePhoto = (id: string) => {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const handlePreview = (e: React.FormEvent) => {
     e.preventDefault();
     if (videoObjectPath) {
       localStorage.setItem("gifted_video_path", videoObjectPath);
     } else {
       localStorage.removeItem("gifted_video_path");
+    }
+    if (photos.length > 0) {
+      localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
+    } else {
+      localStorage.removeItem("gifted_photo_paths");
     }
     setLocation("/preview");
   };
@@ -405,14 +508,84 @@ export default function CreatePage() {
               </p>
             )}
 
-            <button type="button" className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group">
-              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
-              </div>
-              <span className="font-medium">Add Photos</span>
-              <span className="text-xs text-muted-foreground mt-1">Up to 6 images</span>
-            </button>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handlePhotoSelect}
+            />
+
+            {photos.length === 0 && photosUploading.length === 0 && (
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
+                  <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                </div>
+                <span className="font-medium">Add Photos</span>
+                <span className="text-xs text-muted-foreground mt-1">Up to {MAX_PHOTOS} images</span>
+              </button>
+            )}
           </div>
+
+          {(photos.length > 0 || photosUploading.length > 0) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">
+                  {photos.length} of {MAX_PHOTOS} photos
+                </span>
+                {photos.length + photosUploading.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary hover:bg-secondary/80 transition-all border border-border"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add more
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {photos.map((photo) => (
+                  <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden group">
+                    <img
+                      src={photo.previewUrl}
+                      alt="Uploaded photo"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(photo.id)}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {photosUploading.map((item) => (
+                  <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden bg-secondary">
+                    <img
+                      src={item.localPreview}
+                      alt="Uploading"
+                      className="w-full h-full object-cover opacity-50"
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <Loader2 className="w-5 h-5 text-primary animate-spin mb-1.5" />
+                      <span className="text-xs font-medium text-primary">{item.progress}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {photoError && (
+            <p className="text-sm text-destructive">{photoError}</p>
+          )}
 
           <div className="space-y-2 mt-4">
             <Label>Spotify or Apple Music Playlist</Label>

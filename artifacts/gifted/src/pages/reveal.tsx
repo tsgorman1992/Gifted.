@@ -10,12 +10,22 @@ export default function RevealPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    const storedPath = localStorage.getItem("gifted_video_path");
-    if (storedPath) {
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      setVideoUrl(`${base}/api/storage${storedPath}`);
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+    const storedVideoPath = localStorage.getItem("gifted_video_path");
+    if (storedVideoPath) {
+      setVideoUrl(`${base}/api/storage${storedVideoPath}`);
+    }
+
+    const storedPhotoPaths = localStorage.getItem("gifted_photo_paths");
+    if (storedPhotoPaths) {
+      try {
+        const paths: string[] = JSON.parse(storedPhotoPaths);
+        setPhotoUrls(paths.map((p) => `${base}/api/storage${p}`));
+      } catch { /* ignore */ }
     }
   }, []);
 
@@ -198,28 +208,31 @@ export default function RevealPage() {
                 </motion.div>
               )}
 
-              {/* Photos Mockup Grid */}
-              <motion.div
-                 initial={{ y: 20, opacity: 0 }}
-                 animate={{ y: 0, opacity: 1 }}
-                 transition={{ delay: 1.1 }}
-                 className="grid grid-cols-2 md:grid-cols-3 gap-4"
-              >
-                {[
-                  "photo-1522869635100-9f4c5e86aa37",
-                  "photo-1511895426328-dc8714191300",
-                  "photo-1492691527719-9d1e07e534b4"
-                ].map((id, i) => (
-                  <div key={i} className={`rounded-3xl overflow-hidden bg-secondary aspect-square ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}>
-                     {/* landing page lifestyle photography */}
-                     <img 
-                      src={`https://images.unsplash.com/${id}?w=800&fit=crop`} 
-                      alt="Memory" 
-                      className="w-full h-full object-cover" 
-                    />
-                  </div>
-                ))}
-              </motion.div>
+              {(() => {
+                const displayPhotos = photoUrls.length > 0 ? photoUrls : [
+                  "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=800&fit=crop",
+                  "https://images.unsplash.com/photo-1511895426328-dc8714191300?w=800&fit=crop",
+                  "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800&fit=crop"
+                ];
+                return (
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 1.1 }}
+                    className="grid grid-cols-2 md:grid-cols-3 gap-4"
+                  >
+                    {displayPhotos.map((url, i) => (
+                      <div key={i} className={`rounded-3xl overflow-hidden bg-secondary aspect-square ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}>
+                        <img
+                          src={url}
+                          alt="Memory"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </motion.div>
+                );
+              })()}
 
               {/* Balance Reveal */}
               <motion.div

@@ -26,6 +26,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - Streams responses token-by-token with a live typing effect and subtle glow animation
   - Backend route: `POST /api/gifted/rewrite-note` (SSE streaming)
   - Uses `gpt-4o-mini` via Replit AI Integrations (no user API key required)
+- Photo upload on Create page
+  - Tapping "Add Photos" opens native file picker with multi-select (image/* MIME filter)
+  - Up to 6 photos, 20 MB each, with validation
+  - Each photo uploads to GCS via presigned URL with individual progress tracking (XHR)
+  - Shows 3-column thumbnail grid with per-photo upload spinner and progress %
+  - Completed photos show hover-to-reveal X button for removal
+  - "Add more" pill button appears when < 6 photos uploaded
+  - Photos persist to Reveal page via localStorage key `gifted_photo_paths` (JSON array of objectPaths)
+  - Reveal page shows uploaded photos in a responsive grid, falls back to Unsplash mocks when none uploaded
 - Video upload on Create page
   - Tapping "Add a Video" opens native file picker (camera + gallery on mobile, file browser on desktop)
   - Videos upload to GCS via presigned URLs with progress indicator (XHR for real progress tracking)
