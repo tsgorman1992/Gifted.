@@ -26,10 +26,88 @@ const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
 const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 const ACCEPTED_PHOTO_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.heic,.heif";
 
-const THEMES = [
-  { id: "warm", name: "Warm Glow", img: "theme-warm-glow.png" },
-  { id: "midnight", name: "Midnight", img: "theme-midnight.png" },
-  { id: "garden", name: "Garden", img: "theme-garden.png" }
+interface Experience {
+  id: string;
+  name: string;
+  tagline: string;
+  suggestedFor: string[];
+  gradientFrom: string;
+  gradientVia: string;
+  gradientTo: string;
+  premium: boolean;
+}
+
+const EXPERIENCES: Experience[] = [
+  {
+    id: "confetti-burst",
+    name: "Confetti Burst",
+    tagline: "Bright & celebratory",
+    suggestedFor: ["Birthday"],
+    gradientFrom: "#FF6B6B",
+    gradientVia: "#FFD93D",
+    gradientTo: "#6BCB77",
+    premium: false,
+  },
+  {
+    id: "golden-hour",
+    name: "Golden Hour",
+    tagline: "Warm & romantic",
+    suggestedFor: ["Anniversary"],
+    gradientFrom: "#F7C59F",
+    gradientVia: "#E8A87C",
+    gradientTo: "#D4813A",
+    premium: false,
+  },
+  {
+    id: "garden-bloom",
+    name: "Garden Bloom",
+    tagline: "Soft & new beginnings",
+    suggestedFor: ["New Baby"],
+    gradientFrom: "#FFB7C5",
+    gradientVia: "#C7CEEA",
+    gradientTo: "#B5EAD7",
+    premium: false,
+  },
+  {
+    id: "midnight-stars",
+    name: "Midnight Stars",
+    tagline: "Bold & elevated",
+    suggestedFor: ["Graduation"],
+    gradientFrom: "#0f0c29",
+    gradientVia: "#302b63",
+    gradientTo: "#24243e",
+    premium: false,
+  },
+  {
+    id: "rose-petal",
+    name: "Rose Petal",
+    tagline: "Elegant & timeless",
+    suggestedFor: ["Wedding"],
+    gradientFrom: "#FFB7C5",
+    gradientVia: "#FF8FAB",
+    gradientTo: "#E8A7B1",
+    premium: false,
+  },
+  {
+    id: "snow-flurry",
+    name: "Snow Flurry",
+    tagline: "Crisp & festive",
+    suggestedFor: ["Holiday"],
+    gradientFrom: "#BDE0FE",
+    gradientVia: "#A2D2FF",
+    gradientTo: "#CDB4DB",
+    premium: false,
+  },
+  {
+    id: "sunrise",
+    name: "Sunrise",
+    tagline: "Warm & heartfelt",
+    suggestedFor: ["Just Because", "Other"],
+    gradientFrom: "#FFCBA4",
+    gradientVia: "#FF9A8B",
+    gradientTo: "#FF6A88",
+    premium: false,
+  },
 ];
 
 const INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Birthday money", "Baby fund", "Take a break"];
@@ -91,7 +169,9 @@ async function streamAINote(
 
 export default function CreatePage() {
   const [, setLocation] = useLocation();
-  const [selectedTheme, setSelectedTheme] = useState("warm");
+  const getSuggestedExperience = (occ: string) =>
+    EXPERIENCES.find((e) => e.suggestedFor.includes(occ))?.id ?? "confetti-burst";
+  const [selectedExperience, setSelectedExperience] = useState(() => getSuggestedExperience("Birthday"));
   const [amount, setAmount] = useState("");
   const [intent, setIntent] = useState("");
   const [occasion, setOccasion] = useState("Birthday");
@@ -241,6 +321,8 @@ export default function CreatePage() {
     } else {
       localStorage.removeItem("gifted_photo_paths");
     }
+    localStorage.setItem("gifted_experience", selectedExperience);
+    localStorage.setItem("gifted_occasion", occasion);
     setLocation("/preview");
   };
 
@@ -328,7 +410,7 @@ export default function CreatePage() {
 
           <div className="space-y-2">
             <Label htmlFor="occasion">Occasion</Label>
-            <Select value={occasion} onValueChange={setOccasion}>
+            <Select value={occasion} onValueChange={(val) => { setOccasion(val); setSelectedExperience(getSuggestedExperience(val)); }}>
               <SelectTrigger className="h-12 rounded-xl text-base">
                 <SelectValue placeholder="Select occasion" />
               </SelectTrigger>
@@ -663,31 +745,51 @@ export default function CreatePage() {
           </div>
         </section>
 
-        {/* Section 4: Visual Theme */}
+        {/* Section 4: Choose an Experience */}
         <section className="space-y-6">
-          <h2 className="text-xl font-bold px-2">Choose a Visual Theme</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {THEMES.map((theme) => (
-              <button
-                key={theme.id}
-                type="button"
-                onClick={() => setSelectedTheme(theme.id)}
-                className={`relative rounded-2xl overflow-hidden text-left transition-all ${
-                  selectedTheme === theme.id ? "ring-4 ring-primary ring-offset-4 ring-offset-background" : "hover:opacity-80"
-                }`}
-              >
-                <div className="aspect-[4/3] bg-muted w-full relative">
-                  <img
-                    src={`${import.meta.env.BASE_URL}images/${theme.img}`}
-                    alt={theme.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-                    <span className="text-white font-medium">{theme.name}</span>
+          <div className="px-2">
+            <h2 className="text-xl font-bold">Choose an Experience</h2>
+            <p className="text-sm text-muted-foreground mt-1">Pick the mood for your reveal — we suggested one based on the occasion.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {EXPERIENCES.map((exp) => {
+              const isSelected = selectedExperience === exp.id;
+              const isSuggested = exp.suggestedFor.includes(occasion);
+              return (
+                <button
+                  key={exp.id}
+                  type="button"
+                  onClick={() => setSelectedExperience(exp.id)}
+                  className={`relative rounded-2xl overflow-hidden text-left transition-all duration-200 ${
+                    isSelected
+                      ? "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.02]"
+                      : "hover:scale-[1.02] hover:shadow-lg"
+                  }`}
+                >
+                  <div
+                    className="aspect-[3/2] w-full relative"
+                    style={{
+                      background: `linear-gradient(135deg, ${exp.gradientFrom}, ${exp.gradientVia}, ${exp.gradientTo})`,
+                    }}
+                  >
+                    {isSuggested && !isSelected && (
+                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/30 backdrop-blur-sm text-white text-[10px] font-semibold tracking-wide uppercase">
+                        Suggested
+                      </div>
+                    )}
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                      </div>
+                    )}
                   </div>
-                </div>
-              </button>
-            ))}
+                  <div className="p-2.5 bg-card border-x border-b border-border rounded-b-2xl">
+                    <p className="text-sm font-semibold leading-tight">{exp.name}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{exp.tagline}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </section>
 
