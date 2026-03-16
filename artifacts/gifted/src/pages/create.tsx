@@ -23,6 +23,8 @@ interface PhotoUploadingItem {
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
+const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+const ACCEPTED_PHOTO_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.heic,.heif";
 
 const THEMES = [
   { id: "warm", name: "Warm Glow", img: "theme-warm-glow.png" },
@@ -170,8 +172,8 @@ export default function CreatePage() {
         setPhotoError(`"${file.name}" is over 20 MB.`);
         continue;
       }
-      if (!file.type.startsWith("image/")) {
-        setPhotoError(`"${file.name}" is not an image.`);
+      if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
+        setPhotoError(`"${file.name}" must be a JPEG, PNG, WebP, or HEIC image.`);
         continue;
       }
 
@@ -511,7 +513,7 @@ export default function CreatePage() {
             <input
               ref={photoInputRef}
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_PHOTO_EXTENSIONS}
               multiple
               className="hidden"
               onChange={handlePhotoSelect}
@@ -560,7 +562,7 @@ export default function CreatePage() {
                     <button
                       type="button"
                       onClick={() => handleRemovePhoto(photo.id)}
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center transition-colors hover:bg-destructive"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
