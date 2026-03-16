@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./errorEnvelope";
 export * from "./healthStatus";
 export * from "./rewriteGiftNoteBody";
 export * from "./rewriteGiftNoteBodyMode";
+export * from "./uploadUrlRequest";
+export * from "./uploadUrlResponse";

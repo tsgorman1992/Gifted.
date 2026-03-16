@@ -8,6 +8,16 @@ import { mockGiftData } from "@/lib/mock-data";
 
 export default function RevealPage() {
   const [isOpen, setIsOpen] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+
+  useEffect(() => {
+    const storedPath = localStorage.getItem("gifted_video_path");
+    if (storedPath) {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      setVideoUrl(`${base}/api/storage${storedPath}`);
+    }
+  }, []);
 
   useEffect(() => {
     // Disable scrolling when closed to focus on the envelope
@@ -131,25 +141,62 @@ export default function RevealPage() {
                 </p>
               </motion.div>
 
-              {/* Video Mockup */}
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.9 }}
-                className="w-full aspect-video rounded-[2rem] bg-secondary border border-border relative overflow-hidden group cursor-pointer"
-              >
-                {/* Fallback image for video placeholder */}
-                <img 
-                  src="https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop" 
-                  alt="Video thumbnail" 
-                  className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white border border-white/40 group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-xl">
-                    <Play className="w-8 h-8 ml-1" fill="currentColor" />
+              {videoUrl ? (
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.9 }}
+                  className="w-full rounded-[2rem] bg-secondary border border-border relative overflow-hidden"
+                >
+                  {!isVideoPlaying ? (
+                    <div
+                      className="w-full aspect-video relative cursor-pointer group"
+                      onClick={() => setIsVideoPlaying(true)}
+                    >
+                      <video
+                        src={videoUrl}
+                        preload="metadata"
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                        <div className="w-20 h-20 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white border border-white/40 group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-xl">
+                          <Play className="w-8 h-8 ml-1" fill="currentColor" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-sm font-medium">
+                        A message from {mockGiftData.senderName}
+                      </div>
+                    </div>
+                  ) : (
+                    <video
+                      src={videoUrl}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="w-full aspect-video object-cover"
+                    />
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.9 }}
+                  className="w-full aspect-video rounded-[2rem] bg-secondary border border-border relative overflow-hidden group cursor-pointer"
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop" 
+                    alt="Video thumbnail" 
+                    className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white border border-white/40 group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-xl">
+                      <Play className="w-8 h-8 ml-1" fill="currentColor" />
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
 
               {/* Photos Mockup Grid */}
               <motion.div

@@ -26,6 +26,14 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - Streams responses token-by-token with a live typing effect and subtle glow animation
   - Backend route: `POST /api/gifted/rewrite-note` (SSE streaming)
   - Uses `gpt-4o-mini` via Replit AI Integrations (no user API key required)
+- Video upload on Create page
+  - Tapping "Add a Video" opens native file picker (camera + gallery on mobile, file browser on desktop)
+  - Videos upload to GCS via presigned URLs with progress indicator (XHR for real progress tracking)
+  - After upload, shows inline video preview with Remove option
+  - 100 MB file size limit, video/* MIME type validation
+  - Video persists to Reveal page via localStorage (stores objectPath)
+  - Backend: `POST /api/storage/uploads/request-url` for presigned URLs, `GET /api/storage/objects/*` for serving
+  - Uses Replit Object Storage (GCS-backed, no user API key required)
 
 ## Structure
 
@@ -37,6 +45,7 @@ artifacts-monorepo/
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
+│   ├── object-storage-web/  # Client upload hook for object storage
 │   └── db/                 # Drizzle ORM schema + DB connection
 ├── scripts/                # Utility scripts (single workspace package)
 │   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`

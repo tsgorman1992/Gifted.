@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Video, Music, Image as ImageIcon, DollarSign, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { ArrowRight, Video, Music, Image as ImageIcon, DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2 } from "lucide-react";
+import { useUpload } from "@workspace/object-storage-web";
 
 const THEMES = [
   { id: "warm", name: "Warm Glow", img: "theme-warm-glow.png" },
@@ -87,8 +88,50 @@ export default function CreatePage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
 
+  const [videoObjectPath, setVideoObjectPath] = useState<string | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  const { uploadFile, isUploading, progress, error: uploadError } = useUpload({
+    basePath: `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage`,
+    onSuccess: (response) => {
+      setVideoObjectPath(response.objectPath);
+      const servingUrl = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage${response.objectPath}`;
+      setVideoPreviewUrl(servingUrl);
+    },
+  });
+
+  const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert("Video must be under 100 MB.");
+      return;
+    }
+
+    if (!file.type.startsWith("video/")) {
+      alert("Please select a video file.");
+      return;
+    }
+
+    await uploadFile(file);
+    if (videoInputRef.current) videoInputRef.current.value = "";
+  };
+
+  const handleRemoveVideo = () => {
+    setVideoObjectPath(null);
+    setVideoPreviewUrl(null);
+  };
+
   const handlePreview = (e: React.FormEvent) => {
     e.preventDefault();
+    if (videoObjectPath) {
+      localStorage.setItem("gifted_video_path", videoObjectPath);
+    } else {
+      localStorage.removeItem("gifted_video_path");
+    }
     setLocation("/preview");
   };
 
@@ -289,13 +332,74 @@ export default function CreatePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <button type="button" className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group">
-              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                <Video className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={handleVideoSelect}
+            />
+
+            {!videoPreviewUrl && !isUploading && (
+              <button
+                type="button"
+                onClick={() => videoInputRef.current?.click()}
+                className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
+                  <Video className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                </div>
+                <span className="font-medium">Add a Video</span>
+                <span className="text-xs text-muted-foreground mt-1">Record or upload</span>
+              </button>
+            )}
+
+            {isUploading && (
+              <div className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-primary/30 bg-primary/5">
+                <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
+                <span className="font-medium text-sm mb-2">Uploading video...</span>
+                <div className="w-full max-w-[200px] h-2 bg-secondary rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground mt-1.5">{progress}%</span>
               </div>
-              <span className="font-medium">Add a Video</span>
-              <span className="text-xs text-muted-foreground mt-1">Record or upload</span>
-            </button>
+            )}
+
+            {videoPreviewUrl && !isUploading && (
+              <div className="relative rounded-2xl border-2 border-primary/30 bg-primary/5 overflow-hidden">
+                <video
+                  src={videoPreviewUrl}
+                  controls
+                  playsInline
+                  className="w-full aspect-video object-cover rounded-xl"
+                />
+                <div className="flex items-center justify-between px-4 py-2">
+                  <div className="flex items-center gap-1.5 text-sm text-primary font-medium">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Video added
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveVideo}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {uploadError && (
+              <p className="text-sm text-destructive col-span-full">
+                Upload failed: {uploadError.message}
+              </p>
+            )}
 
             <button type="button" className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group">
               <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
