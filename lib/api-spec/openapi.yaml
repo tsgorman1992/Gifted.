@@ -10,7 +10,28 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: gifted
+    description: gifted. platform operations
 paths:
+  /gifted/rewrite-note:
+    post:
+      operationId: rewriteGiftNote
+      tags: [gifted]
+      summary: Rewrite or regenerate a personal gift note using AI
+      description: |
+        Streams back an AI-generated personal note based on context about the gift.
+        Returns an SSE stream of text chunks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RewriteGiftNoteBody"
+      responses:
+        "200":
+          description: SSE stream of AI-generated note text chunks
+          content:
+            text/event-stream: {}
   /healthz:
     get:
       operationId: healthCheck
@@ -26,6 +47,36 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    RewriteGiftNoteBody:
+      type: object
+      properties:
+        currentNote:
+          type: string
+          description: The current personal note text (empty string for fresh generation)
+        occasion:
+          type: string
+          description: The gift occasion (e.g. Birthday, Anniversary)
+        recipientName:
+          type: string
+          description: Name of the gift recipient
+        senderName:
+          type: string
+          description: Name of the gift sender
+        intent:
+          type: string
+          description: The intention/theme label (e.g. "Coffee on me", "Treat yourself")
+        giftTitle:
+          type: string
+          description: The gift headline/title
+        mode:
+          type: string
+          enum: [rewrite, regenerate]
+          description: "rewrite = improve existing note, regenerate = write a fresh one"
+      required:
+        - occasion
+        - recipientName
+        - senderName
+        - mode
     HealthStatus:
       type: object
       properties:

@@ -5,24 +5,116 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type { HealthStatus, RewriteGiftNoteBody } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * Streams back an AI-generated personal note based on context about the gift.
+Returns an SSE stream of text chunks.
+
+ * @summary Rewrite or regenerate a personal gift note using AI
+ */
+export const getRewriteGiftNoteUrl = () => {
+  return `/api/gifted/rewrite-note`;
+};
+
+export const rewriteGiftNote = async (
+  rewriteGiftNoteBody: RewriteGiftNoteBody,
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getRewriteGiftNoteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(rewriteGiftNoteBody),
+  });
+};
+
+export const getRewriteGiftNoteMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rewriteGiftNote>>,
+    TError,
+    { data: BodyType<RewriteGiftNoteBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rewriteGiftNote>>,
+  TError,
+  { data: BodyType<RewriteGiftNoteBody> },
+  TContext
+> => {
+  const mutationKey = ["rewriteGiftNote"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rewriteGiftNote>>,
+    { data: BodyType<RewriteGiftNoteBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return rewriteGiftNote(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RewriteGiftNoteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rewriteGiftNote>>
+>;
+export type RewriteGiftNoteMutationBody = BodyType<RewriteGiftNoteBody>;
+export type RewriteGiftNoteMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Rewrite or regenerate a personal gift note using AI
+ */
+export const useRewriteGiftNote = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rewriteGiftNote>>,
+    TError,
+    { data: BodyType<RewriteGiftNoteBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rewriteGiftNote>>,
+  TError,
+  { data: BodyType<RewriteGiftNoteBody> },
+  TContext
+> => {
+  return useMutation(getRewriteGiftNoteMutationOptions(options));
+};
 
 /**
  * Returns server health status

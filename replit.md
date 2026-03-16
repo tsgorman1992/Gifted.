@@ -16,6 +16,17 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Features
+
+### gifted. (artifacts/gifted)
+- Landing page, Create gift flow, Preview, Reveal, and Redemption pages
+- AI-powered personal note rewriting and regeneration on the Create page
+  - "Rewrite with AI" — improves the existing note while keeping the sentiment
+  - "Regenerate" — writes a fresh note from scratch based on occasion, recipient, intent
+  - Streams responses token-by-token with a live typing effect and subtle glow animation
+  - Backend route: `POST /api/gifted/rewrite-note` (SSE streaming)
+  - Uses `gpt-4o-mini` via Replit AI Integrations (no user API key required)
+
 ## Structure
 
 ```text

@@ -1,12 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Video, Music, Image as ImageIcon, DollarSign } from "lucide-react";
+import { ArrowRight, Video, Music, Image as ImageIcon, DollarSign, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 
 const THEMES = [
   { id: "warm", name: "Warm Glow", img: "theme-warm-glow.png" },
@@ -16,17 +16,125 @@ const THEMES = [
 
 const INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Birthday money", "Baby fund", "Take a break"];
 const AMOUNTS = ["25", "50", "100", "250"];
+const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Other"];
+
+async function streamAINote(
+  payload: {
+    currentNote?: string;
+    occasion: string;
+    recipientName: string;
+    senderName: string;
+    intent?: string;
+    giftTitle?: string;
+    mode: "rewrite" | "regenerate";
+  },
+  onChunk: (text: string) => void,
+  onDone: () => void,
+  onError: (msg: string) => void
+) {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const response = await fetch(`${base}/api/gifted/rewrite-note`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok || !response.body) {
+    onError("Request failed");
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          const parsed = JSON.parse(line.slice(6));
+          if (parsed.content) onChunk(parsed.content);
+          if (parsed.done) onDone();
+          if (parsed.error) onError(parsed.error);
+        } catch {
+          // ignore malformed chunks
+        }
+      }
+    }
+  }
+}
 
 export default function CreatePage() {
   const [, setLocation] = useLocation();
   const [selectedTheme, setSelectedTheme] = useState("warm");
   const [amount, setAmount] = useState("");
   const [intent, setIntent] = useState("");
+  const [occasion, setOccasion] = useState("Birthday");
+  const [recipientName, setRecipientName] = useState("Sarah");
+  const [senderName, setSenderName] = useState("Jamie");
+  const [giftTitle, setGiftTitle] = useState("Happy Birthday, Sarah! 🎂");
+  const [personalNote, setPersonalNote] = useState(
+    "I couldn't be there in person, but I wanted to make sure you felt celebrated today. Use this to treat yourself to something nice. Miss you!"
+  );
+  const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [showAiGlow, setShowAiGlow] = useState(false);
 
   const handlePreview = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, save to state/DB here
     setLocation("/preview");
+  };
+
+  const handleAI = async (mode: "rewrite" | "regenerate") => {
+    if (!recipientName || !senderName || !occasion) {
+      setAiError("Please fill in the recipient, sender, and occasion first.");
+      setTimeout(() => setAiError(null), 4000);
+      return;
+    }
+    setAiLoading(mode);
+    setAiError(null);
+    setShowAiGlow(false);
+
+    let generated = "";
+    setPersonalNote("");
+
+    try {
+      await streamAINote(
+        {
+          currentNote: mode === "rewrite" ? personalNote : undefined,
+          occasion,
+          recipientName,
+          senderName,
+          intent: intent || undefined,
+          giftTitle: giftTitle || undefined,
+          mode,
+        },
+        (chunk) => {
+          generated += chunk;
+          setPersonalNote(generated);
+        },
+        () => {
+          setAiLoading(null);
+          setShowAiGlow(true);
+          setTimeout(() => setShowAiGlow(false), 2000);
+        },
+        (err) => {
+          setAiError(err);
+          setAiLoading(null);
+          if (!generated) setPersonalNote("I couldn't be there in person, but I wanted to make sure you felt celebrated today.");
+        }
+      );
+    } catch {
+      setAiError("Something went wrong. Please try again.");
+      setAiLoading(null);
+    }
   };
 
   return (
@@ -40,48 +148,136 @@ export default function CreatePage() {
         {/* Section 1: The Basics */}
         <section className="bg-card p-8 rounded-3xl shadow-sm border border-border space-y-6">
           <h2 className="text-xl font-bold border-b border-border pb-4">The Basics</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="recipient">Who is this for?</Label>
-              <Input id="recipient" placeholder="e.g. Sarah" defaultValue="Sarah" className="h-12 rounded-xl text-base" required />
+              <Input
+                id="recipient"
+                placeholder="e.g. Sarah"
+                value={recipientName}
+                onChange={(e) => setRecipientName(e.target.value)}
+                className="h-12 rounded-xl text-base"
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="sender">Who is it from?</Label>
-              <Input id="sender" placeholder="e.g. Jamie" defaultValue="Jamie" className="h-12 rounded-xl text-base" required />
+              <Input
+                id="sender"
+                placeholder="e.g. Jamie"
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
+                className="h-12 rounded-xl text-base"
+                required
+              />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="occasion">Occasion</Label>
-            <Select defaultValue="birthday">
+            <Select value={occasion} onValueChange={setOccasion}>
               <SelectTrigger className="h-12 rounded-xl text-base">
                 <SelectValue placeholder="Select occasion" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="birthday">Birthday</SelectItem>
-                <SelectItem value="anniversary">Anniversary</SelectItem>
-                <SelectItem value="graduation">Graduation</SelectItem>
-                <SelectItem value="baby">New Baby</SelectItem>
-                <SelectItem value="just-because">Just Because</SelectItem>
+                {OCCASIONS.map((occ) => (
+                  <SelectItem key={occ} value={occ}>{occ}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="title">Gift Headline</Label>
-            <Input id="title" placeholder="e.g. Happy Birthday to my favorite person!" defaultValue="Happy Birthday, Sarah! 🎂" className="h-12 rounded-xl text-base font-medium" required />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="message">Personal Note</Label>
-            <Textarea 
-              id="message" 
-              placeholder="Write something meaningful..." 
-              className="min-h-[120px] rounded-xl text-base resize-none"
-              defaultValue="I couldn't be there in person, but I wanted to make sure you felt celebrated today. Use this to treat yourself to something nice. Miss you!"
+            <Input
+              id="title"
+              placeholder="e.g. Happy Birthday to my favorite person!"
+              value={giftTitle}
+              onChange={(e) => setGiftTitle(e.target.value)}
+              className="h-12 rounded-xl text-base font-medium"
               required
             />
+          </div>
+
+          {/* Personal Note with AI */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="message">Personal Note</Label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={aiLoading !== null}
+                  onClick={() => handleAI("rewrite")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-primary/20"
+                >
+                  {aiLoading === "rewrite" ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  {aiLoading === "rewrite" ? "Rewriting..." : "Rewrite with AI"}
+                </button>
+                <button
+                  type="button"
+                  disabled={aiLoading !== null}
+                  onClick={() => handleAI("regenerate")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-border"
+                >
+                  {aiLoading === "regenerate" ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                  {aiLoading === "regenerate" ? "Generating..." : "Regenerate"}
+                </button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <AnimatePresence>
+                {showAiGlow && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-primary/30 via-primary/20 to-primary/30 pointer-events-none"
+                    style={{ filter: "blur(4px)" }}
+                  />
+                )}
+              </AnimatePresence>
+              <Textarea
+                id="message"
+                placeholder="Write something meaningful..."
+                className="min-h-[140px] rounded-xl text-base resize-none relative z-10 transition-all"
+                value={personalNote}
+                onChange={(e) => setPersonalNote(e.target.value)}
+                required
+              />
+              {aiLoading !== null && (
+                <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
+                  <Sparkles className="w-3 h-3 animate-pulse" />
+                  AI is writing...
+                </div>
+              )}
+            </div>
+
+            <AnimatePresence>
+              {aiError && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="text-sm text-destructive"
+                >
+                  {aiError}
+                </motion.p>
+              )}
+            </AnimatePresence>
+
+            <p className="text-xs text-muted-foreground">
+              Use AI to improve your note or generate a fresh one based on the occasion and intent you've set.
+            </p>
           </div>
         </section>
 
@@ -100,7 +296,7 @@ export default function CreatePage() {
               <span className="font-medium">Add a Video</span>
               <span className="text-xs text-muted-foreground mt-1">Record or upload</span>
             </button>
-            
+
             <button type="button" className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition-all group">
               <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
                 <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
@@ -114,8 +310,8 @@ export default function CreatePage() {
             <Label>Spotify or Apple Music Playlist</Label>
             <div className="relative">
               <Music className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input 
-                placeholder="Paste playlist URL here..." 
+              <Input
+                placeholder="Paste playlist URL here..."
                 className="h-12 rounded-xl text-base pl-12"
                 defaultValue="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
               />
@@ -133,14 +329,14 @@ export default function CreatePage() {
           <div className="space-y-4">
             <Label>Gift Amount</Label>
             <div className="flex flex-wrap gap-3">
-              {AMOUNTS.map(amt => (
+              {AMOUNTS.map((amt) => (
                 <button
                   key={amt}
                   type="button"
                   onClick={() => setAmount(amt)}
                   className={`px-6 h-12 rounded-full font-bold text-lg border transition-all ${
-                    amount === amt 
-                      ? "bg-primary text-primary-foreground border-primary" 
+                    amount === amt
+                      ? "bg-primary text-primary-foreground border-primary"
                       : "bg-secondary text-secondary-foreground border-transparent hover:border-border"
                   }`}
                 >
@@ -149,9 +345,9 @@ export default function CreatePage() {
               ))}
               <div className="relative flex-1 min-w-[120px]">
                 <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
-                  type="number" 
-                  placeholder="Custom" 
+                <Input
+                  type="number"
+                  placeholder="Custom"
                   className="h-12 rounded-full text-lg font-bold pl-10"
                   value={!AMOUNTS.includes(amount) && amount ? amount : ""}
                   onChange={(e) => setAmount(e.target.value)}
@@ -162,12 +358,15 @@ export default function CreatePage() {
 
           <div className="space-y-4 pt-4">
             <Label>What is the intention behind this balance?</Label>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Setting an intention helps the AI write a more personal note for you.
+            </p>
             <div className="flex flex-wrap gap-2">
-              {INTENTS.map(lbl => (
+              {INTENTS.map((lbl) => (
                 <button
                   key={lbl}
                   type="button"
-                  onClick={() => setIntent(lbl)}
+                  onClick={() => setIntent(intent === lbl ? "" : lbl)}
                   className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                     intent === lbl
                       ? "bg-foreground text-background border-foreground"
@@ -185,7 +384,7 @@ export default function CreatePage() {
         <section className="space-y-6">
           <h2 className="text-xl font-bold px-2">Choose a Visual Theme</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {THEMES.map(theme => (
+            {THEMES.map((theme) => (
               <button
                 key={theme.id}
                 type="button"
@@ -195,9 +394,9 @@ export default function CreatePage() {
                 }`}
               >
                 <div className="aspect-[4/3] bg-muted w-full relative">
-                  <img 
-                    src={`${import.meta.env.BASE_URL}images/${theme.img}`} 
-                    alt={theme.name} 
+                  <img
+                    src={`${import.meta.env.BASE_URL}images/${theme.img}`}
+                    alt={theme.name}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">

@@ -8,6 +8,38 @@
 import * as zod from "zod";
 
 /**
+ * Streams back an AI-generated personal note based on context about the gift.
+Returns an SSE stream of text chunks.
+
+ * @summary Rewrite or regenerate a personal gift note using AI
+ */
+export const RewriteGiftNoteBody = zod.object({
+  currentNote: zod
+    .string()
+    .optional()
+    .describe(
+      "The current personal note text (empty string for fresh generation)",
+    ),
+  occasion: zod
+    .string()
+    .describe("The gift occasion (e.g. Birthday, Anniversary)"),
+  recipientName: zod.string().describe("Name of the gift recipient"),
+  senderName: zod.string().describe("Name of the gift sender"),
+  intent: zod
+    .string()
+    .optional()
+    .describe(
+      'The intention\/theme label (e.g. \"Coffee on me\", \"Treat yourself\")',
+    ),
+  giftTitle: zod.string().optional().describe("The gift headline\/title"),
+  mode: zod
+    .enum(["rewrite", "regenerate"])
+    .describe(
+      "rewrite = improve existing note, regenerate = write a fresh one",
+    ),
+});
+
+/**
  * Returns server health status
  * @summary Health check
  */

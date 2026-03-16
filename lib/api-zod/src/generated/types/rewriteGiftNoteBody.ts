@@ -5,16 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-/**
- * rewrite = improve existing note, regenerate = write a fresh one
- */
-export type RewriteGiftNoteBodyMode =
-  (typeof RewriteGiftNoteBodyMode)[keyof typeof RewriteGiftNoteBodyMode];
-
-export const RewriteGiftNoteBodyMode = {
-  rewrite: "rewrite",
-  regenerate: "regenerate",
-} as const;
+import type { RewriteGiftNoteBodyMode } from "./rewriteGiftNoteBodyMode";
 
 export interface RewriteGiftNoteBody {
   /** The current personal note text (empty string for fresh generation) */
@@ -31,8 +22,4 @@ export interface RewriteGiftNoteBody {
   giftTitle?: string;
   /** rewrite = improve existing note, regenerate = write a fresh one */
   mode: RewriteGiftNoteBodyMode;
-}
-
-export interface HealthStatus {
-  status: string;
 }
