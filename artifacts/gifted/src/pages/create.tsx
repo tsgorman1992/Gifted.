@@ -455,6 +455,8 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_photo_paths");
     localStorage.setItem("gifted_experience", selectedExperience);
     localStorage.setItem("gifted_occasion", occasion);
+    if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
+    if (senderName) localStorage.setItem("gifted_sender_name", senderName);
     setLocation("/preview");
   };
 

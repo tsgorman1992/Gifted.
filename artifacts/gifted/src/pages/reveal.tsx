@@ -683,18 +683,22 @@ export default function RevealPage() {
               <p className={`text-base font-medium mb-2 ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
                 A gift for
               </p>
-              <h1 className={`font-serif text-5xl md:text-7xl mb-14 ${isDark ? "text-white" : ""}`}>
+              <h1 className={`font-serif text-5xl sm:text-6xl md:text-7xl mb-10 break-words max-w-xs sm:max-w-sm ${isDark ? "text-white" : ""}`}>
                 {mockGiftData.recipientName}
               </h1>
 
               <Button
                 onClick={handleOpen}
                 size="lg"
-                className="rounded-full h-16 px-10 text-xl shadow-2xl shadow-primary/30 hover:scale-105 transition-all duration-300"
+                className="rounded-full h-16 px-10 sm:px-14 text-xl w-full max-w-xs shadow-2xl shadow-primary/30 hover:scale-105 transition-all duration-300"
                 style={isDark ? { background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" } : {}}
               >
                 {experience === "midnight-stars" ? "Reveal" : experience === "snow-flurry" ? "Open" : "Tap to open"}
               </Button>
+
+              <p className={`mt-5 text-xs tracking-widest uppercase ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>
+                scroll to explore
+              </p>
             </motion.div>
           </motion.div>
         )}
@@ -707,7 +711,7 @@ export default function RevealPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="w-full pb-32 relative z-10"
+            className="w-full pb-20 md:pb-32 relative z-10"
           >
 
             {/* Hero */}
@@ -724,7 +728,7 @@ export default function RevealPage() {
                 />
               </div>
 
-              <div className="relative z-10 w-full max-w-4xl mx-auto px-6 pb-12">
+              <div className="relative z-10 w-full max-w-4xl mx-auto px-4 sm:px-6 pb-10 md:pb-12">
                 <motion.div
                   initial={{ y: 36, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
@@ -732,7 +736,7 @@ export default function RevealPage() {
                 >
                   {/* Title — style varies per experience */}
                   <h1
-                    className={`font-serif text-5xl md:text-7xl font-medium mb-4 ${isDark ? "text-white" : "text-foreground"}`}
+                    className={`font-serif text-4xl sm:text-5xl md:text-7xl font-medium mb-4 ${isDark ? "text-white" : "text-foreground"}`}
                   >
                     {cfg.titleStyle === "word-burst" && (
                       <WordBurstTitle text={mockGiftData.title} delayS={cfg.heroDelay} />
@@ -786,23 +790,23 @@ export default function RevealPage() {
             </div>
 
             {/* Content sections */}
-            <div className="max-w-4xl mx-auto px-6 space-y-14 -mt-6 relative z-20">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8 md:space-y-14 -mt-4 md:-mt-6 relative z-20">
 
               {/* Note / message — section 0 */}
               <Section cfg={cfg} idx={0}>
                 <div
-                  className="rounded-[2rem] p-8 md:p-12 border shadow-xl"
+                  className="rounded-[2rem] p-6 md:p-12 border shadow-xl"
                   style={isDark
                     ? { background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.12)" }
                     : { background: "hsl(var(--card)/0.8)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.2)" }
                   }
                 >
                   {cfg.titleStyle === "typewriter" ? (
-                    <p className={`font-serif text-2xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
+                    <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
                       "<TypewriterText text={mockGiftData.message} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />"
                     </p>
                   ) : (
-                    <p className={`font-serif text-2xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
+                    <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
                       "{mockGiftData.message}"
                     </p>
                   )}
@@ -896,7 +900,7 @@ export default function RevealPage() {
                           whileInView={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
                           viewport={{ once: true }}
                           transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                          className="font-serif text-7xl md:text-9xl mb-8 tracking-tighter text-white"
+                          className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter text-white"
                           style={{ textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
                         >
                           ${mockGiftData.amount}
@@ -936,7 +940,7 @@ export default function RevealPage() {
                           <span>{mockGiftData.intent}</span>
                         </div>
                         <h3 className="text-xl md:text-2xl font-medium opacity-90 mb-2">You received</h3>
-                        <div className="font-serif text-7xl md:text-9xl mb-8 tracking-tighter">
+                        <div className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter">
                           {cfg.amountStyle === "count-up" ? (
                             <motion.span
                               initial={{ scale: 0.8, opacity: 0 }}
