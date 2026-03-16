@@ -58,7 +58,12 @@ export default function LandingPage() {
                 Create a gift
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full text-lg px-8 h-14 bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all duration-300">
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full sm:w-auto rounded-full text-lg px-8 h-14 bg-white/50 backdrop-blur-sm hover:bg-white/80 transition-all duration-300"
+              onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}
+            >
               See how it works
             </Button>
           </motion.div>
@@ -66,7 +71,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="w-full max-w-6xl mx-auto py-24 px-6">
+      <section id="how-it-works" className="w-full max-w-6xl mx-auto py-24 px-6">
         <div className="text-center mb-16">
           <h2 className="font-serif text-4xl md:text-5xl font-medium mb-4">How it works</h2>
           <p className="text-lg text-muted-foreground">Personal in the moment. Flexible in the end.</p>
