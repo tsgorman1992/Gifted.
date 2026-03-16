@@ -248,9 +248,11 @@ function ProgressBar({ step }: { step: number }) {
 function PreviewCard({
   experience,
   recipientName,
+  onTapOpen,
 }: {
   experience: Experience;
   recipientName: string;
+  onTapOpen: () => void;
 }) {
   const { Icon } = experience;
   const isDark = experience.id === "midnight-stars";
@@ -292,12 +294,14 @@ function PreviewCard({
               {recipientName || "Someone special"}
             </motion.h2>
 
-            <div
-              className="w-full rounded-full py-2.5 px-4 text-center text-sm font-medium"
-              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.85)" : "white" }}
+            <button
+              onClick={onTapOpen}
+              className="w-full rounded-full py-2.5 px-4 text-center text-sm font-medium cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95"
+              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.85)" : "white", border: "none", outline: "none" }}
+              type="button"
             >
               Tap to open
-            </div>
+            </button>
           </div>
         </div>
 
@@ -452,6 +456,11 @@ export default function CreatePage() {
     localStorage.setItem("gifted_experience", selectedExperience);
     localStorage.setItem("gifted_occasion", occasion);
     setLocation("/preview");
+  };
+
+  const handleTapOpen = () => {
+    localStorage.setItem("gifted_experience", selectedExperience);
+    setLocation("/reveal");
   };
 
   const handleAI = async (mode: "rewrite" | "regenerate") => {
@@ -699,7 +708,7 @@ export default function CreatePage() {
                 </div>
 
                 {/* Live preview panel */}
-                <PreviewCard experience={currentExperience} recipientName={recipientName} />
+                <PreviewCard experience={currentExperience} recipientName={recipientName} onTapOpen={handleTapOpen} />
               </div>
             </motion.div>
           )}
