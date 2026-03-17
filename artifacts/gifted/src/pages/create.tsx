@@ -374,7 +374,7 @@ export default function CreatePage() {
 
   const handleRemovePhoto = (id: string) => setPhotos((prev) => prev.filter((p) => p.id !== id));
 
-  const handlePreview = () => {
+  const saveToLocalStorage = () => {
     if (videoObjectPath) localStorage.setItem("gifted_video_path", videoObjectPath);
     else localStorage.removeItem("gifted_video_path");
     if (photos.length > 0) localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
@@ -389,23 +389,19 @@ export default function CreatePage() {
     localStorage.setItem("gifted_occasion", occasion);
     if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
     if (senderName) localStorage.setItem("gifted_sender_name", senderName);
+    if (amount) localStorage.setItem("gifted_amount", amount);
+    else localStorage.removeItem("gifted_amount");
+    if (intent) localStorage.setItem("gifted_intent", intent);
+    else localStorage.removeItem("gifted_intent");
+  };
+
+  const handlePreview = () => {
+    saveToLocalStorage();
     setLocation("/preview");
   };
 
   const handleTapOpen = () => {
-    if (videoObjectPath) localStorage.setItem("gifted_video_path", videoObjectPath);
-    else localStorage.removeItem("gifted_video_path");
-    if (photos.length > 0) localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
-    else localStorage.removeItem("gifted_photo_paths");
-    if (personalNote.trim()) localStorage.setItem("gifted_personal_note", personalNote.trim());
-    else localStorage.removeItem("gifted_personal_note");
-    if (playlistUrl.trim()) localStorage.setItem("gifted_playlist_url", playlistUrl.trim());
-    else localStorage.removeItem("gifted_playlist_url");
-    if (giftTitle.trim()) localStorage.setItem("gifted_gift_title", giftTitle.trim());
-    else localStorage.removeItem("gifted_gift_title");
-    localStorage.setItem("gifted_experience", selectedExperience);
-    if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
-    if (senderName) localStorage.setItem("gifted_sender_name", senderName);
+    saveToLocalStorage();
     setLocation("/reveal");
   };
 

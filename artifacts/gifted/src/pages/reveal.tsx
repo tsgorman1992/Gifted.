@@ -564,6 +564,8 @@ export default function RevealPage() {
   const [senderName, setSenderName]       = useState(mockGiftData.senderName);
   const [giftTitle, setGiftTitle]         = useState(mockGiftData.title);
   const [experience, setExperience]       = useState(DEFAULT_EXPERIENCE);
+  const [giftAmount, setGiftAmount]       = useState<string | null>(null);
+  const [giftIntent, setGiftIntent]       = useState<string | null>(null);
 
   const amountRef  = useRef<HTMLDivElement>(null);
   const amountInView = useInView(amountRef, { once: true });
@@ -571,7 +573,7 @@ export default function RevealPage() {
   const cfg = CONFIGS[experience] ?? CONFIGS[DEFAULT_EXPERIENCE];
 
   const countedAmount = useCountUp(
-    Number(mockGiftData.amount),
+    Number(giftAmount || 0),
     1600,
     300,
     cfg.amountStyle === "count-up" && amountInView,
@@ -607,6 +609,12 @@ export default function RevealPage() {
 
     const stored = localStorage.getItem("gifted_experience");
     if (stored && CONFIGS[stored]) setExperience(stored);
+
+    const amt = localStorage.getItem("gifted_amount");
+    if (amt) setGiftAmount(amt);
+
+    const intn = localStorage.getItem("gifted_intent");
+    if (intn) setGiftIntent(intn);
   }, []);
 
   useEffect(() => {
@@ -911,127 +919,133 @@ export default function RevealPage() {
                 </Section>
               )}
 
-              {/* Balance — section 3 */}
-              <div ref={amountRef}>
-                <Section cfg={cfg} idx={3}>
-                  {/* Midnight Stars gets a distinct dark card */}
-                  {cfg.amountStyle === "stellar-reveal" ? (
-                    <div
-                      className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden"
-                      style={{
-                        background: "linear-gradient(135deg, rgba(48,43,99,0.9), rgba(36,36,62,0.95))",
-                        border: "1px solid rgba(255,255,255,0.15)",
-                        boxShadow: "0 0 60px rgba(150,140,255,0.18), 0 25px 50px rgba(0,0,0,0.5)",
-                      }}
-                    >
-                      <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full blur-3xl" style={{ background: "rgba(130,120,255,0.15)" }} />
-                      <div className="absolute -bottom-20 -left-20 w-56 h-56 rounded-full blur-3xl" style={{ background: "rgba(100,80,200,0.12)" }} />
-                      <div className="relative z-10 flex flex-col items-center">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 text-sm font-medium" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)" }}>
-                          <Sparkles className="w-4 h-4" />
-                          <span>{mockGiftData.intent}</span>
-                        </div>
-                        <h3 className="text-xl md:text-2xl font-medium mb-2 text-white/80">You received</h3>
-                        <motion.div
-                          initial={{ opacity: 0, filter: "blur(16px)", scale: 0.9 }}
-                          whileInView={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                          className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter text-white"
-                          style={{ textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
-                        >
-                          ${mockGiftData.amount}
-                        </motion.div>
-                        <p className="text-lg mb-10 max-w-md mx-auto text-white/60">
-                          Sent with intention. Yours to use however you need.
-                        </p>
-                        <Link href="/redeem">
-                          <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
-                            Redeem your balance
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Standard card for all other experiences */
-                    <div
-                      className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden shadow-2xl shadow-primary/20"
-                      style={
-                        cfg.amountStyle === "glow-reveal"
-                          ? {
-                              background: "linear-gradient(135deg, hsl(28,62%,36%), hsl(28,68%,44%))",
-                              boxShadow: "0 0 80px rgba(180,110,40,0.35), 0 25px 50px rgba(180,110,40,0.2)",
-                              color: "white",
-                            }
-                          : { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }
-                      }
-                    >
-                      <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-                      {cfg.amountStyle === "glow-reveal" && (
-                        <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full blur-3xl" style={{ background: "rgba(255,200,80,0.15)" }} />
-                      )}
-
-                      <div className="relative z-10 flex flex-col items-center">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm mb-6 text-sm font-medium">
-                          <Sparkles className="w-4 h-4" />
-                          <span>{mockGiftData.intent}</span>
-                        </div>
-                        <h3 className="text-xl md:text-2xl font-medium opacity-90 mb-2">You received</h3>
-                        <div className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter">
-                          {cfg.amountStyle === "count-up" ? (
-                            <motion.span
-                              initial={{ scale: 0.8, opacity: 0 }}
-                              whileInView={{ scale: 1, opacity: 1 }}
-                              viewport={{ once: true }}
-                              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                            >
-                              ${countedAmount}
-                            </motion.span>
-                          ) : cfg.amountStyle === "crystallize" ? (
-                            <motion.span
-                              initial={{ filter: "blur(18px)", opacity: 0 }}
-                              whileInView={{ filter: "blur(0px)", opacity: 1 }}
-                              viewport={{ once: true }}
-                              transition={{ duration: 1.0 }}
-                              style={{ display: "inline-block" }}
-                            >
-                              ${mockGiftData.amount}
-                            </motion.span>
-                          ) : cfg.amountStyle === "bloom-pop" ? (
-                            <motion.span
-                              initial={{ scale: 0.6, opacity: 0 }}
-                              whileInView={{ scale: 1, opacity: 1 }}
-                              viewport={{ once: true }}
-                              transition={{ type: "spring", stiffness: 240, damping: 18 }}
-                              style={{ display: "inline-block" }}
-                            >
-                              ${mockGiftData.amount}
-                            </motion.span>
-                          ) : (
-                            <motion.span
-                              initial={{ y: 20, opacity: 0 }}
-                              whileInView={{ y: 0, opacity: 1 }}
-                              viewport={{ once: true }}
-                              transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-                              style={{ display: "inline-block" }}
-                            >
-                              ${mockGiftData.amount}
-                            </motion.span>
+              {/* Balance — section 3 (only shown when an amount was set) */}
+              {giftAmount && (
+                <div ref={amountRef}>
+                  <Section cfg={cfg} idx={3}>
+                    {/* Midnight Stars gets a distinct dark card */}
+                    {cfg.amountStyle === "stellar-reveal" ? (
+                      <div
+                        className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(48,43,99,0.9), rgba(36,36,62,0.95))",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          boxShadow: "0 0 60px rgba(150,140,255,0.18), 0 25px 50px rgba(0,0,0,0.5)",
+                        }}
+                      >
+                        <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full blur-3xl" style={{ background: "rgba(130,120,255,0.15)" }} />
+                        <div className="absolute -bottom-20 -left-20 w-56 h-56 rounded-full blur-3xl" style={{ background: "rgba(100,80,200,0.12)" }} />
+                        <div className="relative z-10 flex flex-col items-center">
+                          {giftIntent && (
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 text-sm font-medium" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)" }}>
+                              <Sparkles className="w-4 h-4" />
+                              <span>{giftIntent}</span>
+                            </div>
                           )}
+                          <h3 className="text-xl md:text-2xl font-medium mb-2 text-white/80">You received</h3>
+                          <motion.div
+                            initial={{ opacity: 0, filter: "blur(16px)", scale: 0.9 }}
+                            whileInView={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                            className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter text-white"
+                            style={{ textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
+                          >
+                            ${giftAmount}
+                          </motion.div>
+                          <p className="text-lg mb-10 max-w-md mx-auto text-white/60">
+                            Sent with intention. Yours to use however you need.
+                          </p>
+                          <Link href="/redeem">
+                            <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
+                              Redeem your balance
+                            </Button>
+                          </Link>
                         </div>
-                        <p className="text-lg opacity-80 mb-10 max-w-md mx-auto">
-                          Sent with intention. Yours to use however you need.
-                        </p>
-                        <Link href="/redeem">
-                          <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
-                            Redeem your balance
-                          </Button>
-                        </Link>
                       </div>
-                    </div>
-                  )}
-                </Section>
-              </div>
+                    ) : (
+                      /* Standard card for all other experiences */
+                      <div
+                        className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden shadow-2xl shadow-primary/20"
+                        style={
+                          cfg.amountStyle === "glow-reveal"
+                            ? {
+                                background: "linear-gradient(135deg, hsl(28,62%,36%), hsl(28,68%,44%))",
+                                boxShadow: "0 0 80px rgba(180,110,40,0.35), 0 25px 50px rgba(180,110,40,0.2)",
+                                color: "white",
+                              }
+                            : { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }
+                        }
+                      >
+                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+                        {cfg.amountStyle === "glow-reveal" && (
+                          <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full blur-3xl" style={{ background: "rgba(255,200,80,0.15)" }} />
+                        )}
+
+                        <div className="relative z-10 flex flex-col items-center">
+                          {giftIntent && (
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm mb-6 text-sm font-medium">
+                              <Sparkles className="w-4 h-4" />
+                              <span>{giftIntent}</span>
+                            </div>
+                          )}
+                          <h3 className="text-xl md:text-2xl font-medium opacity-90 mb-2">You received</h3>
+                          <div className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter">
+                            {cfg.amountStyle === "count-up" ? (
+                              <motion.span
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                whileInView={{ scale: 1, opacity: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                              >
+                                ${countedAmount}
+                              </motion.span>
+                            ) : cfg.amountStyle === "crystallize" ? (
+                              <motion.span
+                                initial={{ filter: "blur(18px)", opacity: 0 }}
+                                whileInView={{ filter: "blur(0px)", opacity: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 1.0 }}
+                                style={{ display: "inline-block" }}
+                              >
+                                ${giftAmount}
+                              </motion.span>
+                            ) : cfg.amountStyle === "bloom-pop" ? (
+                              <motion.span
+                                initial={{ scale: 0.6, opacity: 0 }}
+                                whileInView={{ scale: 1, opacity: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ type: "spring", stiffness: 240, damping: 18 }}
+                                style={{ display: "inline-block" }}
+                              >
+                                ${giftAmount}
+                              </motion.span>
+                            ) : (
+                              <motion.span
+                                initial={{ y: 20, opacity: 0 }}
+                                whileInView={{ y: 0, opacity: 1 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                                style={{ display: "inline-block" }}
+                              >
+                                ${giftAmount}
+                              </motion.span>
+                            )}
+                          </div>
+                          <p className="text-lg opacity-80 mb-10 max-w-md mx-auto">
+                            Sent with intention. Yours to use however you need.
+                          </p>
+                          <Link href="/redeem">
+                            <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
+                              Redeem your balance
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                  </Section>
+                </div>
+              )}
 
             </div>
           </motion.div>

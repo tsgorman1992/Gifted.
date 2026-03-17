@@ -17,6 +17,8 @@ router.post("/gifted/gifts", async (req, res) => {
       videoPath,
       photoPaths,
       playlistUrl,
+      amount,
+      intent,
     } = req.body;
 
     if (!recipientName || !senderName || !experience || !occasion || !giftTitle) {
@@ -37,6 +39,8 @@ router.post("/gifted/gifts", async (req, res) => {
       videoPath: videoPath || null,
       photoPaths: photoPaths && photoPaths.length > 0 ? photoPaths : null,
       playlistUrl: playlistUrl || null,
+      amount: amount || null,
+      intent: intent || null,
     });
 
     res.json({ id });
@@ -68,6 +72,8 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       videoPath: gift.videoPath,
       photoPaths: gift.photoPaths,
       playlistUrl: gift.playlistUrl,
+      amount: gift.amount,
+      intent: gift.intent,
       createdAt: gift.createdAt,
     });
   } catch (err) {

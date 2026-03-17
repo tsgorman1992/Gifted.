@@ -23,6 +23,8 @@ export default function PreviewPage() {
   const [videoLoadError, setVideoLoadError] = useState(false);
   const [photoCount,     setPhotoCount]     = useState(0);
   const [hasPlaylist,    setHasPlaylist]    = useState(false);
+  const [giftAmount,     setGiftAmount]     = useState<string | null>(null);
+  const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
 
   const [saving,   setSaving]   = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -54,6 +56,12 @@ export default function PreviewPage() {
 
     const pl = localStorage.getItem("gifted_playlist_url");
     if (pl) setHasPlaylist(true);
+
+    const amt = localStorage.getItem("gifted_amount");
+    if (amt) setGiftAmount(amt);
+
+    const intn = localStorage.getItem("gifted_intent");
+    if (intn) setGiftIntent(intn);
 
     setCanShare(typeof navigator?.share === "function");
   }, []);
@@ -91,6 +99,12 @@ export default function PreviewPage() {
 
       const pl = localStorage.getItem("gifted_playlist_url");
       if (pl) payload.playlistUrl = pl;
+
+      const amt = localStorage.getItem("gifted_amount");
+      if (amt) payload.amount = amt;
+
+      const intn = localStorage.getItem("gifted_intent");
+      if (intn) payload.intent = intn;
 
       const res = await fetch(`${base}/api/gifted/gifts`, {
         method: "POST",
@@ -208,15 +222,17 @@ export default function PreviewPage() {
                       </span>
                     )}
                   </div>
-                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">{mockGiftData.intent}</p>
-                      <p className="text-2xl font-bold font-serif text-primary">${mockGiftData.amount}</p>
+                  {giftAmount && (
+                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
+                      <div>
+                        {giftIntent && <p className="text-xs text-muted-foreground mb-0.5">{giftIntent}</p>}
+                        <p className="text-2xl font-bold font-serif text-primary">${giftAmount}</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                      </div>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-primary" />
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </motion.div>

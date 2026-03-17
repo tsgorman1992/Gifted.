@@ -13,6 +13,8 @@ export const gifts = pgTable("gifts", {
   videoPath: text("video_path"),
   photoPaths: jsonb("photo_paths").$type<string[]>(),
   playlistUrl: text("playlist_url"),
+  amount: text("amount"),
+  intent: text("intent"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
