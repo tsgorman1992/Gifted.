@@ -3,20 +3,20 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout";
+import { AuthProvider } from "@/lib/auth-context";
 import NotFound from "@/pages/not-found";
 
-// Pages
-import LandingPage from "@/pages/landing";
-import CreatePage from "@/pages/create";
-import PreviewPage from "@/pages/preview";
-import RevealPage from "@/pages/reveal";
-import OpenPage from "@/pages/open";
-import RedeemPage from "@/pages/redeem";
-import FaqPage from "@/pages/faq";
-import TermsPage from "@/pages/terms";
-import PrivacyPage from "@/pages/privacy";
-import MyGiftsPage from "@/pages/my-gifts";
-import SignInPage from "@/pages/sign-in";
+import LandingPage  from "@/pages/landing";
+import CreatePage   from "@/pages/create";
+import PreviewPage  from "@/pages/preview";
+import RevealPage   from "@/pages/reveal";
+import OpenPage     from "@/pages/open";
+import RedeemPage   from "@/pages/redeem";
+import FaqPage      from "@/pages/faq";
+import TermsPage    from "@/pages/terms";
+import PrivacyPage  from "@/pages/privacy";
+import MyGiftsPage  from "@/pages/my-gifts";
+import SignInPage   from "@/pages/sign-in";
 
 const queryClient = new QueryClient();
 
@@ -24,18 +24,18 @@ function Router() {
   return (
     <Layout>
       <Switch>
-        <Route path="/" component={LandingPage} />
-        <Route path="/create" component={CreatePage} />
-        <Route path="/preview" component={PreviewPage} />
-        <Route path="/reveal" component={RevealPage} />
-        <Route path="/open/:id" component={OpenPage} />
-        <Route path="/redeem" component={RedeemPage} />
-        <Route path="/faq" component={FaqPage} />
-        <Route path="/help" component={FaqPage} />
-        <Route path="/terms" component={TermsPage} />
-        <Route path="/privacy" component={PrivacyPage} />
-        <Route path="/my-gifts" component={MyGiftsPage} />
-        <Route path="/sign-in" component={SignInPage} />
+        <Route path="/"          component={LandingPage}  />
+        <Route path="/create"    component={CreatePage}   />
+        <Route path="/preview"   component={PreviewPage}  />
+        <Route path="/reveal"    component={RevealPage}   />
+        <Route path="/open/:id"  component={OpenPage}     />
+        <Route path="/redeem"    component={RedeemPage}   />
+        <Route path="/faq"       component={FaqPage}      />
+        <Route path="/help"      component={FaqPage}      />
+        <Route path="/terms"     component={TermsPage}    />
+        <Route path="/privacy"   component={PrivacyPage}  />
+        <Route path="/my-gifts"  component={MyGiftsPage}  />
+        <Route path="/sign-in"   component={SignInPage}   />
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -46,9 +46,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
+        <AuthProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+        </AuthProvider>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

@@ -1,7 +1,7 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from "@/lib/auth-context";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Gift, ExternalLink, CheckCircle2, Clock, Plus } from "lucide-react";
@@ -28,7 +28,7 @@ async function fetchMyGifts(): Promise<GiftSummary[]> {
 }
 
 export default function MyGiftsPage() {
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   const { data: myGifts, isLoading: giftsLoading } = useQuery({
@@ -56,7 +56,7 @@ export default function MyGiftsPage() {
         <p className="text-muted-foreground max-w-sm">
           Sign in to see all the gifts you've sent and track when they've been opened and redeemed.
         </p>
-        <Button size="lg" className="rounded-full px-10 h-13" onClick={login}>
+        <Button size="lg" className="rounded-full px-10 h-13" onClick={() => setLocation("/sign-in")}>
           Sign in to continue
         </Button>
       </div>
@@ -108,9 +108,8 @@ export default function MyGiftsPage() {
         ) : (
           <div className="space-y-4">
             {myGifts.map((gift, i) => {
-              const shareUrl = `${window.location.origin}${BASE}/api/share/${gift.id}`;
+              const shareUrl  = `${window.location.origin}${BASE}/api/share/${gift.id}`;
               const isRedeemed = !!gift.redeemedAt;
-
               return (
                 <motion.div
                   key={gift.id}
@@ -123,11 +122,9 @@ export default function MyGiftsPage() {
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
                       isRedeemed ? "bg-green-100" : "bg-primary/10"
                     }`}>
-                      {isRedeemed ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-primary" />
-                      )}
+                      {isRedeemed
+                        ? <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        : <Clock className="w-5 h-5 text-primary" />}
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold truncate">{gift.giftTitle || `Gift for ${gift.recipientName}`}</p>
@@ -142,13 +139,8 @@ export default function MyGiftsPage() {
                       </p>
                     </div>
                   </div>
-                  <a
-                    href={shareUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
-                    title="Open gift link"
-                  >
+                  <a href={shareUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5" title="Open gift link">
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </motion.div>

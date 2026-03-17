@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from "@/lib/auth-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +13,14 @@ import { User, Gift, LogOut, ChevronDown } from "lucide-react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const { user, isLoading, isAuthenticated, login, logout } = useAuth();
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
   const isReveal = location === "/reveal" || location.startsWith("/open/");
 
   if (isReveal) {
     return <main className="min-h-screen w-full bg-background selection:bg-primary/20">{children}</main>;
   }
+
+  const displayName = user?.firstName || user?.email?.split("@")[0] || "Account";
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-background selection:bg-primary/20">
@@ -33,14 +35,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-full">
-                      {user.profileImage ? (
-                        <img src={user.profileImage} alt="" className="w-7 h-7 rounded-full object-cover" />
+                      {user.profileImageUrl ? (
+                        <img src={user.profileImageUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
                       ) : (
                         <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
                           <User className="w-4 h-4 text-primary" />
                         </div>
                       )}
-                      <span className="hidden sm:block">{user.firstName || user.username || "Account"}</span>
+                      <span className="hidden sm:block">{displayName}</span>
                       <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                     </button>
                   </DropdownMenuTrigger>
@@ -59,12 +61,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <button
-                  onClick={login}
+                <Link href="/sign-in"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground hidden sm:block transition-colors"
                 >
                   Sign in
-                </button>
+                </Link>
               )
             )}
             <Link href="/create">
@@ -83,9 +84,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span className="text-sm text-muted-foreground">Personal in the moment. Flexible in the end.</span>
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
-            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/terms"   className="hover:text-foreground transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link href="/faq" className="hover:text-foreground transition-colors">Help</Link>
+            <Link href="/faq"     className="hover:text-foreground transition-colors">Help</Link>
           </div>
         </div>
       </footer>
