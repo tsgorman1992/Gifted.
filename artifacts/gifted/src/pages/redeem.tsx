@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, CreditCard, CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw, Lock } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 
@@ -12,11 +12,12 @@ type RedeemScreen = "otp-gate" | "otp-sent" | "banking" | "success";
 
 export default function RedeemPage() {
   const [screen, setScreen]                 = useState<RedeemScreen>("otp-gate");
-  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<"venmo" | "paypal" | "zelle" | null>(null);
   const [isProcessing, setIsProcessing]     = useState(false);
   const [error, setError]                   = useState<string | null>(null);
   const [amount, setAmount]                 = useState<string>("0");
   const [giftId, setGiftId]                 = useState<string | null>(null);
+  const [senderName, setSenderName]         = useState<string | null>(null);
 
   const [otpLoading, setOtpLoading]         = useState(false);
   const [otpError, setOtpError]             = useState<string | null>(null);
@@ -30,6 +31,8 @@ export default function RedeemPage() {
     if (stored) setAmount(stored);
     const storedId = localStorage.getItem("gifted_gift_id");
     if (storedId) setGiftId(storedId);
+    const sn = localStorage.getItem("gifted_sender_name");
+    if (sn) setSenderName(sn);
   }, []);
 
   const displayAmount = parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : null;
@@ -263,51 +266,53 @@ export default function RedeemPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-10"
+              className="space-y-8"
             >
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-3">
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-8 h-8 text-green-600" />
                 </div>
-                <h1 className="font-serif text-5xl font-medium">Cash Out</h1>
-                <p className="text-xl text-muted-foreground">
-                  You have{" "}
-                  <span className="font-bold text-foreground">${displayAmount}</span>{" "}
-                  available to withdraw.
-                </p>
+                <h1 className="font-serif text-5xl font-medium">Claim Your Gift</h1>
+                {senderName ? (
+                  <p className="text-lg text-muted-foreground">
+                    <span className="font-semibold text-foreground">{senderName}</span> sent you{" "}
+                    <span className="font-semibold text-foreground">${displayAmount}</span>. Tell us where to send it.
+                  </p>
+                ) : (
+                  <p className="text-lg text-muted-foreground">
+                    You have <span className="font-semibold text-foreground">${displayAmount}</span> available. Tell us where to send it.
+                  </p>
+                )}
               </div>
 
-              <div className="bg-card border border-border rounded-[2rem] p-6 md:p-10 shadow-sm">
-                <h3 className="text-lg font-bold mb-6">Select Payout Method</h3>
+              <div className="bg-card border border-border rounded-[2rem] p-6 md:p-10 shadow-sm space-y-6">
+                <div>
+                  <h3 className="text-base font-semibold mb-1">How would you like to receive it?</h3>
+                  <p className="text-sm text-muted-foreground">Pick any app you already use. We'll send the money directly.</p>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMethod("debit")}
-                    className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col gap-4 ${
-                      selectedMethod === "debit" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <CreditCard className={`w-8 h-8 ${selectedMethod === "debit" ? "text-primary" : "text-muted-foreground"}`} />
-                    <div>
-                      <p className="font-semibold">Debit Card</p>
-                      <p className="text-sm text-muted-foreground">Transferred within 24 hours</p>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMethod("bank")}
-                    className={`p-6 rounded-2xl border-2 text-left transition-all flex flex-col gap-4 ${
-                      selectedMethod === "bank" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <Building2 className={`w-8 h-8 ${selectedMethod === "bank" ? "text-primary" : "text-muted-foreground"}`} />
-                    <div>
-                      <p className="font-semibold">Bank Account</p>
-                      <p className="text-sm text-muted-foreground">Transferred within 24 hours</p>
-                    </div>
-                  </button>
+                <div className="grid grid-cols-3 gap-3">
+                  {(["venmo", "paypal", "zelle"] as const).map((method) => {
+                    const labels: Record<string, string> = { venmo: "Venmo", paypal: "PayPal", zelle: "Zelle" };
+                    const colors: Record<string, string> = {
+                      venmo:  "bg-[#008CFF]/10 text-[#008CFF] border-[#008CFF]",
+                      paypal: "bg-[#003087]/10 text-[#003087] border-[#003087]",
+                      zelle:  "bg-[#6D1ED4]/10 text-[#6D1ED4] border-[#6D1ED4]",
+                    };
+                    const isSelected = selectedMethod === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setSelectedMethod(method)}
+                        className={`p-4 rounded-2xl border-2 text-center transition-all font-semibold text-sm ${
+                          isSelected ? colors[method] : "border-border hover:border-primary/40 text-muted-foreground"
+                        }`}
+                      >
+                        {labels[method]}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <AnimatePresence>
@@ -316,43 +321,30 @@ export default function RedeemPage() {
                       key={selectedMethod}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
-                      className="overflow-hidden space-y-6 pt-4 border-t border-border"
+                      className="overflow-hidden space-y-5 pt-4 border-t border-border"
                       onSubmit={handleCashOut}
                     >
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label>Legal Name</Label>
+                          <Label>Your Name</Label>
                           <Input placeholder="e.g. Sarah Connor" className="h-12 rounded-xl" required />
                         </div>
-                        {selectedMethod === "debit" ? (
-                          <>
-                            <div className="space-y-2">
-                              <Label>Debit Card Number</Label>
-                              <Input placeholder="•••• •••• •••• ••••" className="h-12 rounded-xl" required />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="space-y-2">
-                                <Label>Expiry</Label>
-                                <Input placeholder="MM / YY" className="h-12 rounded-xl" required />
-                              </div>
-                              <div className="space-y-2">
-                                <Label>CVC</Label>
-                                <Input placeholder="•••" className="h-12 rounded-xl" required />
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="space-y-2">
-                              <Label>Routing Number</Label>
-                              <Input placeholder="9-digit routing number" className="h-12 rounded-xl" required />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Account Number</Label>
-                              <Input placeholder="Account number" className="h-12 rounded-xl" required />
-                            </div>
-                          </>
-                        )}
+                        <div className="space-y-2">
+                          <Label>
+                            {selectedMethod === "venmo"  && "Venmo Username"}
+                            {selectedMethod === "paypal" && "PayPal Email Address"}
+                            {selectedMethod === "zelle"  && "Zelle Phone or Email"}
+                          </Label>
+                          <Input
+                            placeholder={
+                              selectedMethod === "venmo"  ? "@your-venmo-username" :
+                              selectedMethod === "paypal" ? "you@example.com" :
+                              "Phone number or email"
+                            }
+                            className="h-12 rounded-xl"
+                            required
+                          />
+                        </div>
                       </div>
 
                       {error && (
@@ -369,12 +361,13 @@ export default function RedeemPage() {
                       >
                         {isProcessing
                           ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting…</>
-                          : `Request Payout · $${displayAmount}`}
+                          : `Send Me $${displayAmount}`}
                       </Button>
 
-                      <p className="text-center text-xs text-muted-foreground">
-                        Your details are encrypted and secure. You'll receive your payout within 24 hours of submitting.
-                      </p>
+                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <Lock className="w-3.5 h-3.5 shrink-0" />
+                        <span>Every payout is reviewed by our team and sent within 24 hours. Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a></span>
+                      </div>
                     </motion.form>
                   )}
                 </AnimatePresence>
@@ -409,9 +402,14 @@ export default function RedeemPage() {
               <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-8">
                 <CheckCircle2 className="w-12 h-12 text-green-600" />
               </div>
-              <h2 className="font-serif text-4xl font-medium mb-4">Payout Requested</h2>
-              <p className="text-lg text-muted-foreground max-w-md mx-auto mb-10">
-                Your <span className="font-semibold text-foreground">${displayAmount}</span> is on its way. You'll receive it within 24 hours. We'll reach out if we need anything else.
+              <h2 className="font-serif text-4xl font-medium mb-4">You're all set!</h2>
+              <p className="text-lg text-muted-foreground max-w-md mx-auto mb-3">
+                We'll send your <span className="font-semibold text-foreground">${displayAmount}</span> to your{" "}
+                {selectedMethod === "venmo" ? "Venmo" : selectedMethod === "paypal" ? "PayPal" : "Zelle"}{" "}
+                within 24 hours.
+              </p>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-10">
+                Questions? Reach us at <a href="mailto:help@gifted.page" className="underline">help@gifted.page</a>
               </p>
               <Button variant="outline" className="rounded-full h-12 px-8" onClick={() => (window.location.href = "/")}>
                 Return to home
