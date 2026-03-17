@@ -5,23 +5,7 @@ import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
-
-// ─── Palette ────────────────────────────────────────────────────────────────
-
-const PALETTES: Record<string, { from: string; via: string; to: string }> = {
-  "confetti-burst":  { from: "#FF6B6B", via: "#FFD93D", to: "#6BCB77" },
-  "golden-hour":     { from: "#F7C59F", via: "#E8A87C", to: "#D4813A" },
-  "garden-bloom":    { from: "#FFB7C5", via: "#C7CEEA", to: "#B5EAD7" },
-  "midnight-stars":  { from: "#0f0c29", via: "#302b63", to: "#24243e" },
-  "rose-petal":      { from: "#FFB7C5", via: "#FF8FAB", to: "#E8A7B1" },
-  "snow-flurry":     { from: "#BDE0FE", via: "#A2D2FF", to: "#CDB4DB" },
-  "sunrise":         { from: "#FFCBA4", via: "#FF9A8B", to: "#FF6A88" },
-};
-
-function gradientStyle(exp: string): React.CSSProperties {
-  const p = PALETTES[exp] ?? PALETTES["confetti-burst"];
-  return { background: `linear-gradient(135deg, ${p.from}, ${p.via}, ${p.to})` };
-}
+import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 
 // ─── Experience configs ──────────────────────────────────────────────────────
 
@@ -568,19 +552,17 @@ function Section({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-const DEFAULT_EXP = "confetti-burst";
-
 export default function RevealPage() {
   const [isOpen, setIsOpen]               = useState(false);
   const [videoUrl, setVideoUrl]           = useState<string | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
-  const [experience, setExperience]       = useState(DEFAULT_EXP);
+  const [experience, setExperience]       = useState(DEFAULT_EXPERIENCE);
 
   const amountRef  = useRef<HTMLDivElement>(null);
   const amountInView = useInView(amountRef, { once: true });
 
-  const cfg = CONFIGS[experience] ?? CONFIGS[DEFAULT_EXP];
+  const cfg = CONFIGS[experience] ?? CONFIGS[DEFAULT_EXPERIENCE];
 
   const countedAmount = useCountUp(
     Number(mockGiftData.amount),

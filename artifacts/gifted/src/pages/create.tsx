@@ -13,6 +13,14 @@ import {
 } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
 
+import {
+  EXPERIENCE_LIST,
+  DEFAULT_EXPERIENCE,
+  getSuggestedExperience,
+  type ExperienceId,
+  type ExperienceMeta,
+} from "@/lib/experiences";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PhotoItem {
@@ -27,99 +35,17 @@ interface PhotoUploadingItem {
   localPreview: string;
 }
 
-interface Experience {
-  id: string;
-  name: string;
-  tagline: string;
-  suggestedFor: string[];
-  gradientFrom: string;
-  gradientVia: string;
-  gradientTo: string;
-  premium: boolean;
-  Icon: React.ComponentType<{ className?: string }>;
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const EXPERIENCES: Experience[] = [
-  {
-    id: "confetti-burst",
-    name: "Confetti Burst",
-    tagline: "Bright & celebratory",
-    suggestedFor: ["Birthday"],
-    gradientFrom: "#FF6B6B",
-    gradientVia: "#FFD93D",
-    gradientTo: "#6BCB77",
-    premium: false,
-    Icon: Gift,
-  },
-  {
-    id: "golden-hour",
-    name: "Golden Hour",
-    tagline: "Warm & romantic",
-    suggestedFor: ["Anniversary"],
-    gradientFrom: "#F7C59F",
-    gradientVia: "#E8A87C",
-    gradientTo: "#D4813A",
-    premium: false,
-    Icon: Sparkles,
-  },
-  {
-    id: "garden-bloom",
-    name: "Garden Bloom",
-    tagline: "Soft & new beginnings",
-    suggestedFor: ["New Baby"],
-    gradientFrom: "#FFB7C5",
-    gradientVia: "#C7CEEA",
-    gradientTo: "#B5EAD7",
-    premium: false,
-    Icon: Flower2,
-  },
-  {
-    id: "midnight-stars",
-    name: "Midnight Stars",
-    tagline: "Bold & elevated",
-    suggestedFor: ["Graduation"],
-    gradientFrom: "#0f0c29",
-    gradientVia: "#302b63",
-    gradientTo: "#24243e",
-    premium: false,
-    Icon: Star,
-  },
-  {
-    id: "rose-petal",
-    name: "Rose Petal",
-    tagline: "Elegant & timeless",
-    suggestedFor: ["Wedding"],
-    gradientFrom: "#FFB7C5",
-    gradientVia: "#FF8FAB",
-    gradientTo: "#E8A7B1",
-    premium: false,
-    Icon: Heart,
-  },
-  {
-    id: "snow-flurry",
-    name: "Snow Flurry",
-    tagline: "Crisp & festive",
-    suggestedFor: ["Holiday"],
-    gradientFrom: "#BDE0FE",
-    gradientVia: "#A2D2FF",
-    gradientTo: "#CDB4DB",
-    premium: false,
-    Icon: Snowflake,
-  },
-  {
-    id: "sunrise",
-    name: "Sunrise",
-    tagline: "Warm & heartfelt",
-    suggestedFor: ["Just Because", "Other"],
-    gradientFrom: "#FFCBA4",
-    gradientVia: "#FF9A8B",
-    gradientTo: "#FF6A88",
-    premium: false,
-    Icon: Sun,
-  },
-];
+const EXPERIENCE_ICONS: Record<ExperienceId, React.ComponentType<{ className?: string }>> = {
+  "confetti-burst": Gift,
+  "golden-hour":    Sparkles,
+  "garden-bloom":   Flower2,
+  "midnight-stars": Star,
+  "rose-petal":     Heart,
+  "snow-flurry":    Snowflake,
+  "sunrise":        Sun,
+};
 
 const INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Birthday money", "Baby fund", "Take a break"];
 const AMOUNTS = ["25", "50", "100", "250"];
@@ -250,12 +176,12 @@ function PreviewCard({
   recipientName,
   onTapOpen,
 }: {
-  experience: Experience;
+  experience: ExperienceMeta;
   recipientName: string;
   onTapOpen: () => void;
 }) {
-  const { Icon } = experience;
-  const isDark = experience.id === "midnight-stars";
+  const Icon = EXPERIENCE_ICONS[experience.id];
+  const isDark = experience.isDark;
 
   return (
     <div className="hidden lg:block w-64 flex-shrink-0">
@@ -265,7 +191,7 @@ function PreviewCard({
         </p>
         <div
           className="w-full rounded-[2rem] overflow-hidden shadow-2xl"
-          style={{ aspectRatio: "9/16", background: `linear-gradient(155deg, ${experience.gradientFrom}, ${experience.gradientVia}, ${experience.gradientTo})` }}
+          style={{ aspectRatio: "9/16", background: `linear-gradient(155deg, ${experience.palette.from}, ${experience.palette.via}, ${experience.palette.to})` }}
         >
           {/* Top area */}
           <div className="flex flex-col items-center justify-center h-full px-5 text-center">
@@ -327,9 +253,6 @@ export default function CreatePage() {
   const [stepError, setStepError] = useState<string | null>(null);
 
   // Gift state
-  const getSuggestedExperience = (occ: string) =>
-    EXPERIENCES.find((e) => e.suggestedFor.includes(occ))?.id ?? "confetti-burst";
-
   const [selectedExperience, setSelectedExperience] = useState(() => getSuggestedExperience("Birthday"));
   const [suggestedExperience, setSuggestedExperience] = useState(() => getSuggestedExperience("Birthday"));
   const [hasManuallyChosen, setHasManuallyChosen] = useState(false);
@@ -353,7 +276,7 @@ export default function CreatePage() {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
-  const currentExperience = EXPERIENCES.find((e) => e.id === selectedExperience) ?? EXPERIENCES[0];
+  const currentExperience = EXPERIENCE_LIST.find((e) => e.id === selectedExperience) ?? EXPERIENCE_LIST[0];
 
   useEffect(() => {
     localStorage.removeItem("gifted_video_path");
@@ -515,15 +438,16 @@ export default function CreatePage() {
   };
 
   // Context pill shown in steps 2+
+  const CurrentIcon = EXPERIENCE_ICONS[currentExperience.id];
   const ContextPill = () => (
     <div
       className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium mb-8 border"
       style={{
-        background: `linear-gradient(90deg, ${currentExperience.gradientFrom}25, ${currentExperience.gradientVia}20)`,
-        borderColor: `${currentExperience.gradientFrom}40`,
+        background: `linear-gradient(90deg, ${currentExperience.palette.from}25, ${currentExperience.palette.via}20)`,
+        borderColor: `${currentExperience.palette.from}40`,
       }}
     >
-      <currentExperience.Icon className="w-3.5 h-3.5" />
+      <CurrentIcon className="w-3.5 h-3.5" />
       {recipientName || "Someone special"} · {currentExperience.name}
     </div>
   );
@@ -538,7 +462,7 @@ export default function CreatePage() {
           className="fixed inset-0 pointer-events-none"
           style={{
             zIndex: -1,
-            background: `linear-gradient(145deg, ${currentExperience.gradientFrom}, ${currentExperience.gradientVia}, ${currentExperience.gradientTo})`,
+            background: `linear-gradient(145deg, ${currentExperience.palette.from}, ${currentExperience.palette.via}, ${currentExperience.palette.to})`,
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.07 }}
@@ -581,10 +505,9 @@ export default function CreatePage() {
 
                   {/* Experience grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-10">
-                    {EXPERIENCES.map((exp) => {
+                    {EXPERIENCE_LIST.map((exp) => {
                       const isSelected = selectedExperience === exp.id;
-                      const isSuggested = exp.suggestedFor.includes(occasion);
-                      const isDark = exp.id === "midnight-stars";
+                      const ExpIcon = EXPERIENCE_ICONS[exp.id];
                       return (
                         <button
                           key={exp.id}
@@ -599,12 +522,12 @@ export default function CreatePage() {
                           <div
                             className="w-full relative flex flex-col items-center justify-center py-6 gap-2"
                             style={{
-                              background: `linear-gradient(135deg, ${exp.gradientFrom}, ${exp.gradientVia}, ${exp.gradientTo})`,
+                              background: `linear-gradient(135deg, ${exp.palette.from}, ${exp.palette.via}, ${exp.palette.to})`,
                             }}
                           >
                             {/* Icon */}
-                            <exp.Icon
-                              className={`w-6 h-6 ${isDark ? "text-indigo-200" : "text-white/90"}`}
+                            <ExpIcon
+                              className={`w-6 h-6 ${exp.isDark ? "text-indigo-200" : "text-white/90"}`}
                             />
 
                             {/* Badges */}

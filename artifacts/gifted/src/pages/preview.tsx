@@ -7,26 +7,14 @@ import {
   Sparkles, Video, Music, Image as ImageIcon,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
-
-// ─── Experience config ────────────────────────────────────────────────────────
-
-const EXPERIENCES: Record<string, { from: string; via: string; to: string; name: string; dark: boolean }> = {
-  "confetti-burst": { from: "#FF6B6B", via: "#FFD93D", to: "#6BCB77", name: "Confetti Burst", dark: false },
-  "golden-hour":    { from: "#F7C59F", via: "#E8A87C", to: "#D4813A", name: "Golden Hour",    dark: false },
-  "garden-bloom":   { from: "#FFB7C5", via: "#C7CEEA", to: "#B5EAD7", name: "Garden Bloom",   dark: false },
-  "midnight-stars": { from: "#0f0c29", via: "#302b63", to: "#24243e", name: "Midnight Stars",  dark: true  },
-  "rose-petal":     { from: "#FFB7C5", via: "#FF8FAB", to: "#E8A7B1", name: "Rose Petal",      dark: false },
-  "snow-flurry":    { from: "#BDE0FE", via: "#A2D2FF", to: "#CDB4DB", name: "Snow Flurry",     dark: false },
-  "sunrise":        { from: "#FFCBA4", via: "#FF9A8B", to: "#FF6A88", name: "Sunrise",          dark: false },
-};
-const DEFAULT_EXP = "confetti-burst";
+import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PreviewPage() {
   const [, setLocation] = useLocation();
 
-  const [experience,     setExperience]     = useState(DEFAULT_EXP);
+  const [experience,     setExperience]     = useState(DEFAULT_EXPERIENCE);
   const [recipientName,  setRecipientName]  = useState(mockGiftData.recipientName);
   const [senderName,     setSenderName]     = useState(mockGiftData.senderName);
   const [copied,         setCopied]         = useState(false);
@@ -34,7 +22,7 @@ export default function PreviewPage() {
 
   useEffect(() => {
     const exp = localStorage.getItem("gifted_experience");
-    if (exp && EXPERIENCES[exp]) setExperience(exp);
+    if (exp && EXPERIENCE_MAP[exp as keyof typeof EXPERIENCE_MAP]) setExperience(exp);
 
     const rn = localStorage.getItem("gifted_recipient_name");
     if (rn) setRecipientName(rn);
@@ -45,8 +33,8 @@ export default function PreviewPage() {
     setCanShare(typeof navigator?.share === "function");
   }, []);
 
-  const exp      = EXPERIENCES[experience] ?? EXPERIENCES[DEFAULT_EXP];
-  const gStyle   = { background: `linear-gradient(135deg, ${exp.from}, ${exp.via}, ${exp.to})` };
+  const expMeta  = EXPERIENCE_MAP[experience as keyof typeof EXPERIENCE_MAP] ?? EXPERIENCE_MAP[DEFAULT_EXPERIENCE];
+  const gStyle   = { background: `linear-gradient(135deg, ${expMeta.palette.from}, ${expMeta.palette.via}, ${expMeta.palette.to})` };
 
   const base      = import.meta.env.BASE_URL.replace(/\/$/, "");
   const shareUrl  = `${window.location.origin}${base}/api/share?name=${encodeURIComponent(recipientName)}&from=${encodeURIComponent(senderName)}&exp=${experience}`;
@@ -165,7 +153,7 @@ export default function PreviewPage() {
                 style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
               >
                 <Sparkles className="w-3 h-3" />
-                {exp.name}
+                {expMeta.name}
               </div>
               <div>
                 <p className="text-white/65 text-xs font-medium mb-0.5">A gift for</p>
