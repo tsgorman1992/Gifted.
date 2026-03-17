@@ -944,7 +944,7 @@ export default function CreatePage() {
                       <Music className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input placeholder="Paste playlist URL..." className="h-11 rounded-xl text-sm pl-10" value={playlistUrl} onChange={(e) => setPlaylistUrl(e.target.value)} />
                     </div>
-                    <p className="text-xs text-muted-foreground">Plays in the background as they scroll through your gift.</p>
+                    <p className="text-xs text-muted-foreground">They'll see a tap-to-open playlist card in their reveal.</p>
                   </div>
                 </div>
 
