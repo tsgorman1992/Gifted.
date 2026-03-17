@@ -125,6 +125,9 @@ export default function PreviewPage() {
         giftTitle:     localStorage.getItem("gifted_gift_title")     || giftTitle,
       };
 
+      const rp = localStorage.getItem("gifted_recipient_phone");
+      if (rp) payload.recipientPhone = rp;
+
       const pn = localStorage.getItem("gifted_personal_note");
       if (pn) payload.personalNote = pn;
 

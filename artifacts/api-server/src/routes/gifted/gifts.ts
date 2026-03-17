@@ -9,6 +9,7 @@ router.post("/gifted/gifts", async (req, res) => {
   try {
     const {
       recipientName,
+      recipientPhone,
       senderName,
       experience,
       occasion,
@@ -33,6 +34,7 @@ router.post("/gifted/gifts", async (req, res) => {
       id,
       senderUserId,
       recipientName,
+      recipientPhone: recipientPhone || null,
       senderName,
       experience,
       occasion,

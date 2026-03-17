@@ -260,6 +260,7 @@ export default function CreatePage() {
   const [intent, setIntent] = useState("");
   const [occasion, setOccasion] = useState("Birthday");
   const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
   const [senderName, setSenderName] = useState("");
   const [giftTitle, setGiftTitle] = useState("");
   const [personalNote, setPersonalNote] = useState("");
@@ -388,6 +389,8 @@ export default function CreatePage() {
     localStorage.setItem("gifted_experience", selectedExperience);
     localStorage.setItem("gifted_occasion", occasion);
     if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
+    if (recipientPhone) localStorage.setItem("gifted_recipient_phone", recipientPhone);
+    else localStorage.removeItem("gifted_recipient_phone");
     if (senderName) localStorage.setItem("gifted_sender_name", senderName);
     if (amount) localStorage.setItem("gifted_amount", amount);
     else localStorage.removeItem("gifted_amount");
@@ -595,6 +598,25 @@ export default function CreatePage() {
                         className="h-12 rounded-xl text-base"
                       />
                     </div>
+                  </div>
+
+                  {/* Recipient phone */}
+                  <div className="space-y-2 mb-4">
+                    <Label htmlFor="recipientPhone">
+                      Their phone number{" "}
+                      <span className="text-muted-foreground text-xs font-normal">— required to secure a cash balance</span>
+                    </Label>
+                    <Input
+                      id="recipientPhone"
+                      type="tel"
+                      placeholder="+1 (555) 000-0000"
+                      value={recipientPhone}
+                      onChange={(e) => setRecipientPhone(e.target.value)}
+                      className="h-12 rounded-xl text-base"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Only used to verify the recipient's identity when they withdraw cash. Never shared or used for marketing.
+                    </p>
                   </div>
 
                   {/* Occasion */}

@@ -6,6 +6,7 @@ export const gifts = pgTable("gifts", {
   id: text("id").primaryKey(),
   senderUserId: text("sender_user_id"),
   recipientName: text("recipient_name").notNull(),
+  recipientPhone: text("recipient_phone"),
   senderName: text("sender_name").notNull(),
   experience: text("experience").notNull(),
   occasion: text("occasion").notNull(),
@@ -18,6 +19,9 @@ export const gifts = pgTable("gifts", {
   intent: text("intent"),
   paid: boolean("paid").default(false),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
+  redemptionOtp: text("redemption_otp"),
+  redemptionOtpExpiry: timestamp("redemption_otp_expiry", { withTimezone: true }),
+  redemptionVerified: boolean("redemption_verified").default(false),
   redeemedAt: timestamp("redeemed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
