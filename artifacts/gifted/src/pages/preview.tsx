@@ -19,8 +19,14 @@ export default function PreviewPage() {
   const [senderName,     setSenderName]     = useState(mockGiftData.senderName);
   const [copied,         setCopied]         = useState(false);
   const [canShare,       setCanShare]       = useState(false);
+  const [hasVideo,       setHasVideo]       = useState(false);
+  const [videoUrl,       setVideoUrl]       = useState<string | null>(null);
+  const [photoCount,     setPhotoCount]     = useState(0);
+  const [hasPlaylist,    setHasPlaylist]    = useState(false);
 
   useEffect(() => {
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
     const exp = localStorage.getItem("gifted_experience");
     if (exp && EXPERIENCE_MAP[exp as keyof typeof EXPERIENCE_MAP]) setExperience(exp);
 
@@ -29,6 +35,17 @@ export default function PreviewPage() {
 
     const sn = localStorage.getItem("gifted_sender_name");
     if (sn) setSenderName(sn);
+
+    const vp = localStorage.getItem("gifted_video_path");
+    if (vp) { setHasVideo(true); setVideoUrl(`${base}/api/storage${vp}`); }
+
+    const pp = localStorage.getItem("gifted_photo_paths");
+    if (pp) {
+      try { setPhotoCount(JSON.parse(pp).length); } catch { /* ignore */ }
+    }
+
+    const pl = localStorage.getItem("gifted_playlist_url");
+    if (pl) setHasPlaylist(true);
 
     setCanShare(typeof navigator?.share === "function");
   }, []);
@@ -115,15 +132,21 @@ export default function PreviewPage() {
                     <p className="text-sm text-muted-foreground leading-relaxed">{mockGiftData.message}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
-                      <Video className="w-3 h-3 text-primary" /> 1 Video
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
-                      <Music className="w-3 h-3 text-primary" /> Playlist
-                    </span>
-                    <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
-                      <ImageIcon className="w-3 h-3 text-primary" /> {mockGiftData.photosCount} Photos
-                    </span>
+                    {hasVideo && (
+                      <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
+                        <Video className="w-3 h-3 text-primary" /> Video
+                      </span>
+                    )}
+                    {photoCount > 0 && (
+                      <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
+                        <ImageIcon className="w-3 h-3 text-primary" /> {photoCount} Photo{photoCount !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {hasPlaylist && (
+                      <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
+                        <Music className="w-3 h-3 text-primary" /> Playlist
+                      </span>
+                    )}
                   </div>
                   <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
                     <div>
@@ -162,6 +185,25 @@ export default function PreviewPage() {
               </div>
             </div>
           </motion.div>
+
+          {/* Video confirmation */}
+          {hasVideo && videoUrl && (
+            <motion.div {...fade(0.04)} className="mb-5 rounded-2xl overflow-hidden border border-border bg-card">
+              <div className="aspect-video w-full relative">
+                <video
+                  src={videoUrl}
+                  playsInline
+                  controls
+                  preload="metadata"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="px-4 py-2.5 flex items-center gap-2">
+                <Video className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-medium text-muted-foreground">Your video message is included</span>
+              </div>
+            </motion.div>
+          )}
 
           <motion.div {...fade(0.08)}>
             <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">Your gift is ready.</h1>

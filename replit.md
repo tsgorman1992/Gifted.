@@ -42,7 +42,21 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - 100 MB file size limit, video/* MIME type validation
   - Video persists to Reveal page via localStorage (stores objectPath)
   - Backend: `POST /api/storage/uploads/request-url` for presigned URLs, `GET /api/storage/objects/*` for serving
+  - Storage proxy supports HTTP Range requests for mobile video streaming (206 Partial Content)
   - Uses Replit Object Storage (GCS-backed, no user API key required)
+- Video playback on Reveal page
+  - Single `<video>` element with ref-based `.play()` on tap (no DOM swap — critical for mobile autoplay)
+  - `videoError` fallback state when video fails to load
+  - Play overlay with sender name attribution
+  - Preview page shows video preview card with controls when video is uploaded
+- Personal Note (optional)
+  - Create page: note field has "(optional)" label, AI Rewrite button disabled when note is empty
+  - Persists via localStorage key `gifted_personal_note`
+  - Reveal page: note card hidden entirely when no note provided; uses dynamic text from localStorage
+- Playlist
+  - Create page: playlist URL input wired to state, persists via localStorage key `gifted_playlist_url`
+  - Reveal page: renders as tappable deeplink card with Music icon, auto-detects Spotify/Apple Music
+  - Preview page: shows Playlist badge conditionally
 
 ## Structure
 

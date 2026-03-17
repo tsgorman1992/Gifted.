@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2 } from "lucide-react";
+import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 
@@ -556,7 +556,11 @@ export default function RevealPage() {
   const [isOpen, setIsOpen]               = useState(false);
   const [videoUrl, setVideoUrl]           = useState<string | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [videoError, setVideoError]       = useState(false);
+  const videoRef                          = useRef<HTMLVideoElement>(null);
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
+  const [personalNote, setPersonalNote]   = useState<string | null>(null);
+  const [playlistUrl, setPlaylistUrl]     = useState<string | null>(null);
   const [experience, setExperience]       = useState(DEFAULT_EXPERIENCE);
 
   const amountRef  = useRef<HTMLDivElement>(null);
@@ -583,6 +587,12 @@ export default function RevealPage() {
         setPhotoUrls(paths.map(p => `${base}/api/storage${p}`));
       } catch { /* ignore */ }
     }
+
+    const pn = localStorage.getItem("gifted_personal_note");
+    if (pn) setPersonalNote(pn);
+
+    const pl = localStorage.getItem("gifted_playlist_url");
+    if (pl) setPlaylistUrl(pl);
 
     const stored = localStorage.getItem("gifted_experience");
     if (stored && CONFIGS[stored]) setExperience(stored);
@@ -782,46 +792,66 @@ export default function RevealPage() {
             {/* Content sections */}
             <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8 md:space-y-14 -mt-4 md:-mt-6 relative z-20">
 
-              {/* Note / message — section 0 */}
-              <Section cfg={cfg} idx={0}>
-                <div
-                  className="rounded-[2rem] p-6 md:p-12 border shadow-xl"
-                  style={isDark
-                    ? { background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.12)" }
-                    : { background: "hsl(var(--card)/0.8)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.2)" }
-                  }
-                >
-                  {cfg.titleStyle === "typewriter" ? (
-                    <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
-                      &ldquo;<TypewriterText text={mockGiftData.message} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />&rdquo;
-                    </p>
-                  ) : (
-                    <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
-                      &ldquo;{mockGiftData.message}&rdquo;
-                    </p>
-                  )}
-                </div>
-              </Section>
+              {/* Note / message — section 0 (hidden when no note) */}
+              {personalNote && (
+                <Section cfg={cfg} idx={0}>
+                  <div
+                    className="rounded-[2rem] p-6 md:p-12 border shadow-xl"
+                    style={isDark
+                      ? { background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.12)" }
+                      : { background: "hsl(var(--card)/0.8)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.2)" }
+                    }
+                  >
+                    {cfg.titleStyle === "typewriter" ? (
+                      <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
+                        &ldquo;<TypewriterText text={personalNote} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />&rdquo;
+                      </p>
+                    ) : (
+                      <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
+                        &ldquo;{personalNote}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                </Section>
+              )}
 
               {/* Video — section 1 */}
               <Section cfg={cfg} idx={1}>
                 {videoUrl ? (
                   <div className="w-full rounded-[2rem] overflow-hidden border" style={isDark ? { borderColor: "rgba(255,255,255,0.1)" } : {}}>
-                    {!isVideoPlaying ? (
-                      <div className="w-full aspect-video relative cursor-pointer group" onClick={() => setIsVideoPlaying(true)}>
-                        <video src={videoUrl} preload="metadata" playsInline className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <div className="w-full aspect-video relative group">
+                      <video
+                        ref={videoRef}
+                        src={videoUrl}
+                        preload="metadata"
+                        playsInline
+                        controls={isVideoPlaying}
+                        className="w-full h-full object-cover"
+                        onPlay={() => setIsVideoPlaying(true)}
+                        onPause={() => setIsVideoPlaying(false)}
+                        onError={() => setVideoError(true)}
+                      />
+                      {!isVideoPlaying && !videoError && (
+                        <div
+                          className="absolute inset-0 bg-black/20 flex items-center justify-center cursor-pointer"
+                          onClick={() => { videoRef.current?.play(); }}
+                        >
                           <div className="w-20 h-20 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white border border-white/40 group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-xl">
                             <Play className="w-8 h-8 ml-1" fill="currentColor" />
                           </div>
+                          <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-sm font-medium">
+                            A message from {mockGiftData.senderName}
+                          </div>
                         </div>
-                        <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-sm font-medium">
-                          A message from {mockGiftData.senderName}
+                      )}
+                      {videoError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                          <p className={`text-sm font-medium ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
+                            Video couldn't be loaded
+                          </p>
                         </div>
-                      </div>
-                    ) : (
-                      <video src={videoUrl} controls autoPlay playsInline className="w-full aspect-video object-cover" />
-                    )}
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative group cursor-pointer" style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}>
@@ -863,6 +893,43 @@ export default function RevealPage() {
                   ))}
                 </div>
               </Section>
+
+              {/* Playlist — between photos and balance */}
+              {playlistUrl && (
+                <Section cfg={cfg} idx={2}>
+                  <a
+                    href={playlistUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99]"
+                    style={isDark
+                      ? { background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.12)" }
+                      : { background: "hsl(var(--card)/0.8)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.2)" }
+                    }
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                        style={isDark
+                          ? { background: "rgba(255,255,255,0.1)" }
+                          : { background: "hsl(var(--primary)/0.1)" }
+                        }
+                      >
+                        <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-semibold text-base ${isDark ? "text-white" : "text-foreground"}`}>
+                          {playlistUrl.includes("spotify") ? "Spotify Playlist" : playlistUrl.includes("apple") ? "Apple Music Playlist" : "Playlist"}
+                        </p>
+                        <p className={`text-sm truncate ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
+                          Curated just for you
+                        </p>
+                      </div>
+                      <ExternalLink className={`w-5 h-5 flex-shrink-0 ${isDark ? "text-white/40" : "text-muted-foreground"}`} />
+                    </div>
+                  </a>
+                </Section>
+              )}
 
               {/* Balance — section 3 */}
               <div ref={amountRef}>

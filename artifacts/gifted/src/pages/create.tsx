@@ -263,6 +263,7 @@ export default function CreatePage() {
   const [senderName, setSenderName] = useState("");
   const [giftTitle, setGiftTitle] = useState("");
   const [personalNote, setPersonalNote] = useState("");
+  const [playlistUrl, setPlaylistUrl] = useState("");
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
@@ -378,6 +379,10 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_video_path");
     if (photos.length > 0) localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
     else localStorage.removeItem("gifted_photo_paths");
+    if (personalNote.trim()) localStorage.setItem("gifted_personal_note", personalNote.trim());
+    else localStorage.removeItem("gifted_personal_note");
+    if (playlistUrl.trim()) localStorage.setItem("gifted_playlist_url", playlistUrl.trim());
+    else localStorage.removeItem("gifted_playlist_url");
     localStorage.setItem("gifted_experience", selectedExperience);
     localStorage.setItem("gifted_occasion", occasion);
     if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
@@ -386,7 +391,17 @@ export default function CreatePage() {
   };
 
   const handleTapOpen = () => {
+    if (videoObjectPath) localStorage.setItem("gifted_video_path", videoObjectPath);
+    else localStorage.removeItem("gifted_video_path");
+    if (photos.length > 0) localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
+    else localStorage.removeItem("gifted_photo_paths");
+    if (personalNote.trim()) localStorage.setItem("gifted_personal_note", personalNote.trim());
+    else localStorage.removeItem("gifted_personal_note");
+    if (playlistUrl.trim()) localStorage.setItem("gifted_playlist_url", playlistUrl.trim());
+    else localStorage.removeItem("gifted_playlist_url");
     localStorage.setItem("gifted_experience", selectedExperience);
+    if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
+    if (senderName) localStorage.setItem("gifted_sender_name", senderName);
     setLocation("/reveal");
   };
 
@@ -423,7 +438,6 @@ export default function CreatePage() {
     }
     if (step === 2) {
       if (!giftTitle.trim()) { setStepError("Please add a gift headline."); return; }
-      if (!personalNote.trim()) { setStepError("Please write a personal note."); return; }
     }
     setDirection(1);
     setStep((s) => s + 1);
@@ -693,7 +707,7 @@ export default function CreatePage() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <Label htmlFor="message" className="text-base font-semibold">Personal Note</Label>
+                      <Label htmlFor="message" className="text-base font-semibold">Personal Note <span className="text-muted-foreground font-normal text-sm">(optional)</span></Label>
                       <p className="text-xs text-muted-foreground mt-1">
                         Styled beautifully in their reveal — yours to edit, or let AI help.
                       </p>
@@ -701,7 +715,7 @@ export default function CreatePage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         type="button"
-                        disabled={aiLoading !== null}
+                        disabled={aiLoading !== null || !personalNote.trim()}
                         onClick={() => handleAI("rewrite")}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-primary/20"
                       >
@@ -928,7 +942,7 @@ export default function CreatePage() {
                     <Label className="text-sm font-medium">Playlist <span className="text-muted-foreground font-normal">(Spotify or Apple Music)</span></Label>
                     <div className="relative">
                       <Music className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input placeholder="Paste playlist URL..." className="h-11 rounded-xl text-sm pl-10" />
+                      <Input placeholder="Paste playlist URL..." className="h-11 rounded-xl text-sm pl-10" value={playlistUrl} onChange={(e) => setPlaylistUrl(e.target.value)} />
                     </div>
                     <p className="text-xs text-muted-foreground">Plays in the background as they scroll through your gift.</p>
                   </div>
