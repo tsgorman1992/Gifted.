@@ -1,0 +1,79 @@
+import { Router } from "express";
+import { nanoid } from "nanoid";
+import { db, gifts } from "@workspace/db";
+import { eq } from "drizzle-orm";
+
+const router = Router();
+
+router.post("/gifted/gifts", async (req, res) => {
+  try {
+    const {
+      recipientName,
+      senderName,
+      experience,
+      occasion,
+      giftTitle,
+      personalNote,
+      videoPath,
+      photoPaths,
+      playlistUrl,
+    } = req.body;
+
+    if (!recipientName || !senderName || !experience || !occasion || !giftTitle) {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+
+    const id = nanoid(12);
+
+    await db.insert(gifts).values({
+      id,
+      recipientName,
+      senderName,
+      experience,
+      occasion,
+      giftTitle,
+      personalNote: personalNote || null,
+      videoPath: videoPath || null,
+      photoPaths: photoPaths && photoPaths.length > 0 ? photoPaths : null,
+      playlistUrl: playlistUrl || null,
+    });
+
+    res.json({ id });
+  } catch (err) {
+    console.error("Error creating gift:", err);
+    res.status(500).json({ error: "Failed to create gift" });
+  }
+});
+
+router.get("/gifted/gifts/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [gift] = await db.select().from(gifts).where(eq(gifts.id, id)).limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    res.json({
+      id: gift.id,
+      recipientName: gift.recipientName,
+      senderName: gift.senderName,
+      experience: gift.experience,
+      occasion: gift.occasion,
+      giftTitle: gift.giftTitle,
+      personalNote: gift.personalNote,
+      videoPath: gift.videoPath,
+      photoPaths: gift.photoPaths,
+      playlistUrl: gift.playlistUrl,
+      createdAt: gift.createdAt,
+    });
+  } catch (err) {
+    console.error("Error fetching gift:", err);
+    res.status(500).json({ error: "Failed to fetch gift" });
+  }
+});
+
+export default router;

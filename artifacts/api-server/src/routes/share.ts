@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { db, gifts } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -20,16 +22,32 @@ function esc(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-router.get("/share", (req, res) => {
-  const name   = esc(String(req.query.name ?? "you"));
-  const from   = esc(String(req.query.from ?? "someone special"));
-  const exp    = String(req.query.exp ?? "confetti-burst");
+router.get("/share/:id", async (req, res) => {
+  const { id } = req.params;
+
+  let name = "you";
+  let from = "someone special";
+  let exp = "confetti-burst";
+
+  try {
+    const [gift] = await db.select().from(gifts).where(eq(gifts.id, id)).limit(1);
+    if (gift) {
+      name = gift.recipientName;
+      from = gift.senderName;
+      exp = gift.experience;
+    }
+  } catch (err) {
+    console.error("Error fetching gift for share page:", err);
+  }
+
+  name = esc(name);
+  from = esc(from);
 
   const ogImage       = OG_IMAGES[exp] ?? OG_IMAGES["confetti-burst"];
   const ogTitle       = `A gift for ${name} 🎁`;
   const ogDescription = `${from} sent you something special on gifted. Tap to open your gift.`;
 
-  const redirectUrl = `/reveal`;
+  const redirectUrl = `/open/${id}`;
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");

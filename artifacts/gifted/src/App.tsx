@@ -10,6 +10,7 @@ import LandingPage from "@/pages/landing";
 import CreatePage from "@/pages/create";
 import PreviewPage from "@/pages/preview";
 import RevealPage from "@/pages/reveal";
+import OpenPage from "@/pages/open";
 import RedeemPage from "@/pages/redeem";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ function Router() {
         <Route path="/create" component={CreatePage} />
         <Route path="/preview" component={PreviewPage} />
         <Route path="/reveal" component={RevealPage} />
+        <Route path="/open/:id" component={OpenPage} />
         <Route path="/redeem" component={RedeemPage} />
         <Route component={NotFound} />
       </Switch>

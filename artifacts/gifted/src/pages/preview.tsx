@@ -1,15 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check, ExternalLink,
-  Sparkles, Video, Music, Image as ImageIcon,
+  Sparkles, Video, Music, Image as ImageIcon, Loader2,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PreviewPage() {
   const [, setLocation] = useLocation();
@@ -25,6 +23,11 @@ export default function PreviewPage() {
   const [videoLoadError, setVideoLoadError] = useState(false);
   const [photoCount,     setPhotoCount]     = useState(0);
   const [hasPlaylist,    setHasPlaylist]    = useState(false);
+
+  const [saving,   setSaving]   = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [giftId,   setGiftId]   = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -58,35 +61,86 @@ export default function PreviewPage() {
   const expMeta  = EXPERIENCE_MAP[experience as keyof typeof EXPERIENCE_MAP] ?? EXPERIENCE_MAP[DEFAULT_EXPERIENCE];
   const gStyle   = { background: `linear-gradient(135deg, ${expMeta.palette.from}, ${expMeta.palette.via}, ${expMeta.palette.to})` };
 
-  const base      = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const shareUrl  = `${window.location.origin}${base}/api/share?name=${encodeURIComponent(recipientName)}&from=${encodeURIComponent(senderName)}&exp=${experience}`;
-  const displayUrl = `gifted.co/open/7A3kx`;
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const saveGift = useCallback(async (): Promise<string | null> => {
+    if (giftId && shareUrl) return shareUrl;
+
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      const payload: Record<string, unknown> = {
+        recipientName: localStorage.getItem("gifted_recipient_name") || recipientName,
+        senderName: localStorage.getItem("gifted_sender_name") || senderName,
+        experience: localStorage.getItem("gifted_experience") || experience,
+        occasion: localStorage.getItem("gifted_occasion") || "general",
+        giftTitle: localStorage.getItem("gifted_gift_title") || giftTitle,
+      };
+
+      const pn = localStorage.getItem("gifted_personal_note");
+      if (pn) payload.personalNote = pn;
+
+      const vp = localStorage.getItem("gifted_video_path");
+      if (vp) payload.videoPath = vp;
+
+      const pp = localStorage.getItem("gifted_photo_paths");
+      if (pp) {
+        try { payload.photoPaths = JSON.parse(pp); } catch { /* ignore */ }
+      }
+
+      const pl = localStorage.getItem("gifted_playlist_url");
+      if (pl) payload.playlistUrl = pl;
+
+      const res = await fetch(`${base}/api/gifted/gifts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Save failed");
+
+      const { id } = await res.json();
+      setGiftId(id);
+
+      const url = `${window.location.origin}${base}/api/share/${id}`;
+      setShareUrl(url);
+      setSaving(false);
+      return url;
+    } catch {
+      setSaveError("Could not save your gift. Please try again.");
+      setSaving(false);
+      return null;
+    }
+  }, [giftId, shareUrl, base, recipientName, senderName, experience, giftTitle]);
 
   const handleCopy = async () => {
+    const url = await saveGift();
+    if (!url) return;
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
-    } catch {
-      // fallback: nothing
-    }
+    } catch { /* fallback: nothing */ }
   };
 
   const handleShare = async () => {
     if (!navigator.share) return;
+    const url = await saveGift();
+    if (!url) return;
     try {
       await navigator.share({
         title: `A gift for ${recipientName} 🎁`,
         text: `${senderName} sent you something on gifted.`,
-        url: shareUrl,
+        url,
       });
-    } catch {
-      // user cancelled
-    }
+    } catch { /* user cancelled */ }
   };
 
-  const handleSMS = () => {
-    const body = `Hey ${recipientName}, I made something for you 🎁\n${shareUrl}`;
+  const handleSMS = async () => {
+    const url = await saveGift();
+    if (!url) return;
+    const body = `Hey ${recipientName}, I made something for you 🎁\n${url}`;
     window.open(`sms:?body=${encodeURIComponent(body)}`, "_blank");
   };
 
@@ -95,7 +149,8 @@ export default function PreviewPage() {
     setLocation("/reveal");
   };
 
-  // ── Stagger delays
+  const displayUrl = giftId ? `gifted./open/${giftId}` : "gifted./open/...";
+
   const fade = (delay: number) => ({
     initial: { opacity: 0, y: 18 },
     animate: { opacity: 1, y: 0 },
@@ -106,7 +161,7 @@ export default function PreviewPage() {
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-14 flex flex-col md:flex-row gap-8 md:gap-14">
 
-        {/* ── Desktop: phone mockup ── */}
+        {/* Desktop: phone mockup */}
         <div className="hidden md:block flex-1">
           <div className="sticky top-24">
             <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest mb-4 text-center">
@@ -168,7 +223,7 @@ export default function PreviewPage() {
           </div>
         </div>
 
-        {/* ── Right / main column ── */}
+        {/* Right / main column */}
         <div className="flex-[0.9] flex flex-col">
 
           {/* Experience summary card */}
@@ -226,12 +281,19 @@ export default function PreviewPage() {
 
           <motion.div {...fade(0.15)} className="space-y-3">
 
-            {/* Link preview card — styled like a messaging app unfurl */}
+            {/* Error notice */}
+            {saveError && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {saveError}
+              </div>
+            )}
+
+            {/* Link preview card */}
             <div className="rounded-2xl border border-border overflow-hidden bg-card">
               <div className="p-4 flex items-start gap-3">
                 <div className="w-12 h-12 rounded-xl flex-shrink-0" style={gStyle} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">gifted.co</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">gifted.</p>
                   <p className="text-sm font-semibold text-foreground leading-snug">A gift for {recipientName} 🎁</p>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">from {senderName} — tap to open</p>
                 </div>
@@ -241,10 +303,11 @@ export default function PreviewPage() {
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0"
+                  disabled={saving}
+                  className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0 disabled:opacity-50"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? "Copied!" : "Copy"}
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {saving ? "Saving..." : copied ? "Copied!" : "Copy"}
                 </button>
               </div>
             </div>
@@ -252,11 +315,14 @@ export default function PreviewPage() {
             {/* Primary send button */}
             <Button
               onClick={canShare ? handleShare : handleSMS}
+              disabled={saving}
               className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200"
             >
-              {canShare
-                ? <><Share2 className="w-5 h-5 mr-2" /> Share this gift</>
-                : <><MessageCircle className="w-5 h-5 mr-2" /> Message {recipientName}</>
+              {saving
+                ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving gift...</>
+                : canShare
+                  ? <><Share2 className="w-5 h-5 mr-2" /> Share this gift</>
+                  : <><MessageCircle className="w-5 h-5 mr-2" /> Message {recipientName}</>
               }
             </Button>
 
@@ -266,6 +332,7 @@ export default function PreviewPage() {
                 <Button
                   variant="outline"
                   onClick={handleSMS}
+                  disabled={saving}
                   className="flex-1 h-12 rounded-xl text-sm font-medium"
                 >
                   <MessageCircle className="w-4 h-4 mr-2" /> SMS
@@ -274,11 +341,14 @@ export default function PreviewPage() {
               <Button
                 variant="outline"
                 onClick={handleCopy}
+                disabled={saving}
                 className="flex-1 h-12 rounded-xl text-sm font-medium"
               >
-                {copied
-                  ? <><Check className="w-4 h-4 mr-2" /> Copied!</>
-                  : <><Copy className="w-4 h-4 mr-2" /> Copy link</>
+                {saving
+                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                  : copied
+                    ? <><Check className="w-4 h-4 mr-2" /> Copied!</>
+                    : <><Copy className="w-4 h-4 mr-2" /> Copy link</>
                 }
               </Button>
             </div>

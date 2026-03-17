@@ -57,6 +57,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - Create page: playlist URL input wired to state, persists via localStorage key `gifted_playlist_url`
   - Reveal page: renders as tappable deeplink card with Music icon, auto-detects Spotify/Apple Music
   - Preview page: shows Playlist badge conditionally
+- Gift Persistence & Shareable Links
+  - Database: `gifts` table in PostgreSQL via Drizzle ORM (`lib/db/src/schema/gifts.ts`)
+    - Columns: id (nanoid 12-char), recipientName, senderName, experience, occasion, giftTitle, personalNote, videoPath, photoPaths (JSONB array), playlistUrl, createdAt
+  - API: `POST /api/gifted/gifts` — saves gift to DB, returns `{ id }`
+  - API: `GET /api/gifted/gifts/:id` — fetches gift by ID, returns full payload or 404
+  - Share: `GET /api/share/:id` — renders OG meta tags from DB data, redirects to `/open/:id`
+  - Frontend: `/open/:id` route fetches gift from API, hydrates localStorage, then renders RevealPage
+  - Frontend: `/preview` page saves gift to DB on first share/copy/SMS action, caches giftId to avoid duplicates
+  - The `/reveal` route still works as a local preview (reads from localStorage only)
 
 ## Structure
 
@@ -111,7 +120,8 @@ Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client insta
 
 - `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
 - `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
+- `src/schema/gifts.ts` — `gifts` table (gift persistence for shareable links)
+- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas
 - `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
 - Exports: `.` (pool, db, schema), `./schema` (schema only)
 
