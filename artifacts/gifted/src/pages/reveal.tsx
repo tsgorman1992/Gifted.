@@ -555,7 +555,6 @@ function Section({
 export default function RevealPage() {
   const [isOpen, setIsOpen]               = useState(false);
   const [videoUrl, setVideoUrl]           = useState<string | null>(null);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [videoError, setVideoError]       = useState(false);
   const videoRef                          = useRef<HTMLVideoElement>(null);
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
@@ -825,25 +824,10 @@ export default function RevealPage() {
                         src={videoUrl}
                         preload="metadata"
                         playsInline
-                        controls={isVideoPlaying}
+                        controls
                         className="w-full h-full object-cover"
-                        onPlay={() => setIsVideoPlaying(true)}
-                        onPause={() => setIsVideoPlaying(false)}
                         onError={() => setVideoError(true)}
                       />
-                      {!isVideoPlaying && !videoError && (
-                        <div
-                          className="absolute inset-0 bg-black/20 flex items-center justify-center cursor-pointer"
-                          onClick={() => { videoRef.current?.play(); }}
-                        >
-                          <div className="w-20 h-20 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white border border-white/40 group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-xl">
-                            <Play className="w-8 h-8 ml-1" fill="currentColor" />
-                          </div>
-                          <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white text-sm font-medium">
-                            A message from {mockGiftData.senderName}
-                          </div>
-                        </div>
-                      )}
                       {videoError && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/10">
                           <p className={`text-sm font-medium ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
