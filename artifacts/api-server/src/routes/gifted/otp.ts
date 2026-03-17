@@ -16,6 +16,14 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  if (digits.length > 7) return `+${digits}`;
+  return phone;
+}
+
 /**
  * POST /api/gifted/send-otp
  * Generates a 6-digit OTP and sends it via SMS to the recipient's phone on file.
@@ -58,13 +66,15 @@ router.post("/gifted/send-otp", async (req, res) => {
     }).where(eq(gifts.id, giftId));
 
     const client = getTwilioClient();
-    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-    if (!fromNumber) throw new Error("TWILIO_PHONE_NUMBER not configured");
+    const rawFrom = process.env.TWILIO_PHONE_NUMBER;
+    if (!rawFrom) throw new Error("TWILIO_PHONE_NUMBER not configured");
+    const fromNumber = normalizePhone(rawFrom);
+    const toNumber   = normalizePhone(gift.recipientPhone);
 
     await client.messages.create({
       body: `Your gifted. verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
       from: fromNumber,
-      to: gift.recipientPhone,
+      to: toNumber,
     });
 
     res.json({ success: true, message: "Verification code sent" });
