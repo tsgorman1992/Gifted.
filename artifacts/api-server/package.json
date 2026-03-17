@@ -19,7 +19,8 @@
     "express": "^5",
     "google-auth-library": "^10.6.1",
     "nanoid": "^3.3.11",
-    "openid-client": "^6.8.2"
+    "openid-client": "^6.8.2",
+    "stripe": "^20.4.1"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
