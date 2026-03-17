@@ -21,6 +21,7 @@ export default function PreviewPage() {
   const [canShare,       setCanShare]       = useState(false);
   const [hasVideo,       setHasVideo]       = useState(false);
   const [videoUrl,       setVideoUrl]       = useState<string | null>(null);
+  const [videoLoadError, setVideoLoadError] = useState(false);
   const [photoCount,     setPhotoCount]     = useState(0);
   const [hasPlaylist,    setHasPlaylist]    = useState(false);
 
@@ -190,17 +191,20 @@ export default function PreviewPage() {
           {hasVideo && videoUrl && (
             <motion.div {...fade(0.04)} className="mb-5 rounded-2xl overflow-hidden border border-border bg-card">
               <div className="aspect-video w-full relative">
-                <video
-                  src={videoUrl}
-                  playsInline
-                  controls
-                  preload="metadata"
-                  className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLVideoElement).style.display = "none"; }}
-                />
-                <noscript>
-                  <p className="text-sm text-muted-foreground p-4">Video preview unavailable</p>
-                </noscript>
+                {!videoLoadError ? (
+                  <video
+                    src={videoUrl}
+                    playsInline
+                    controls
+                    preload="metadata"
+                    className="w-full h-full object-cover"
+                    onError={() => setVideoLoadError(true)}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-secondary">
+                    <p className="text-sm text-muted-foreground">Video preview unavailable</p>
+                  </div>
+                )}
               </div>
               <div className="px-4 py-2.5 flex items-center gap-2">
                 <Video className="w-3.5 h-3.5 text-primary" />
