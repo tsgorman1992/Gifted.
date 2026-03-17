@@ -1,12 +1,21 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@workspace/replit-auth-web";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { User, Gift, LogOut, ChevronDown } from "lucide-react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const isReveal = location === "/reveal";
+  const { user, isLoading, isAuthenticated, login, logout } = useAuth();
+  const isReveal = location === "/reveal" || location.startsWith("/open/");
 
-  // Hide standard nav on the reveal page for maximum immersion
   if (isReveal) {
     return <main className="min-h-screen w-full bg-background selection:bg-primary/20">{children}</main>;
   }
@@ -19,9 +28,45 @@ export function Layout({ children }: { children: React.ReactNode }) {
             gifted.
           </Link>
           <nav className="flex items-center gap-4">
-            <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground hidden sm:block transition-colors">
-              Sign in
-            </Link>
+            {!isLoading && (
+              isAuthenticated && user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-full">
+                      {user.profileImage ? (
+                        <img src={user.profileImage} alt="" className="w-7 h-7 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
+                      <span className="hidden sm:block">{user.firstName || user.username || "Account"}</span>
+                      <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-2xl">
+                    <DropdownMenuItem asChild>
+                      <Link href="/my-gifts" className="flex items-center gap-2 cursor-pointer">
+                        <Gift className="w-4 h-4" />
+                        My Gifts
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout} className="flex items-center gap-2 cursor-pointer text-muted-foreground">
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <button
+                  onClick={login}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground hidden sm:block transition-colors"
+                >
+                  Sign in
+                </button>
+              )
+            )}
             <Link href="/create">
               <Button className="rounded-full px-6 shadow-md hover:-translate-y-0.5 transition-transform duration-300">
                 Send a gift
@@ -38,9 +83,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span className="text-sm text-muted-foreground">Personal in the moment. Flexible in the end.</span>
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-            <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-            <a href="#" className="hover:text-foreground transition-colors">Help</a>
+            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link href="/faq" className="hover:text-foreground transition-colors">Help</Link>
           </div>
         </div>
       </footer>

@@ -81,7 +81,7 @@ export default function LandingPage() {
           {[
             { icon: Heart, title: "1. Add Meaning", desc: "Write a note, record a video, add photos, or link a playlist to set the mood." },
             { icon: Gift, title: "2. Add a Balance", desc: "Optionally add funds with an intention like 'Coffee on me' or 'Treat yourself'." },
-            { icon: CreditCard, title: "3. They Redeem", desc: "They experience the reveal, then cash out their balance to Venmo or their bank." }
+            { icon: CreditCard, title: "3. They Redeem", desc: "They experience the reveal, then instantly transfer their balance to a debit card or bank account." }
           ].map((step, i) => (
             <motion.div 
               key={i}

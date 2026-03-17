@@ -12,6 +12,11 @@ import PreviewPage from "@/pages/preview";
 import RevealPage from "@/pages/reveal";
 import OpenPage from "@/pages/open";
 import RedeemPage from "@/pages/redeem";
+import FaqPage from "@/pages/faq";
+import TermsPage from "@/pages/terms";
+import PrivacyPage from "@/pages/privacy";
+import MyGiftsPage from "@/pages/my-gifts";
+import SignInPage from "@/pages/sign-in";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +30,12 @@ function Router() {
         <Route path="/reveal" component={RevealPage} />
         <Route path="/open/:id" component={OpenPage} />
         <Route path="/redeem" component={RedeemPage} />
+        <Route path="/faq" component={FaqPage} />
+        <Route path="/help" component={FaqPage} />
+        <Route path="/terms" component={TermsPage} />
+        <Route path="/privacy" component={PrivacyPage} />
+        <Route path="/my-gifts" component={MyGiftsPage} />
+        <Route path="/sign-in" component={SignInPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
