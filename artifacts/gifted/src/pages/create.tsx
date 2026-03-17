@@ -331,6 +331,8 @@ export default function CreatePage() {
     EXPERIENCES.find((e) => e.suggestedFor.includes(occ))?.id ?? "confetti-burst";
 
   const [selectedExperience, setSelectedExperience] = useState(() => getSuggestedExperience("Birthday"));
+  const [suggestedExperience, setSuggestedExperience] = useState(() => getSuggestedExperience("Birthday"));
+  const [hasManuallyChosen, setHasManuallyChosen] = useState(false);
   const [amount, setAmount] = useState("");
   const [intent, setIntent] = useState("");
   const [occasion, setOccasion] = useState("Birthday");
@@ -587,7 +589,7 @@ export default function CreatePage() {
                         <button
                           key={exp.id}
                           type="button"
-                          onClick={() => setSelectedExperience(exp.id)}
+                          onClick={() => { setSelectedExperience(exp.id); setHasManuallyChosen(true); }}
                           className={`relative rounded-2xl overflow-hidden text-left transition-all duration-200 focus:outline-none ${
                             isSelected
                               ? "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.03] shadow-xl"
@@ -606,7 +608,7 @@ export default function CreatePage() {
                             />
 
                             {/* Badges */}
-                            {isSuggested && !isSelected && (
+                            {suggestedExperience === exp.id && !isSelected && (
                               <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-white text-[9px] font-bold tracking-wide uppercase">
                                 Suggested
                               </div>
@@ -665,7 +667,11 @@ export default function CreatePage() {
                       value={occasion}
                       onValueChange={(val) => {
                         setOccasion(val);
-                        setSelectedExperience(getSuggestedExperience(val));
+                        const suggested = getSuggestedExperience(val);
+                        setSuggestedExperience(suggested);
+                        if (!hasManuallyChosen) {
+                          setSelectedExperience(suggested);
+                        }
                       }}
                     >
                       <SelectTrigger className="h-12 rounded-xl text-base">

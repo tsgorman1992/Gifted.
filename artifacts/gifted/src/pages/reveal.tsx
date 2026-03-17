@@ -28,7 +28,7 @@ function gradientStyle(exp: string): React.CSSProperties {
 type TitleStyle    = "word-burst" | "blur-in" | "bloom" | "typewriter" | "elegant-fade" | "crisp-fall" | "rise";
 type SectionStyle  = "spring-pop" | "fade-drift" | "bloom-scale" | "materialize" | "slide-alternate" | "fall-in" | "rise-stagger";
 type AmountStyle   = "count-up" | "glow-reveal" | "bloom-pop" | "stellar-reveal" | "elegant-reveal" | "crystallize" | "warm-reveal";
-type AmbientEffect = "petals" | "snow" | "stars";
+type AmbientEffect = "petals" | "rose-petals" | "snow" | "stars";
 type PreIconAnim   = "bounce" | "pulse-slow" | "float" | "twinkle" | "heartbeat" | "spin-slow" | "rise";
 
 interface RevealCfg {
@@ -123,7 +123,7 @@ const CONFIGS: Record<string, RevealCfg> = {
     isDark: false,
     envelopeExit: { opacity: 0, x: 60, rotateZ: 2 },
     envelopeTransition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
-    ambientEffect: "petals",
+    ambientEffect: "rose-petals",
     preIconAnim: "heartbeat",
     preIconColorClass: "text-rose-400",
   },
@@ -803,11 +803,11 @@ export default function RevealPage() {
                 >
                   {cfg.titleStyle === "typewriter" ? (
                     <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
-                      "<TypewriterText text={mockGiftData.message} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />"
+                      &ldquo;<TypewriterText text={mockGiftData.message} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />&rdquo;
                     </p>
                   ) : (
                     <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
-                      "{mockGiftData.message}"
+                      &ldquo;{mockGiftData.message}&rdquo;
                     </p>
                   )}
                 </div>
