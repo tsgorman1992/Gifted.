@@ -411,11 +411,19 @@ type ParticleCfg = {
 
 const PARTICLE_CFGS: Partial<Record<AmbientEffect, ParticleCfg>> = {
   petals: {
-    colors: ["#FFB7C5", "#FF8FAB", "#FFFFFF", "#FFC0CB", "#FFE4E8", "#B5EAD7"],
-    sizes: [10, 22],
-    batchSize: 8,
-    batchInterval: 900,
-    duration: [3200, 6000],
+    colors: ["#FFB7C5", "#C7CEEA", "#B5EAD7", "#FFFFFF", "#E8D5E0", "#D4F0E7"],
+    sizes: [8, 18],
+    batchSize: 6,
+    batchInterval: 1100,
+    duration: [4000, 7000],
+    keyframe: "gifted-petal-fall",
+  },
+  "rose-petals": {
+    colors: ["#FFB7C5", "#FF8FAB", "#E8A7B1", "#FFC0CB", "#FFFFFF"],
+    sizes: [14, 26],
+    batchSize: 4,
+    batchInterval: 1400,
+    duration: [4500, 8000],
     keyframe: "gifted-petal-fall",
   },
   snow: {
