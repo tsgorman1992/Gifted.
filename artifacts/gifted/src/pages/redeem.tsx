@@ -4,28 +4,48 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, CreditCard, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Building2, CreditCard, CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 
 export default function RedeemPage() {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [amount, setAmount] = useState<string>("0");
+  const [isProcessing, setIsProcessing]     = useState(false);
+  const [isSuccess, setIsSuccess]           = useState(false);
+  const [error, setError]                   = useState<string | null>(null);
+  const [amount, setAmount]                 = useState<string>("0");
+  const [giftId, setGiftId]                 = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("gifted_amount");
     if (stored) setAmount(stored);
+
+    const storedId = localStorage.getItem("gifted_gift_id");
+    if (storedId) setGiftId(storedId);
   }, []);
 
   const displayAmount = parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : null;
 
-  const handleCashOut = (e: React.FormEvent) => {
+  const handleCashOut = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
+
+    try {
+      if (giftId) {
+        const res = await fetch(`${BASE}/api/gifted/redeem`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ giftId }),
+        });
+        if (!res.ok) throw new Error("Redeem request failed");
+      }
       setIsSuccess(true);
-    }, 1500);
+    } catch {
+      setError("Something went wrong. Please try again or contact help@gifted.so.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -96,6 +116,12 @@ export default function RedeemPage() {
                     </button>
                   </div>
 
+                  {error && (
+                    <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                      {error}
+                    </div>
+                  )}
+
                   <AnimatePresence>
                     {selectedMethod && (
                       <motion.form
@@ -110,10 +136,22 @@ export default function RedeemPage() {
                             <Input placeholder="e.g. Sarah Connor" className="h-12 rounded-xl" required />
                           </div>
                           {selectedMethod === "debit" ? (
-                            <div className="space-y-2">
-                              <Label>Debit Card Number</Label>
-                              <Input placeholder="•••• •••• •••• ••••" className="h-12 rounded-xl" required />
-                            </div>
+                            <>
+                              <div className="space-y-2">
+                                <Label>Debit Card Number</Label>
+                                <Input placeholder="•••• •••• •••• ••••" className="h-12 rounded-xl" required />
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-2">
+                                  <Label>Expiry</Label>
+                                  <Input placeholder="MM / YY" className="h-12 rounded-xl" required />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label>CVC</Label>
+                                  <Input placeholder="•••" className="h-12 rounded-xl" required />
+                                </div>
+                              </div>
+                            </>
                           ) : (
                             <>
                               <div className="space-y-2">
@@ -134,7 +172,9 @@ export default function RedeemPage() {
                           disabled={isProcessing}
                           className="w-full h-14 rounded-full text-lg shadow-lg"
                         >
-                          {isProcessing ? "Processing…" : `Transfer $${displayAmount}`}
+                          {isProcessing
+                            ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing…</>
+                            : `Transfer $${displayAmount}`}
                         </Button>
 
                         <p className="text-center text-xs text-muted-foreground">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check, ExternalLink,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
+  CreditCard, CheckCircle2,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -26,14 +27,18 @@ export default function PreviewPage() {
   const [giftAmount,     setGiftAmount]     = useState<string | null>(null);
   const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
 
-  const [saving,   setSaving]   = useState(false);
+  const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [giftId,   setGiftId]   = useState<string | null>(null);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [giftId,    setGiftId]    = useState<string | null>(null);
+  const [shareUrl,  setShareUrl]  = useState<string | null>(null);
+
+  // Stripe payment state
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "redirecting" | "confirming" | "confirmed" | "failed">("idle");
+  const [payingError,   setPayingError]   = useState<string | null>(null);
+
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   useEffect(() => {
-    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-
     const exp = localStorage.getItem("gifted_experience");
     if (exp && EXPERIENCE_MAP[exp as keyof typeof EXPERIENCE_MAP]) setExperience(exp);
 
@@ -64,15 +69,49 @@ export default function PreviewPage() {
     if (intn) setGiftIntent(intn);
 
     setCanShare(typeof navigator?.share === "function");
-  }, []);
 
-  const expMeta  = EXPERIENCE_MAP[experience as keyof typeof EXPERIENCE_MAP] ?? EXPERIENCE_MAP[DEFAULT_EXPERIENCE];
-  const gStyle   = { background: `linear-gradient(135deg, ${expMeta.palette.from}, ${expMeta.palette.via}, ${expMeta.palette.to})` };
+    // Handle return from Stripe Checkout
+    const params = new URLSearchParams(window.location.search);
+    const paidParam  = params.get("paid");
+    const giftParam  = params.get("gift_id");
+    const sessionId  = params.get("session_id");
+    const cancelled  = params.get("cancelled");
 
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    if (cancelled) {
+      setPayingError("Payment cancelled — your gift is saved but not yet paid.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
 
-  const saveGift = useCallback(async (): Promise<string | null> => {
-    if (giftId && shareUrl) return shareUrl;
+    if (paidParam === "true" && giftParam && sessionId) {
+      setGiftId(giftParam);
+      const url = `${window.location.origin}${base}/api/share/${giftParam}`;
+      setShareUrl(url);
+      setPaymentStatus("confirming");
+
+      fetch(`${base}/api/gifted/confirm-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ sessionId, giftId: giftParam }),
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error("Confirm failed");
+          setPaymentStatus("confirmed");
+        })
+        .catch(() => {
+          // Even if confirm fails (e.g. already confirmed), treat as paid
+          setPaymentStatus("confirmed");
+        });
+
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [base]);
+
+  const expMeta = EXPERIENCE_MAP[experience as keyof typeof EXPERIENCE_MAP] ?? EXPERIENCE_MAP[DEFAULT_EXPERIENCE];
+  const gStyle  = { background: `linear-gradient(135deg, ${expMeta.palette.from}, ${expMeta.palette.via}, ${expMeta.palette.to})` };
+
+  const saveGift = useCallback(async (): Promise<{ id: string; url: string } | null> => {
+    if (giftId && shareUrl) return { id: giftId, url: shareUrl };
 
     setSaving(true);
     setSaveError(null);
@@ -80,10 +119,10 @@ export default function PreviewPage() {
     try {
       const payload: Record<string, unknown> = {
         recipientName: localStorage.getItem("gifted_recipient_name") || recipientName,
-        senderName: localStorage.getItem("gifted_sender_name") || senderName,
-        experience: localStorage.getItem("gifted_experience") || experience,
-        occasion: localStorage.getItem("gifted_occasion") || "general",
-        giftTitle: localStorage.getItem("gifted_gift_title") || giftTitle,
+        senderName:    localStorage.getItem("gifted_sender_name")    || senderName,
+        experience:    localStorage.getItem("gifted_experience")     || experience,
+        occasion:      localStorage.getItem("gifted_occasion")       || "general",
+        giftTitle:     localStorage.getItem("gifted_gift_title")     || giftTitle,
       };
 
       const pn = localStorage.getItem("gifted_personal_note");
@@ -93,9 +132,7 @@ export default function PreviewPage() {
       if (vp) payload.videoPath = vp;
 
       const pp = localStorage.getItem("gifted_photo_paths");
-      if (pp) {
-        try { payload.photoPaths = JSON.parse(pp); } catch { /* ignore */ }
-      }
+      if (pp) { try { payload.photoPaths = JSON.parse(pp); } catch { /* ignore */ } }
 
       const pl = localStorage.getItem("gifted_playlist_url");
       if (pl) payload.playlistUrl = pl;
@@ -109,6 +146,7 @@ export default function PreviewPage() {
       const res = await fetch(`${base}/api/gifted/gifts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -120,7 +158,7 @@ export default function PreviewPage() {
       const url = `${window.location.origin}${base}/api/share/${id}`;
       setShareUrl(url);
       setSaving(false);
-      return url;
+      return { id, url };
     } catch {
       setSaveError("Could not save your gift. Please try again.");
       setSaving(false);
@@ -128,33 +166,61 @@ export default function PreviewPage() {
     }
   }, [giftId, shareUrl, base, recipientName, senderName, experience, giftTitle]);
 
-  const handleCopy = async () => {
-    const url = await saveGift();
-    if (!url) return;
+  // ─── Stripe Pay & Send ───────────────────────────────────────────────────────
+  const handlePayAndSend = async () => {
+    setPayingError(null);
+    const saved = await saveGift();
+    if (!saved) return;
+
+    setPaymentStatus("redirecting");
+
+    const returnUrl = `${window.location.origin}${base}/preview`;
+
     try {
-      await navigator.clipboard.writeText(url);
+      const res = await fetch(`${base}/api/gifted/checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ giftId: saved.id, returnUrl }),
+      });
+
+      if (!res.ok) throw new Error("Checkout failed");
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch {
+      setPaymentStatus("idle");
+      setPayingError("Could not start checkout. Please try again.");
+    }
+  };
+
+  // ─── Share helpers ────────────────────────────────────────────────────────────
+  const handleCopy = async () => {
+    const saved = await saveGift();
+    if (!saved) return;
+    try {
+      await navigator.clipboard.writeText(saved.url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
-    } catch { /* fallback: nothing */ }
+    } catch { /* ignore */ }
   };
 
   const handleShare = async () => {
     if (!navigator.share) return;
-    const url = await saveGift();
-    if (!url) return;
+    const saved = await saveGift();
+    if (!saved) return;
     try {
       await navigator.share({
         title: `A gift for ${recipientName} 🎁`,
         text: `${senderName} sent you something on gifted.`,
-        url,
+        url: saved.url,
       });
     } catch { /* user cancelled */ }
   };
 
   const handleSMS = async () => {
-    const url = await saveGift();
-    if (!url) return;
-    const body = `Hey ${recipientName}, I made something for you 🎁\n${url}`;
+    const saved = await saveGift();
+    if (!saved) return;
+    const body = `Hey ${recipientName}, I made something for you 🎁\n${saved.url}`;
     window.open(`sms:?body=${encodeURIComponent(body)}`, "_blank");
   };
 
@@ -163,7 +229,11 @@ export default function PreviewPage() {
     setLocation("/reveal");
   };
 
-  const displayUrl = giftId ? `gifted./open/${giftId}` : "gifted./open/...";
+  const displayUrl   = giftId ? `gifted./open/${giftId}` : "gifted./open/...";
+  const displayAmt   = giftAmount ? parseFloat(giftAmount).toFixed(2) : null;
+  const hasBalance   = !!displayAmt && parseFloat(displayAmt) > 0;
+  const isPaid       = paymentStatus === "confirmed" || paymentStatus === "confirming";
+  const isRedirecting = paymentStatus === "redirecting";
 
   const fade = (delay: number) => ({
     initial: { opacity: 0, y: 18 },
@@ -289,18 +359,44 @@ export default function PreviewPage() {
           )}
 
           <motion.div {...fade(0.08)}>
-            <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">Your gift is ready.</h1>
-            <p className="text-muted-foreground mb-7 text-base">
-              Send {recipientName} the link below — they'll see a beautiful animated reveal.
-            </p>
+            {isPaid ? (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <span className="text-sm font-semibold text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                    {paymentStatus === "confirming" ? "Confirming payment…" : `$${displayAmt} paid`}
+                  </span>
+                </div>
+                <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">Gift paid & ready!</h1>
+                <p className="text-muted-foreground mb-7 text-base">
+                  Share the link with {recipientName} — they can now open and redeem their gift.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">
+                  {hasBalance ? "One last step." : "Your gift is ready."}
+                </h1>
+                <p className="text-muted-foreground mb-7 text-base">
+                  {hasBalance
+                    ? `Pay the $${displayAmt} balance, then share the link with ${recipientName}.`
+                    : `Send ${recipientName} the link below — they'll see a beautiful animated reveal.`}
+                </p>
+              </>
+            )}
           </motion.div>
 
           <motion.div {...fade(0.15)} className="space-y-3">
 
-            {/* Error notice */}
+            {/* Error notices */}
             {saveError && (
               <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
                 {saveError}
+              </div>
+            )}
+            {payingError && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {payingError}
               </div>
             )}
 
@@ -319,7 +415,7 @@ export default function PreviewPage() {
                 <button
                   type="button"
                   onClick={handleCopy}
-                  disabled={saving}
+                  disabled={saving || isRedirecting}
                   className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0 disabled:opacity-50"
                 >
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -328,19 +424,34 @@ export default function PreviewPage() {
               </div>
             </div>
 
-            {/* Primary send button */}
-            <Button
-              onClick={canShare ? handleShare : handleSMS}
-              disabled={saving}
-              className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              {saving
-                ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving gift...</>
-                : canShare
-                  ? <><Share2 className="w-5 h-5 mr-2" /> Share this gift</>
-                  : <><MessageCircle className="w-5 h-5 mr-2" /> Message {recipientName}</>
-              }
-            </Button>
+            {/* Primary CTA — Pay & Send when balance unpaid, or Share when no balance / already paid */}
+            {hasBalance && !isPaid ? (
+              <Button
+                onClick={handlePayAndSend}
+                disabled={saving || isRedirecting}
+                className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
+              >
+                {isRedirecting
+                  ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
+                  : saving
+                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
+                    : <><CreditCard className="w-5 h-5" /> Pay ${displayAmt} &amp; Send</>
+                }
+              </Button>
+            ) : (
+              <Button
+                onClick={canShare ? handleShare : handleSMS}
+                disabled={saving}
+                className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200"
+              >
+                {saving
+                  ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving gift...</>
+                  : canShare
+                    ? <><Share2 className="w-5 h-5 mr-2" /> Share this gift</>
+                    : <><MessageCircle className="w-5 h-5 mr-2" /> Message {recipientName}</>
+                }
+              </Button>
+            )}
 
             {/* Secondary row */}
             <div className="flex gap-3">
@@ -348,7 +459,7 @@ export default function PreviewPage() {
                 <Button
                   variant="outline"
                   onClick={handleSMS}
-                  disabled={saving}
+                  disabled={saving || isRedirecting}
                   className="flex-1 h-12 rounded-xl text-sm font-medium"
                 >
                   <MessageCircle className="w-4 h-4 mr-2" /> SMS
@@ -357,7 +468,7 @@ export default function PreviewPage() {
               <Button
                 variant="outline"
                 onClick={handleCopy}
-                disabled={saving}
+                disabled={saving || isRedirecting}
                 className="flex-1 h-12 rounded-xl text-sm font-medium"
               >
                 {saving
@@ -387,6 +498,12 @@ export default function PreviewPage() {
                 Open
               </Button>
             </div>
+
+            {hasBalance && !isPaid && (
+              <p className="text-center text-xs text-muted-foreground">
+                You can also share the link without paying — your recipient will see the gift but can't redeem the balance until payment is complete.
+              </p>
+            )}
 
             {/* Footer link */}
             <div className="pt-1 text-center">

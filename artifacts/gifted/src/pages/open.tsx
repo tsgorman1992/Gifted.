@@ -55,6 +55,9 @@ export default function OpenPage() {
         if (gift.intent) localStorage.setItem("gifted_intent", gift.intent);
         else localStorage.removeItem("gifted_intent");
 
+        localStorage.setItem("gifted_gift_id", gift.id);
+        localStorage.setItem("gifted_gift_paid", gift.paid ? "true" : "false");
+
         setStatus("ready");
       })
       .catch(() => {

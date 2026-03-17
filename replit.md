@@ -57,6 +57,29 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - Create page: playlist URL input wired to state, persists via localStorage key `gifted_playlist_url`
   - Reveal page: renders as tappable deeplink card with Music icon, auto-detects Spotify/Apple Music
   - Preview page: shows Playlist badge conditionally
+- Stripe Payments (Task #10)
+  - Sender: Preview page shows "Pay $X & Send" CTA when a balance is attached
+  - Clicking saves the gift, creates a Stripe Checkout Session, redirects to Stripe
+  - On return: `?paid=true&session_id=xxx` → calls `POST /api/gifted/confirm-payment` → marks `paid=true` in DB
+  - API routes: `POST /api/gifted/checkout-session`, `POST /api/gifted/confirm-payment`, `POST /api/gifted/redeem`, `POST /api/stripe/webhook`
+  - Webhook handler for `checkout.session.completed` (requires STRIPE_WEBHOOK_SECRET in prod)
+  - Recipient: Redeem page calls `POST /api/gifted/redeem` to record redeemedAt in DB
+  - `STRIPE_SECRET_KEY` stored in Replit Secrets
+- Replit Auth (Task #9)
+  - Auth middleware on all API routes via `authMiddleware` (from session cookie)
+  - Routes: `/api/login`, `/api/callback`, `/api/logout`, `/api/auth/user`
+  - Layout nav shows "Sign in" when unauthenticated, avatar + dropdown when signed in
+  - `/my-gifts` dashboard: lists all gifts the signed-in user has sent with status
+  - `/sign-in` page with branded sign-in CTA
+  - Gifts table: `senderUserId` column populated on create for ownership
+  - `GET /api/gifted/my-gifts` endpoint: auth-gated, returns sender's gifts ordered by date
+- FAQ, Legal, Polish (Task #11)
+  - `/faq` — 11-question animated accordion
+  - `/terms` — Full Terms of Service (10 sections)
+  - `/privacy` — Comprehensive Privacy Policy
+  - Footer links point to real pages
+  - Landing page: "Venmo" → "debit card or bank account"
+  - Redeem page: reads real amount from localStorage, no more mockGiftData
 - Gift Persistence & Shareable Links
   - Database: `gifts` table in PostgreSQL via Drizzle ORM (`lib/db/src/schema/gifts.ts`)
     - Columns: id (nanoid 12-char), recipientName, senderName, experience, occasion, giftTitle, personalNote, videoPath, photoPaths (JSONB array), playlistUrl, createdAt
