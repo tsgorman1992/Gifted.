@@ -291,7 +291,7 @@ export default function RedeemPage() {
                     <CreditCard className={`w-8 h-8 ${selectedMethod === "debit" ? "text-primary" : "text-muted-foreground"}`} />
                     <div>
                       <p className="font-semibold">Debit Card</p>
-                      <p className="text-sm text-muted-foreground">Instant transfer, ~30 min</p>
+                      <p className="text-sm text-muted-foreground">Transferred within 24 hours</p>
                     </div>
                   </button>
 
@@ -305,7 +305,7 @@ export default function RedeemPage() {
                     <Building2 className={`w-8 h-8 ${selectedMethod === "bank" ? "text-primary" : "text-muted-foreground"}`} />
                     <div>
                       <p className="font-semibold">Bank Account</p>
-                      <p className="text-sm text-muted-foreground">ACH transfer, 1–3 days</p>
+                      <p className="text-sm text-muted-foreground">Transferred within 24 hours</p>
                     </div>
                   </button>
                 </div>
@@ -368,12 +368,12 @@ export default function RedeemPage() {
                         className="w-full h-14 rounded-full text-lg shadow-lg"
                       >
                         {isProcessing
-                          ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing…</>
-                          : `Transfer $${displayAmount}`}
+                          ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting…</>
+                          : `Request Payout · $${displayAmount}`}
                       </Button>
 
                       <p className="text-center text-xs text-muted-foreground">
-                        Payouts are processed securely via Stripe. No expiry. No hidden fees.
+                        Your details are encrypted and secure. You'll receive your payout within 24 hours of submitting.
                       </p>
                     </motion.form>
                   )}
@@ -409,11 +409,9 @@ export default function RedeemPage() {
               <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-8">
                 <CheckCircle2 className="w-12 h-12 text-green-600" />
               </div>
-              <h2 className="font-serif text-4xl font-medium mb-4">Transfer Initiated</h2>
+              <h2 className="font-serif text-4xl font-medium mb-4">Payout Requested</h2>
               <p className="text-lg text-muted-foreground max-w-md mx-auto mb-10">
-                {selectedMethod === "debit"
-                  ? `Your $${displayAmount} should arrive within 30 minutes.`
-                  : `Your $${displayAmount} will arrive in 1–3 business days.`}
+                Your <span className="font-semibold text-foreground">${displayAmount}</span> is on its way. You'll receive it within 24 hours. We'll reach out if we need anything else.
               </p>
               <Button variant="outline" className="rounded-full h-12 px-8" onClick={() => (window.location.href = "/")}>
                 Return to home
