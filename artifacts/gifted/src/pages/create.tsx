@@ -716,25 +716,32 @@ export default function CreatePage() {
                         Styled beautifully in their reveal — yours to edit, or let AI help.
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        type="button"
-                        disabled={aiLoading !== null || !personalNote.trim()}
-                        onClick={() => handleAI("rewrite")}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-primary/20"
-                      >
-                        {aiLoading === "rewrite" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                        {aiLoading === "rewrite" ? "Rewriting..." : "Rewrite"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={aiLoading !== null}
-                        onClick={() => handleAI("regenerate")}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-border"
-                      >
-                        {aiLoading === "regenerate" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                        {aiLoading === "regenerate" ? "Generating..." : "Generate"}
-                      </button>
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={aiLoading !== null || !personalNote.trim()}
+                          title={!personalNote.trim() ? "Write a note first, then AI can help improve it" : undefined}
+                          onClick={() => handleAI("rewrite")}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-primary/20"
+                        >
+                          {aiLoading === "rewrite" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                          {aiLoading === "rewrite" ? "Rewriting..." : "Rewrite"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={aiLoading !== null || !personalNote.trim()}
+                          title={!personalNote.trim() ? "Write a note first, then AI can help improve it" : undefined}
+                          onClick={() => handleAI("regenerate")}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-border"
+                        >
+                          {aiLoading === "regenerate" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          {aiLoading === "regenerate" ? "Generating..." : "Generate"}
+                        </button>
+                      </div>
+                      {!personalNote.trim() && (
+                        <p className="text-xs text-muted-foreground">Write a note to enable AI assist</p>
+                      )}
                     </div>
                   </div>
 
@@ -752,7 +759,7 @@ export default function CreatePage() {
                     </AnimatePresence>
                     <Textarea
                       id="message"
-                      placeholder="Write something meaningful..."
+                      placeholder="Write a personal note (optional)..."
                       className="min-h-[160px] rounded-xl text-base resize-none relative z-10"
                       value={personalNote}
                       onChange={(e) => setPersonalNote(e.target.value)}
