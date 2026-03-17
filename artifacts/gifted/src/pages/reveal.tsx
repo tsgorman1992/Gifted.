@@ -560,6 +560,9 @@ export default function RevealPage() {
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
   const [playlistUrl, setPlaylistUrl]     = useState<string | null>(null);
+  const [recipientName, setRecipientName] = useState(mockGiftData.recipientName);
+  const [senderName, setSenderName]       = useState(mockGiftData.senderName);
+  const [giftTitle, setGiftTitle]         = useState(mockGiftData.title);
   const [experience, setExperience]       = useState(DEFAULT_EXPERIENCE);
 
   const amountRef  = useRef<HTMLDivElement>(null);
@@ -592,6 +595,15 @@ export default function RevealPage() {
 
     const pl = localStorage.getItem("gifted_playlist_url");
     if (pl) setPlaylistUrl(pl);
+
+    const rn = localStorage.getItem("gifted_recipient_name");
+    if (rn) setRecipientName(rn);
+
+    const sn = localStorage.getItem("gifted_sender_name");
+    if (sn) setSenderName(sn);
+
+    const gt = localStorage.getItem("gifted_gift_title");
+    if (gt) setGiftTitle(gt);
 
     const stored = localStorage.getItem("gifted_experience");
     if (stored && CONFIGS[stored]) setExperience(stored);
@@ -683,7 +695,7 @@ export default function RevealPage() {
                 A gift for
               </p>
               <h1 className={`font-serif text-5xl sm:text-6xl md:text-7xl mb-10 break-words max-w-xs sm:max-w-sm ${isDark ? "text-white" : ""}`}>
-                {mockGiftData.recipientName}
+                {recipientName}
               </h1>
 
               <Button
@@ -738,10 +750,10 @@ export default function RevealPage() {
                     className={`font-serif text-4xl sm:text-5xl md:text-7xl font-medium mb-4 ${isDark ? "text-white" : "text-foreground"}`}
                   >
                     {cfg.titleStyle === "word-burst" && (
-                      <WordBurstTitle text={mockGiftData.title} delayS={cfg.heroDelay} />
+                      <WordBurstTitle text={giftTitle} delayS={cfg.heroDelay} />
                     )}
                     {cfg.titleStyle === "typewriter" && (
-                      <TypewriterText text={mockGiftData.title} delayS={cfg.heroDelay + 0.2} speed={65} />
+                      <TypewriterText text={giftTitle} delayS={cfg.heroDelay + 0.2} speed={65} />
                     )}
                     {cfg.titleStyle === "blur-in" && (
                       <motion.span
@@ -750,7 +762,7 @@ export default function RevealPage() {
                         transition={{ delay: cfg.heroDelay + 0.1, duration: cfg.heroDuration + 0.1 }}
                         style={{ display: "inline-block" }}
                       >
-                        {mockGiftData.title}
+                        {giftTitle}
                       </motion.span>
                     )}
                     {(cfg.titleStyle === "bloom" || cfg.titleStyle === "elegant-fade" || cfg.titleStyle === "crisp-fall" || cfg.titleStyle === "rise") && (
@@ -776,13 +788,13 @@ export default function RevealPage() {
                         }
                         style={{ display: "inline-block" }}
                       >
-                        {mockGiftData.title}
+                        {giftTitle}
                       </motion.span>
                     )}
                   </h1>
 
                   <p className={`text-xl ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
-                    {cfg.senderText} {mockGiftData.senderName}
+                    {cfg.senderText} {senderName}
                   </p>
                 </motion.div>
               </div>

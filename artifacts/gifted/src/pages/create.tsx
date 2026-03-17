@@ -383,6 +383,8 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_personal_note");
     if (playlistUrl.trim()) localStorage.setItem("gifted_playlist_url", playlistUrl.trim());
     else localStorage.removeItem("gifted_playlist_url");
+    if (giftTitle.trim()) localStorage.setItem("gifted_gift_title", giftTitle.trim());
+    else localStorage.removeItem("gifted_gift_title");
     localStorage.setItem("gifted_experience", selectedExperience);
     localStorage.setItem("gifted_occasion", occasion);
     if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
@@ -399,6 +401,8 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_personal_note");
     if (playlistUrl.trim()) localStorage.setItem("gifted_playlist_url", playlistUrl.trim());
     else localStorage.removeItem("gifted_playlist_url");
+    if (giftTitle.trim()) localStorage.setItem("gifted_gift_title", giftTitle.trim());
+    else localStorage.removeItem("gifted_gift_title");
     localStorage.setItem("gifted_experience", selectedExperience);
     if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
     if (senderName) localStorage.setItem("gifted_sender_name", senderName);

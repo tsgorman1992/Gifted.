@@ -17,6 +17,7 @@ export default function PreviewPage() {
   const [experience,     setExperience]     = useState(DEFAULT_EXPERIENCE);
   const [recipientName,  setRecipientName]  = useState(mockGiftData.recipientName);
   const [senderName,     setSenderName]     = useState(mockGiftData.senderName);
+  const [giftTitle,      setGiftTitle]      = useState(mockGiftData.title);
   const [copied,         setCopied]         = useState(false);
   const [canShare,       setCanShare]       = useState(false);
   const [hasVideo,       setHasVideo]       = useState(false);
@@ -36,6 +37,9 @@ export default function PreviewPage() {
 
     const sn = localStorage.getItem("gifted_sender_name");
     if (sn) setSenderName(sn);
+
+    const gt = localStorage.getItem("gifted_gift_title");
+    if (gt) setGiftTitle(gt);
 
     const vp = localStorage.getItem("gifted_video_path");
     if (vp) { setHasVideo(true); setVideoUrl(`${base}/api/storage${vp}`); }
@@ -129,7 +133,7 @@ export default function PreviewPage() {
                 </div>
                 <div className="p-5 space-y-7">
                   <div>
-                    <h4 className="font-serif text-xl mb-2">{mockGiftData.title}</h4>
+                    <h4 className="font-serif text-xl mb-2">{giftTitle}</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">{mockGiftData.message}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
