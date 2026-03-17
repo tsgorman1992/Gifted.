@@ -11,7 +11,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 type RedeemScreen = "otp-gate" | "otp-sent" | "banking" | "success";
 
 export default function RedeemPage() {
-  const [screen, setScreen]                 = useState<RedeemScreen>("otp-gate");
+  const [screen, setScreen]                 = useState<RedeemScreen>("banking"); // OTP bypassed temporarily — restore to "otp-gate" once Twilio toll-free is verified
   const [selectedMethod, setSelectedMethod] = useState<"venmo" | "paypal" | "zelle" | null>(null);
   const [isProcessing, setIsProcessing]     = useState(false);
   const [error, setError]                   = useState<string | null>(null);
