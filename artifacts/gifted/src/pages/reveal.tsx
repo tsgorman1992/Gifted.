@@ -804,7 +804,7 @@ export default function RevealPage() {
             <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8 md:space-y-14 -mt-4 md:-mt-6 relative z-20">
 
               {/* Note / message — section 0 (hidden when no note) */}
-              {personalNote && (
+              {personalNote?.trim() && (
                 <Section cfg={cfg} idx={0}>
                   <div
                     className="rounded-[2rem] p-6 md:p-12 border shadow-xl"
