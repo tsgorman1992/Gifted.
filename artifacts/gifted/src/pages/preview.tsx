@@ -196,7 +196,11 @@ export default function PreviewPage() {
                   controls
                   preload="metadata"
                   className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLVideoElement).style.display = "none"; }}
                 />
+                <noscript>
+                  <p className="text-sm text-muted-foreground p-4">Video preview unavailable</p>
+                </noscript>
               </div>
               <div className="px-4 py-2.5 flex items-center gap-2">
                 <Video className="w-3.5 h-3.5 text-primary" />

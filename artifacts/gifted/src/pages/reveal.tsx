@@ -838,17 +838,12 @@ export default function RevealPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative group cursor-pointer" style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}>
+                  <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative" style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}>
                     <img
                       src="https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop"
-                      alt="Video thumbnail"
-                      className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
+                      alt="Memory"
+                      className="w-full h-full object-cover opacity-60"
                     />
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                      <div className="w-20 h-20 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white border border-white/40 group-hover:bg-primary group-hover:border-primary transition-all duration-300 shadow-xl">
-                        <Play className="w-8 h-8 ml-1" fill="currentColor" />
-                      </div>
-                    </div>
                   </div>
                 )}
               </Section>
