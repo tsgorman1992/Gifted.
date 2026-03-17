@@ -82,6 +82,15 @@ export default function PreviewPage() {
       window.history.replaceState({}, "", window.location.pathname);
     }
 
+    // Restore paid state if user navigates back after payment
+    const savedPaidId = localStorage.getItem("gifted_paid_id");
+    if (savedPaidId) {
+      setGiftId(savedPaidId);
+      const url = `${window.location.origin}${base}/api/share/${savedPaidId}`;
+      setShareUrl(url);
+      setPaymentStatus("confirmed");
+    }
+
     if (paidParam === "true" && giftParam && sessionId) {
       setGiftId(giftParam);
       const url = `${window.location.origin}${base}/api/share/${giftParam}`;
@@ -97,10 +106,12 @@ export default function PreviewPage() {
         .then(async (res) => {
           if (!res.ok) throw new Error("Confirm failed");
           setPaymentStatus("confirmed");
+          localStorage.setItem("gifted_paid_id", giftParam);
         })
         .catch(() => {
           // Even if confirm fails (e.g. already confirmed), treat as paid
           setPaymentStatus("confirmed");
+          localStorage.setItem("gifted_paid_id", giftParam);
         });
 
       window.history.replaceState({}, "", window.location.pathname);

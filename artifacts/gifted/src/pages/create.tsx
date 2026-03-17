@@ -376,6 +376,7 @@ export default function CreatePage() {
   const handleRemovePhoto = (id: string) => setPhotos((prev) => prev.filter((p) => p.id !== id));
 
   const saveToLocalStorage = () => {
+    localStorage.removeItem("gifted_paid_id");
     if (videoObjectPath) localStorage.setItem("gifted_video_path", videoObjectPath);
     else localStorage.removeItem("gifted_video_path");
     if (photos.length > 0) localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
