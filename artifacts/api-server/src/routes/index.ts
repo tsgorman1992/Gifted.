@@ -6,6 +6,7 @@ import giftsRouter from "./gifted/gifts";
 import stripeRouter from "./gifted/stripe";
 import storageRouter from "./storage";
 import shareRouter from "./share";
+import ogRouter from "./og";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(giftsRouter);
 router.use(stripeRouter);
 router.use(storageRouter);
 router.use(shareRouter);
+router.use("/og", ogRouter);
 
 export default router;
