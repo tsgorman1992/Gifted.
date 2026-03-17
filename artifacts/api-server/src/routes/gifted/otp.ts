@@ -71,11 +71,15 @@ router.post("/gifted/send-otp", async (req, res) => {
     const fromNumber = normalizePhone(rawFrom);
     const toNumber   = normalizePhone(gift.recipientPhone);
 
-    await client.messages.create({
+    console.log(`[OTP] Sending from=${fromNumber} to=${toNumber}`);
+
+    const msg = await client.messages.create({
       body: `Your gifted. verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
       from: fromNumber,
       to: toNumber,
     });
+
+    console.log(`[OTP] Twilio SID=${msg.sid} status=${msg.status} errorCode=${msg.errorCode}`);
 
     res.json({ success: true, message: "Verification code sent" });
   } catch (err: any) {
