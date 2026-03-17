@@ -634,11 +634,6 @@ export default function RevealPage() {
   const iconProps = preIconMotionProps(cfg.preIconAnim);
   const isDark = cfg.isDark;
 
-  const displayPhotos = photoUrls.length > 0 ? photoUrls : [
-    "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=800&fit=crop",
-    "https://images.unsplash.com/photo-1511895426328-dc8714191300?w=800&fit=crop",
-    "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=800&fit=crop",
-  ];
 
   // ── Page-level style override for dark themes
   const pageStyle: React.CSSProperties = isDark
@@ -826,9 +821,9 @@ export default function RevealPage() {
                 </Section>
               )}
 
-              {/* Video — section 1 */}
-              <Section cfg={cfg} idx={1}>
-                {videoUrl ? (
+              {/* Video — section 1 (hidden when no video) */}
+              {videoUrl && (
+                <Section cfg={cfg} idx={1}>
                   <div className="w-full rounded-[2rem] overflow-hidden border" style={isDark ? { borderColor: "rgba(255,255,255,0.1)" } : {}}>
                     <div className="w-full aspect-video relative group">
                       <video
@@ -849,41 +844,35 @@ export default function RevealPage() {
                       )}
                     </div>
                   </div>
-                ) : (
-                  <div className="w-full aspect-video rounded-[2rem] overflow-hidden relative" style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}>
-                    <img
-                      src="https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&h=800&fit=crop"
-                      alt="Memory"
-                      className="w-full h-full object-cover opacity-60"
-                    />
-                  </div>
-                )}
-              </Section>
+                </Section>
+              )}
 
-              {/* Photos — section 2 */}
-              <Section cfg={cfg} idx={2}>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {displayPhotos.map((url, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.94 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{
-                        delay: i * 0.08,
-                        type: cfg.sectionStyle === "spring-pop" || cfg.sectionStyle === "bloom-scale" || cfg.sectionStyle === "fall-in" ? "spring" : undefined,
-                        stiffness: 260,
-                        damping: 24,
-                        duration: cfg.sectionStyle === "fade-drift" || cfg.sectionStyle === "rise-stagger" ? 0.7 : undefined,
-                      }}
-                      className={`rounded-3xl overflow-hidden aspect-square ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}
-                      style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}
-                    >
-                      <img src={url} alt="Memory" className="w-full h-full object-cover" />
-                    </motion.div>
-                  ))}
-                </div>
-              </Section>
+              {/* Photos — section 2 (hidden when no photos) */}
+              {photoUrls.length > 0 && (
+                <Section cfg={cfg} idx={2}>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {photoUrls.map((url, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, scale: 0.94 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                        transition={{
+                          delay: i * 0.08,
+                          type: cfg.sectionStyle === "spring-pop" || cfg.sectionStyle === "bloom-scale" || cfg.sectionStyle === "fall-in" ? "spring" : undefined,
+                          stiffness: 260,
+                          damping: 24,
+                          duration: cfg.sectionStyle === "fade-drift" || cfg.sectionStyle === "rise-stagger" ? 0.7 : undefined,
+                        }}
+                        className={`rounded-3xl overflow-hidden aspect-square ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}
+                        style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}
+                      >
+                        <img src={url} alt="Memory" className="w-full h-full object-cover" />
+                      </motion.div>
+                    ))}
+                  </div>
+                </Section>
+              )}
 
               {/* Playlist — between photos and balance */}
               {playlistUrl && (
