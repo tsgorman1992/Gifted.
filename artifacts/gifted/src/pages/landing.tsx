@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight, Check, RotateCcw, Pause } from "lucide-react";
+import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight, Check, RotateCcw, ExternalLink } from "lucide-react";
 
 type Phase = "sealed" | "opening" | "revealed";
 
@@ -14,7 +14,6 @@ const PHOTOS = [
 
 export default function LandingPage() {
   const [phase, setPhase] = useState<Phase>("sealed");
-  const [playingMusic, setPlayingMusic] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleReveal() {
@@ -359,36 +358,20 @@ export default function LandingPage() {
                           <p className="text-white/50 text-xs shrink-0">0:42</p>
                         </motion.div>
 
-                        {/* Playlist row */}
-                        <motion.button
+                        {/* Playlist row — link card (matches actual product behaviour) */}
+                        <motion.div
                           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-                          onClick={() => setPlayingMusic(p => !p)}
-                          className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-green-200/60 dark:border-green-800/40 bg-green-50 dark:bg-green-950/30 w-full cursor-pointer"
+                          className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-green-200/60 dark:border-green-800/40 bg-green-50 dark:bg-green-950/30"
                         >
                           <div className="w-7 h-7 rounded-md bg-green-500 flex items-center justify-center shrink-0">
                             <Music className="w-3.5 h-3.5 text-white" />
                           </div>
-                          <div className="flex-1 min-w-0 text-left">
+                          <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate">Golden Hour – JVKE</p>
-                            <p className="text-xs text-muted-foreground">Your birthday playlist</p>
+                            <p className="text-xs text-muted-foreground">Open in Spotify</p>
                           </div>
-                          <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-                            {playingMusic ? (
-                              <div className="flex gap-[2px] items-end h-3.5">
-                                {[0, 1, 2].map(i => (
-                                  <motion.div
-                                    key={i}
-                                    className="w-[3px] rounded-full bg-white"
-                                    animate={{ height: ["3px", "10px", "5px", "12px", "3px"] }}
-                                    transition={{ duration: 0.65, repeat: Infinity, delay: i * 0.18, ease: "easeInOut" }}
-                                  />
-                                ))}
-                              </div>
-                            ) : (
-                              <Play className="w-2.5 h-2.5 text-white ml-0.5" />
-                            )}
-                          </div>
-                        </motion.button>
+                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        </motion.div>
                       </motion.div>
                     )}
 
