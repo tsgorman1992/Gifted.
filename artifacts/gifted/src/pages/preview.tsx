@@ -71,7 +71,8 @@ export default function PreviewPage() {
     if (pl) setHasPlaylist(true);
 
     const amt = localStorage.getItem("gifted_amount");
-    if (amt) setGiftAmount(amt);
+    if (amt && parseFloat(amt) > 0) setGiftAmount(amt);
+    else localStorage.removeItem("gifted_amount");
 
     const intn = localStorage.getItem("gifted_intent");
     if (intn) setGiftIntent(intn);
@@ -255,6 +256,10 @@ export default function PreviewPage() {
 
   const handleRevealPreview = () => {
     localStorage.setItem("gifted_experience", experience);
+    if (giftAmount && parseFloat(giftAmount) > 0) localStorage.setItem("gifted_amount", giftAmount);
+    else localStorage.removeItem("gifted_amount");
+    if (giftIntent) localStorage.setItem("gifted_intent", giftIntent);
+    else localStorage.removeItem("gifted_intent");
     setLocation("/reveal");
   };
 
