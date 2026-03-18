@@ -547,6 +547,7 @@ type ParticleCfg = {
   duration: [number, number];
   keyframe: string;
   shape?: "circle";
+  startDelay?: number;
 };
 
 const PARTICLE_CFGS: Partial<Record<AmbientEffect, ParticleCfg>> = {
@@ -577,10 +578,20 @@ const PARTICLE_CFGS: Partial<Record<AmbientEffect, ParticleCfg>> = {
   },
 };
 
-function startAmbientParticles(effect: AmbientEffect): () => void {
+const INTENSITY_SCALE: Record<"low" | "medium" | "high", number> = {
+  low: 0.55,
+  medium: 1.0,
+  high: 1.5,
+};
+
+function startAmbientParticles(effect: AmbientEffect, intensity: "low" | "medium" | "high" = "medium"): () => void {
   if (effect === "stars") return () => {};
   const cfg = PARTICLE_CFGS[effect];
   if (!cfg) return () => {};
+
+  const scale = INTENSITY_SCALE[intensity];
+  const batchSize = Math.max(1, Math.round(cfg.batchSize * scale));
+  const batchInterval = Math.max(150, Math.round(cfg.batchInterval / Math.max(scale, 0.5)));
 
   injectParticleStyles();
   const container = document.createElement("div");
@@ -589,9 +600,11 @@ function startAmbientParticles(effect: AmbientEffect): () => void {
 
   let active = true;
 
+  const delay = cfg.startDelay ?? 0;
+
   function spawnBatch() {
     if (!active) return;
-    for (let i = 0; i < cfg.batchSize; i++) {
+    for (let i = 0; i < batchSize; i++) {
       setTimeout(() => {
         if (!active) return;
         const el = document.createElement("div");
@@ -615,12 +628,16 @@ function startAmbientParticles(effect: AmbientEffect): () => void {
         `;
         container.appendChild(el);
         setTimeout(() => el.remove(), dur + 200);
-      }, Math.random() * cfg.batchInterval);
+      }, Math.random() * batchInterval);
     }
   }
 
-  spawnBatch();
-  const iv = setInterval(spawnBatch, cfg.batchInterval + 200);
+  if (delay > 0) {
+    setTimeout(() => { if (active) { spawnBatch(); } }, delay);
+  } else {
+    spawnBatch();
+  }
+  const iv = setInterval(spawnBatch, batchInterval + 200);
 
   return () => {
     active = false;
@@ -920,7 +937,7 @@ export default function RevealPage() {
     setIsOpen(true);
     fireEntryBurst(experience);
     if (cfg.ambientEffect && cfg.ambientEffect !== "stars") {
-      ambientCleanup.current = startAmbientParticles(cfg.ambientEffect);
+      ambientCleanup.current = startAmbientParticles(cfg.ambientEffect, cfg.ambientIntensity);
     }
     // Confetti Burst: after entry burst settles, keep a gentle rain going
     if (experience === "confetti-burst") {
