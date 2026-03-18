@@ -42,8 +42,16 @@ router.post("/gifted/gifts", async (req, res) => {
       return;
     }
 
+    if (amount && parseFloat(amount) < 10) {
+      res.status(400).json({ error: "Minimum gift balance is $10." });
+      return;
+    }
+
     const id = nanoid(12);
     const senderUserId = (req as any).user?.id ?? null;
+
+    const scheduledForRaw = req.body.scheduledFor as string | undefined;
+    const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
 
     await db.insert(gifts).values({
       id,
@@ -60,6 +68,7 @@ router.post("/gifted/gifts", async (req, res) => {
       playlistUrl: playlistUrl || null,
       amount: amount || null,
       intent: intent || null,
+      scheduledFor: scheduledFor,
     });
 
     res.json({ id });

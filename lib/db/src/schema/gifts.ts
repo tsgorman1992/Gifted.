@@ -23,6 +23,8 @@ export const gifts = pgTable("gifts", {
   redemptionOtpExpiry: timestamp("redemption_otp_expiry", { withTimezone: true }),
   redemptionVerified: boolean("redemption_verified").default(false),
   redeemedAt: timestamp("redeemed_at", { withTimezone: true }),
+  scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+  scheduleDelivered: boolean("schedule_delivered").default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

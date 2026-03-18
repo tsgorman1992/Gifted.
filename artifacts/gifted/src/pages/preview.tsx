@@ -26,6 +26,7 @@ export default function PreviewPage() {
   const [hasPlaylist,    setHasPlaylist]    = useState(false);
   const [giftAmount,     setGiftAmount]     = useState<string | null>(null);
   const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
+  const [scheduledFor,   setScheduledFor]   = useState<string | null>(null);
 
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -74,6 +75,9 @@ export default function PreviewPage() {
 
     const intn = localStorage.getItem("gifted_intent");
     if (intn) setGiftIntent(intn);
+
+    const sf = localStorage.getItem("gifted_scheduled_for");
+    if (sf) setScheduledFor(sf);
 
     setCanShare(typeof navigator?.share === "function");
     setIsDesktop(window.innerWidth >= 768);
@@ -164,6 +168,9 @@ export default function PreviewPage() {
 
       const intn = localStorage.getItem("gifted_intent");
       if (intn) payload.intent = intn;
+
+      const sf = localStorage.getItem("gifted_scheduled_for");
+      if (sf) payload.scheduledFor = sf;
 
       const res = await fetch(`${base}/api/gifted/gifts`, {
         method: "POST",
@@ -460,6 +467,24 @@ export default function PreviewPage() {
           </motion.div>
 
           <motion.div {...fade(0.15)} className="space-y-3">
+
+            {/* Scheduled delivery badge */}
+            {scheduledFor && !isPaid && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5">
+                <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                  <Send className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Scheduled delivery</p>
+                  <p className="text-xs text-muted-foreground">
+                    {recipientName} will receive the link on{" "}
+                    {new Date(scheduledFor + "T12:00:00").toLocaleDateString("en-US", {
+                      weekday: "long", month: "long", day: "numeric",
+                    })}.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Error notices */}
             {saveError && (

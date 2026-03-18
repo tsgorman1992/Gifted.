@@ -855,6 +855,83 @@ function GiftBoxOpening({ phase, experience, isDark }: { phase: number; experien
   );
 }
 
+// ─── Experience sound synthesis ───────────────────────────────────────────────
+
+function playExperienceSound(exp: string) {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+
+    const hz: Record<string, number> = {
+      C4: 261.63, E4: 329.63, G4: 392.00, B4: 493.88,
+      C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880.00,
+      C6: 1046.50, E6: 1318.51, G6: 1567.98,
+    };
+
+    interface NoteEvent { f: number; t: number; d: number; g: number }
+
+    const map: Record<string, NoteEvent[]> = {
+      "confetti-burst":  [
+        { f: hz.C5, t: 0,    d: 0.12, g: 0.38 },
+        { f: hz.E5, t: 0.08, d: 0.12, g: 0.38 },
+        { f: hz.G5, t: 0.16, d: 0.12, g: 0.38 },
+        { f: hz.C6, t: 0.24, d: 0.5,  g: 0.48 },
+      ],
+      "golden-hour":     [
+        { f: hz.G4, t: 0,   d: 2.2, g: 0.18 },
+        { f: hz.B4, t: 0.1, d: 2.2, g: 0.15 },
+        { f: hz.E5, t: 0.2, d: 2.2, g: 0.13 },
+      ],
+      "garden-bloom":    [
+        { f: hz.C5, t: 0,    d: 0.55, g: 0.22 },
+        { f: hz.E5, t: 0.18, d: 0.55, g: 0.22 },
+        { f: hz.G5, t: 0.36, d: 0.55, g: 0.22 },
+        { f: hz.A5, t: 0.54, d: 0.7,  g: 0.28 },
+      ],
+      "midnight-stars":  [
+        { f: hz.E6, t: 0,    d: 1.0, g: 0.14 },
+        { f: hz.G6, t: 0.3,  d: 1.0, g: 0.11 },
+        { f: hz.C6, t: 0.6,  d: 1.2, g: 0.16 },
+      ],
+      "rose-petal":      [
+        { f: hz.G4, t: 0,    d: 1.4, g: 0.20 },
+        { f: hz.C5, t: 0.18, d: 1.4, g: 0.17 },
+        { f: hz.E5, t: 0.36, d: 1.8, g: 0.19 },
+      ],
+      "snow-flurry":     [
+        { f: hz.E6, t: 0,    d: 0.35, g: 0.18 },
+        { f: hz.G6, t: 0.14, d: 0.30, g: 0.13 },
+        { f: hz.E6, t: 0.30, d: 0.35, g: 0.16 },
+        { f: hz.C6, t: 0.48, d: 0.65, g: 0.20 },
+      ],
+      "sunrise":         [
+        { f: hz.C4, t: 0,    d: 1.8, g: 0.18 },
+        { f: hz.E4, t: 0.22, d: 1.8, g: 0.16 },
+        { f: hz.G4, t: 0.44, d: 1.8, g: 0.16 },
+        { f: hz.B4, t: 0.66, d: 2.0, g: 0.20 },
+      ],
+    };
+
+    const events = map[exp] ?? map["confetti-burst"];
+    const now = ctx.currentTime;
+
+    for (const ev of events) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(ev.f, now + ev.t);
+      gain.gain.setValueAtTime(0, now + ev.t);
+      gain.gain.linearRampToValueAtTime(ev.g, now + ev.t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + ev.t + ev.d);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + ev.t);
+      osc.stop(now + ev.t + ev.d + 0.05);
+    }
+  } catch { /* silently ignore — audio is enhancement only */ }
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function RevealPage() {
@@ -970,6 +1047,7 @@ export default function RevealPage() {
 
   const handleOpenClick = () => {
     if (isOpening) return;
+    playExperienceSound(experience);
     setIsOpening(true);
     setOpenPhase(1);
     setTimeout(() => setOpenPhase(2), 520);
@@ -1616,6 +1694,40 @@ export default function RevealPage() {
               )}
 
             </div>
+
+            {/* Viral CTA — shown to every gift recipient */}
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-20 mb-8">
+              <div
+                className="rounded-3xl border p-8 text-center"
+                style={{
+                  background: isDark ? "rgba(255,255,255,0.04)" : "hsl(var(--card))",
+                  borderColor: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))",
+                }}
+              >
+                <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                  gifted.
+                </p>
+                <h3 className={`font-serif text-2xl font-medium mb-2 ${isDark ? "text-white" : "text-foreground"}`}>
+                  Want to send a moment like this?
+                </h3>
+                <p className={`text-sm mb-6 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
+                  Create a gift experience in minutes — message, video, photos, music, and a cash balance they can actually use.
+                </p>
+                <Link href="/create">
+                  <button
+                    type="button"
+                    className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all hover:-translate-y-0.5 ${
+                      isDark
+                        ? "bg-white text-black hover:bg-white/90"
+                        : "bg-foreground text-background hover:bg-foreground/90"
+                    }`}
+                  >
+                    Create a gift <Sparkles className="w-4 h-4" />
+                  </button>
+                </Link>
+              </div>
+            </div>
+
           </motion.div>
         )}
       </AnimatePresence>

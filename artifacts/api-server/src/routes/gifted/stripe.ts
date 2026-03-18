@@ -58,6 +58,7 @@ router.post("/gifted/checkout-session", async (req, res) => {
 
     const stripe = getStripe();
     const amountCents = Math.round(parseFloat(gift.amount) * 100);
+    const feeCents    = Math.round(amountCents * 0.05);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -73,6 +74,17 @@ router.post("/gifted/checkout-session", async (req, res) => {
                 : `Sent via gifted. by ${gift.senderName}`,
             },
             unit_amount: amountCents,
+          },
+          quantity: 1,
+        },
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "gifted. platform fee",
+              description: "5% service fee for premium gifting experience",
+            },
+            unit_amount: feeCents,
           },
           quantity: 1,
         },

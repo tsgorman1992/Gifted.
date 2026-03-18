@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar,
 } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
 
@@ -258,6 +258,8 @@ export default function CreatePage() {
   const [hasManuallyChosen, setHasManuallyChosen] = useState(false);
   const [amount, setAmount] = useState("");
   const [intent, setIntent] = useState("");
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState("");
   const [occasion, setOccasion] = useState("Birthday");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
@@ -301,6 +303,8 @@ export default function CreatePage() {
     if (amt) setAmount(amt);
     const int = localStorage.getItem("gifted_intent");
     if (int) setIntent(int);
+    const sf = localStorage.getItem("gifted_scheduled_for");
+    if (sf) { setScheduledFor(sf); setScheduleEnabled(true); }
     const exp = localStorage.getItem("gifted_experience");
     if (exp && EXPERIENCE_LIST.find(e => e.id === exp)) {
       setSelectedExperience(exp as ExperienceId);
@@ -421,9 +425,19 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_amount");
     if (intent) localStorage.setItem("gifted_intent", intent);
     else localStorage.removeItem("gifted_intent");
+    if (scheduleEnabled && scheduledFor) localStorage.setItem("gifted_scheduled_for", scheduledFor);
+    else localStorage.removeItem("gifted_scheduled_for");
   };
 
   const handlePreview = () => {
+    if (amount && parseFloat(amount) < 10) {
+      setStepError("The minimum gift balance is $10. Choose $10 or more, or leave it blank.");
+      return;
+    }
+    if (scheduleEnabled && !scheduledFor) {
+      setStepError("Please pick a delivery date, or switch back to \"Send now\".");
+      return;
+    }
     saveToLocalStorage();
     setLocation("/preview");
   };
@@ -1108,6 +1122,72 @@ export default function CreatePage() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Schedule delivery */}
+              <div className="rounded-3xl p-6 border space-y-4" style={{ background: "hsl(var(--card))" }}>
+                <div className="flex items-center justify-between border-b border-border pb-4">
+                  <div>
+                    <h2 className="text-base font-semibold">Schedule delivery</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Send now or pick a future date — we'll deliver the link automatically.
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">Optional</span>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleEnabled(false)}
+                    className={`flex-1 py-3 rounded-2xl text-sm font-medium border transition-all ${
+                      !scheduleEnabled
+                        ? "bg-foreground text-background border-foreground"
+                        : "border-border hover:border-foreground/40 text-muted-foreground"
+                    }`}
+                  >
+                    Send now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleEnabled(true)}
+                    className={`flex-1 py-3 rounded-2xl text-sm font-medium border transition-all ${
+                      scheduleEnabled
+                        ? "bg-foreground text-background border-foreground"
+                        : "border-border hover:border-foreground/40 text-muted-foreground"
+                    }`}
+                  >
+                    Schedule for later
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {scheduleEnabled && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex items-center gap-3 pt-1">
+                        <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <Input
+                          type="date"
+                          value={scheduledFor}
+                          min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                          onChange={(e) => setScheduledFor(e.target.value)}
+                          className="h-11 rounded-xl text-base flex-1"
+                        />
+                      </div>
+                      {scheduledFor && (
+                        <p className="text-xs text-muted-foreground mt-2 pl-7">
+                          {recipientName || "Your recipient"} will get the link on{" "}
+                          {new Date(scheduledFor + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}.
+                        </p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Navigation */}
