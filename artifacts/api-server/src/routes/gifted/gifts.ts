@@ -101,7 +101,7 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       videoPath: gift.videoPath,
       photoPaths: gift.photoPaths,
       playlistUrl: gift.playlistUrl,
-      amount: gift.amount,
+      amount: (gift.amount && parseFloat(gift.amount) > 0) ? gift.amount : null,
       intent: gift.intent,
       paid: gift.paid,
       redeemedAt: gift.redeemedAt,

@@ -49,7 +49,7 @@ export default function OpenPage() {
         localStorage.setItem("gifted_recipient_name", gift.recipientName);
         localStorage.setItem("gifted_sender_name", gift.senderName);
 
-        if (gift.amount) localStorage.setItem("gifted_amount", gift.amount);
+        if (gift.amount && parseFloat(gift.amount) > 0) localStorage.setItem("gifted_amount", gift.amount);
         else localStorage.removeItem("gifted_amount");
 
         if (gift.intent) localStorage.setItem("gifted_intent", gift.intent);

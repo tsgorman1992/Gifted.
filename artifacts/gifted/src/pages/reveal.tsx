@@ -1003,7 +1003,7 @@ export default function RevealPage() {
     if (stored && CONFIGS[stored]) setExperience(stored);
 
     const amt = localStorage.getItem("gifted_amount");
-    if (amt) setGiftAmount(amt);
+    if (amt && parseFloat(amt) > 0) setGiftAmount(amt);
 
     const intn = localStorage.getItem("gifted_intent");
     if (intn) setGiftIntent(intn);
