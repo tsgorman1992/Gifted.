@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check, ExternalLink,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CreditCard, CheckCircle2,
+  CreditCard, CheckCircle2, Send, Mail, Phone,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -35,6 +35,13 @@ export default function PreviewPage() {
   // Stripe payment state
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "redirecting" | "confirming" | "confirmed" | "failed">("idle");
   const [payingError,   setPayingError]   = useState<string | null>(null);
+
+  // Desktop send form state
+  const [isDesktop,   setIsDesktop]   = useState(false);
+  const [sendContact, setSendContact] = useState("");
+  const [sendStatus,  setSendStatus]  = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [sendError,   setSendError]   = useState<string | null>(null);
+  const sendInputRef = useRef<HTMLInputElement>(null);
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -69,6 +76,7 @@ export default function PreviewPage() {
     if (intn) setGiftIntent(intn);
 
     setCanShare(typeof navigator?.share === "function");
+    setIsDesktop(window.innerWidth >= 768);
 
     // Handle return from Stripe Checkout
     const params = new URLSearchParams(window.location.search);
@@ -241,6 +249,51 @@ export default function PreviewPage() {
   const handleRevealPreview = () => {
     localStorage.setItem("gifted_experience", experience);
     setLocation("/reveal");
+  };
+
+  const handleDesktopSend = async () => {
+    const contact = sendContact.trim();
+    if (!contact) return;
+
+    const saved = await saveGift();
+    if (!saved) return;
+
+    setSendStatus("sending");
+    setSendError(null);
+
+    try {
+      const res = await fetch(`${base}/api/gifted/send-gift`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          giftId: saved.id,
+          contact,
+          recipientName,
+          senderName,
+          giftUrl: saved.url,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSendStatus("error");
+        setSendError(data.error || "Could not send. Please copy the link instead.");
+        return;
+      }
+
+      if (data.method === "email" && data.mailtoUrl) {
+        window.open(data.mailtoUrl, "_blank");
+        setSendStatus("sent");
+        return;
+      }
+
+      setSendStatus("sent");
+    } catch {
+      setSendStatus("error");
+      setSendError("Network error. Please copy the link and send it manually.");
+    }
   };
 
   const displayUrl   = giftId ? `gifted./open/${giftId}` : "gifted./open/...";
@@ -438,8 +491,8 @@ export default function PreviewPage() {
               </div>
             </div>
 
-            {/* Primary CTA — Pay & Send when balance unpaid, or Share when no balance / already paid */}
-            {hasBalance && !isPaid ? (
+            {/* Primary CTA — Pay & Send when balance unpaid */}
+            {hasBalance && !isPaid && (
               <Button
                 onClick={handlePayAndSend}
                 disabled={saving || isRedirecting}
@@ -452,47 +505,111 @@ export default function PreviewPage() {
                     : <><CreditCard className="w-5 h-5" /> Pay ${displayAmt} &amp; Send</>
                 }
               </Button>
-            ) : (
-              <Button
-                onClick={canShare ? handleShare : handleSMS}
-                disabled={saving}
-                className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200"
-              >
-                {saving
-                  ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving gift...</>
-                  : canShare
-                    ? <><Share2 className="w-5 h-5 mr-2" /> Share this gift</>
-                    : <><MessageCircle className="w-5 h-5 mr-2" /> Message {recipientName}</>
-                }
-              </Button>
             )}
 
-            {/* Secondary row */}
-            <div className="flex gap-3">
-              {canShare && (
+            {/* ── Desktop: clean send form ── */}
+            {isDesktop && (!hasBalance || isPaid) && (
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+                <p className="text-sm font-semibold">Send to {recipientName}</p>
+                <p className="text-xs text-muted-foreground">Enter their phone number or email — we'll deliver the link directly.</p>
+                {sendStatus === "sent" ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center gap-3 py-3 px-4 rounded-xl bg-green-50 border border-green-200"
+                  >
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-green-800">Gift sent!</p>
+                      <p className="text-xs text-green-700">{recipientName} will receive the link shortly.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setSendStatus("idle"); setSendContact(""); }}
+                      className="ml-auto text-xs text-green-700 underline"
+                    >
+                      Send again
+                    </button>
+                  </motion.div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        {sendContact.includes("@")
+                          ? <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          : <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        }
+                        <input
+                          ref={sendInputRef}
+                          type="text"
+                          value={sendContact}
+                          onChange={e => { setSendContact(e.target.value); setSendStatus("idle"); setSendError(null); }}
+                          onKeyDown={e => e.key === "Enter" && handleDesktopSend()}
+                          placeholder="Phone number or email"
+                          className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleDesktopSend}
+                        disabled={!sendContact.trim() || sendStatus === "sending" || saving}
+                        className="h-11 px-5 rounded-xl shrink-0"
+                      >
+                        {sendStatus === "sending"
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <><Send className="w-4 h-4 mr-1.5" /> Send</>
+                        }
+                      </Button>
+                    </div>
+                    {sendError && (
+                      <p className="text-xs text-destructive">{sendError}</p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── Mobile: native share buttons ── */}
+            {!isDesktop && (!hasBalance || isPaid) && (
+              <div className="flex gap-3">
+                <Button
+                  onClick={canShare ? handleShare : handleSMS}
+                  disabled={saving}
+                  className="flex-1 h-12 rounded-xl text-sm font-semibold shadow-lg shadow-primary/20"
+                >
+                  {saving
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                    : canShare
+                      ? <><Share2 className="w-4 h-4 mr-2" /> Share</>
+                      : <><MessageCircle className="w-4 h-4 mr-2" /> SMS</>
+                  }
+                </Button>
                 <Button
                   variant="outline"
-                  onClick={handleSMS}
-                  disabled={saving || isRedirecting}
+                  onClick={handleCopy}
+                  disabled={saving}
                   className="flex-1 h-12 rounded-xl text-sm font-medium"
                 >
-                  <MessageCircle className="w-4 h-4 mr-2" /> SMS
+                  {copied ? <><Check className="w-4 h-4 mr-2" /> Copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
                 </Button>
-              )}
+              </div>
+            )}
+
+            {/* Desktop: copy link always available */}
+            {isDesktop && (
               <Button
                 variant="outline"
                 onClick={handleCopy}
                 disabled={saving || isRedirecting}
-                className="flex-1 h-12 rounded-xl text-sm font-medium"
+                className="w-full h-11 rounded-xl text-sm font-medium"
               >
                 {saving
                   ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
                   : copied
                     ? <><Check className="w-4 h-4 mr-2" /> Copied!</>
-                    : <><Copy className="w-4 h-4 mr-2" /> Copy link</>
+                    : <><Copy className="w-4 h-4 mr-2" /> Copy link instead</>
                 }
               </Button>
-            </div>
+            )}
 
             {/* Reveal preview nudge */}
             <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3.5 flex items-center justify-between gap-4">
