@@ -176,10 +176,10 @@ export default function LandingPage() {
             {/* On mobile: mockup first so the interactive demo earns attention */}
             <div className="relative order-first lg:order-last">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-[2.5rem] transform rotate-3 blur-xl opacity-50" />
-              <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[9/16] sm:aspect-[4/5] flex flex-col">
+              <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[3/4] sm:aspect-[4/5] flex flex-col">
 
                 {/* Header */}
-                <div className="h-44 sm:h-64 relative overflow-hidden flex-shrink-0">
+                <div className="h-36 sm:h-52 relative overflow-hidden flex-shrink-0">
                   <AnimatePresence mode="wait">
                     {phase !== "revealed" ? (
                       <motion.div
@@ -253,7 +253,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 p-5 flex flex-col gap-2.5 overflow-hidden">
+                <div className="flex-1 p-4 flex flex-col gap-2 overflow-hidden">
                   <AnimatePresence mode="wait">
                     {phase === "sealed" && (
                       <motion.div key="sealed-body" exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="flex flex-col gap-3">
@@ -315,7 +315,7 @@ export default function LandingPage() {
                   </AnimatePresence>
 
                   {/* Balance card */}
-                  <div className="mt-auto p-3.5 rounded-xl border border-border flex items-center justify-between">
+                  <div className="mt-auto p-3 rounded-xl border border-border flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <motion.div animate={phase === "revealed" ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.45 }} className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                         <Gift className="w-4 h-4 text-primary" />
