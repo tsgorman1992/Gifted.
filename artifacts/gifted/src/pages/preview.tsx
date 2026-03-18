@@ -428,15 +428,21 @@ export default function PreviewPage() {
           <motion.div {...fade(0.08)}>
             {isPaid ? (
               <>
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  <span className="text-sm font-semibold text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-200">
-                    {paymentStatus === "confirming" ? "Confirming payment…" : `$${displayAmt} paid`}
-                  </span>
-                </div>
-                <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">Gift paid & ready!</h1>
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                  className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-4"
+                >
+                  <CheckCircle2 className="w-7 h-7 text-green-600" />
+                </motion.div>
+                <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">
+                  {paymentStatus === "confirming" ? "Confirming payment…" : "Gift sent!"}
+                </h1>
                 <p className="text-muted-foreground mb-7 text-base">
-                  Share the link with {recipientName} — they can now open and redeem their gift.
+                  {paymentStatus === "confirming"
+                    ? "Just a moment while we confirm your payment…"
+                    : `$${displayAmt} paid. Now send ${recipientName} the link below — their experience is ready.`}
                 </p>
               </>
             ) : (
@@ -594,8 +600,8 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* Desktop: copy link always available */}
-            {isDesktop && (
+            {/* Desktop: copy link — only available once paid (or no balance) */}
+            {isDesktop && (!hasBalance || isPaid) && (
               <Button
                 variant="outline"
                 onClick={handleCopy}
@@ -630,11 +636,6 @@ export default function PreviewPage() {
               </Button>
             </div>
 
-            {hasBalance && !isPaid && (
-              <p className="text-center text-xs text-muted-foreground">
-                You can also share the link without paying — your recipient will see the gift but can't redeem the balance until payment is complete.
-              </p>
-            )}
 
             {/* Footer link */}
             <div className="pt-1 text-center">

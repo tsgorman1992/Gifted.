@@ -871,6 +871,7 @@ export default function RevealPage() {
   const [experience, setExperience]       = useState(DEFAULT_EXPERIENCE);
   const [giftAmount, setGiftAmount]       = useState<string | null>(null);
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
+  const [giftPaid, setGiftPaid]           = useState<boolean>(true);
   const [isOpening, setIsOpening]         = useState(false);
   const [openPhase, setOpenPhase]         = useState(0);
 
@@ -922,6 +923,9 @@ export default function RevealPage() {
 
     const intn = localStorage.getItem("gifted_intent");
     if (intn) setGiftIntent(intn);
+
+    const paid = localStorage.getItem("gifted_gift_paid");
+    if (paid === "false") setGiftPaid(false);
   }, []);
 
   useEffect(() => {
@@ -1504,11 +1508,15 @@ export default function RevealPage() {
                           <p className="text-lg mb-10 max-w-md mx-auto text-white/60">
                             Sent with intention. Yours to use however you need.
                           </p>
-                          <Link href="/redeem">
-                            <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
-                              Redeem your balance
-                            </Button>
-                          </Link>
+                          {giftPaid ? (
+                            <Link href="/redeem">
+                              <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
+                                Redeem your balance
+                              </Button>
+                            </Link>
+                          ) : (
+                            <p className="text-sm text-white/40 italic">Payment pending — check back soon.</p>
+                          )}
                         </div>
                       </div>
                     ) : (
@@ -1591,11 +1599,15 @@ export default function RevealPage() {
                           <p className="text-lg opacity-80 mb-10 max-w-md mx-auto">
                             Sent with intention. Yours to use however you need.
                           </p>
-                          <Link href="/redeem">
-                            <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
-                              Redeem your balance
-                            </Button>
-                          </Link>
+                          {giftPaid ? (
+                            <Link href="/redeem">
+                              <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
+                                Redeem your balance
+                              </Button>
+                            </Link>
+                          ) : (
+                            <p className="text-sm opacity-60 italic">Payment pending — check back soon.</p>
+                          )}
                         </div>
                       </div>
                     )}

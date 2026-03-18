@@ -158,6 +158,11 @@ router.post("/gifted/redeem", async (req, res) => {
       return;
     }
 
+    if (gift.amount && parseFloat(gift.amount) > 0 && !gift.paid) {
+      res.status(402).json({ error: "This gift balance has not been paid yet. Please ask the sender to complete payment." });
+      return;
+    }
+
     await db
       .update(gifts)
       .set({ redeemedAt: new Date() })
