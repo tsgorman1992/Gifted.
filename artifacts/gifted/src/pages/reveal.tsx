@@ -550,6 +550,138 @@ function Section({
   );
 }
 
+// ─── Gift-box opening animation ──────────────────────────────────────────────
+
+const BOX_THEMES: Record<string, { box: string; lid: string; ribbon: string; bow: string }> = {
+  "confetti-burst": { box: "#FF6B6B", lid: "#E05555", ribbon: "#FFD93D", bow: "#FFD700" },
+  "golden-hour":    { box: "#E8A87C", lid: "#c9622a", ribbon: "#F7C59F", bow: "#FFD700" },
+  "garden-bloom":   { box: "#B5EAD7", lid: "#7DC9AD", ribbon: "#FFB7C5", bow: "#FF8FAB" },
+  "midnight-stars": { box: "#1e1b4b", lid: "#1a1060", ribbon: "#a5b4fc", bow: "#818cf8" },
+  "rose-petal":     { box: "#FFB7C5", lid: "#FF8FAB", ribbon: "#FFFFFF", bow: "#f9a8d4" },
+  "snow-flurry":    { box: "#bfdbfe", lid: "#93c5fd", ribbon: "#FFFFFF", bow: "#e0f2fe" },
+  "sunrise":        { box: "#fed7aa", lid: "#fb923c", ribbon: "#fca5a5", bow: "#f97316" },
+};
+
+// phase: 0=idle 1=rising 2=shaking 3=lid-pops 4=flash
+function GiftBoxOpening({ phase, experience, isDark }: { phase: number; experience: string; isDark: boolean }) {
+  const t = BOX_THEMES[experience] ?? BOX_THEMES["confetti-burst"];
+  const W = 210, BH = 130, LH = 54;
+
+  return (
+    <div style={{ position: "relative", width: W, height: BH + LH + 28 }} className="select-none">
+
+      {/* Bow — pops off with lid */}
+      <motion.div
+        style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", zIndex: 2 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={
+          phase >= 3
+            ? { y: -200, rotate: -25, opacity: 0, scale: 0.4 }
+            : phase >= 1
+            ? { opacity: 1, y: 0 }
+            : { opacity: 0, y: 20 }
+        }
+        transition={phase >= 3 ? { duration: 0.55, ease: [0.2, 0, 1, 0.8] } : { duration: 0.4 }}
+      >
+        <div style={{ width: 36, height: 24, background: t.bow, borderRadius: "50%", transform: "rotate(-42deg)", marginRight: -9, opacity: 0.93, boxShadow: "0 2px 6px rgba(0,0,0,0.18)" }} />
+        <div style={{ width: 16, height: 16, background: t.bow, borderRadius: "50%", zIndex: 1, boxShadow: "0 1px 4px rgba(0,0,0,0.22)" }} />
+        <div style={{ width: 36, height: 24, background: t.bow, borderRadius: "50%", transform: "rotate(42deg)",  marginLeft: -9,  opacity: 0.93, boxShadow: "0 2px 6px rgba(0,0,0,0.18)" }} />
+      </motion.div>
+
+      {/* Lid */}
+      <motion.div
+        style={{
+          position: "absolute", top: 22, left: 0,
+          width: W, height: LH,
+          background: t.lid,
+          borderRadius: "12px 12px 0 0",
+          overflow: "hidden",
+          zIndex: 1,
+        }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={
+          phase >= 3 ? { y: -220, rotate: 32, opacity: 0 }
+          : phase === 2 ? { y: [0, -10, 5, -6, 0], opacity: 1 }
+          : phase >= 1 ? { opacity: 1, y: 0 }
+          : { opacity: 0, y: 20 }
+        }
+        transition={
+          phase >= 3 ? { duration: 0.55, ease: [0.2, 0, 0.85, 0.5] }
+          : phase === 2 ? { duration: 0.52, times: [0, 0.22, 0.52, 0.76, 1] }
+          : { duration: 0.4 }
+        }
+      >
+        {/* Ribbon stripe */}
+        <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center" }}>
+          <div style={{ width: 20, height: "100%", background: t.ribbon, opacity: 0.65 }} />
+        </div>
+      </motion.div>
+
+      {/* Box body */}
+      <motion.div
+        style={{
+          position: "absolute", top: 22 + LH, left: 0,
+          width: W, height: BH,
+          background: t.box,
+          borderRadius: "0 0 18px 18px",
+          overflow: "hidden",
+        }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={phase >= 1 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+        transition={{ duration: 0.4 }}
+      >
+        {/* Ribbon stripe */}
+        <div style={{ position: "absolute", inset: 0, display: "flex", justifyContent: "center" }}>
+          <div style={{ width: 20, height: "100%", background: t.ribbon, opacity: 0.45 }} />
+        </div>
+
+        {/* Inner glow when lid pops */}
+        {phase >= 3 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0.65] }}
+            transition={{ duration: 0.7 }}
+            style={{
+              position: "absolute", inset: 0,
+              background: isDark
+                ? "radial-gradient(ellipse at 50% 0%, rgba(200,180,255,0.98), rgba(140,110,255,0.55) 65%, transparent)"
+                : "radial-gradient(ellipse at 50% 0%, rgba(255,253,180,1), rgba(255,220,90,0.7) 65%, transparent)",
+            }}
+          />
+        )}
+      </motion.div>
+
+      {/* Sparkles fly out when lid pops */}
+      {phase >= 3 && (
+        <div style={{ position: "absolute", top: 22 + LH, left: "50%", pointerEvents: "none" }}>
+          {[
+            { x: -80, y: -100, delay: 0.00, size: 10 },
+            { x: -45, y: -125, delay: 0.06, size: 8  },
+            { x:   0, y: -140, delay: 0.03, size: 12 },
+            { x:  45, y: -120, delay: 0.08, size: 8  },
+            { x:  80, y: -95,  delay: 0.02, size: 10 },
+          ].map((p, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+              animate={{ opacity: [0, 1, 0], x: p.x, y: p.y, scale: [0, 1.5, 0] }}
+              transition={{ duration: 0.8, delay: p.delay, ease: "easeOut" }}
+              style={{
+                position: "absolute",
+                width: p.size, height: p.size,
+                borderRadius: "50%",
+                background: t.bow,
+                marginLeft: -p.size / 2,
+                marginTop: -p.size / 2,
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function RevealPage() {
@@ -567,6 +699,7 @@ export default function RevealPage() {
   const [giftAmount, setGiftAmount]       = useState<string | null>(null);
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
   const [isOpening, setIsOpening]         = useState(false);
+  const [openPhase, setOpenPhase]         = useState(0);
 
   const amountRef  = useRef<HTMLDivElement>(null);
   const amountInView = useInView(amountRef, { once: true });
@@ -637,7 +770,11 @@ export default function RevealPage() {
   const handleOpenClick = () => {
     if (isOpening) return;
     setIsOpening(true);
-    setTimeout(() => handleOpen(), 340);
+    setOpenPhase(1);
+    setTimeout(() => setOpenPhase(2), 520);
+    setTimeout(() => setOpenPhase(3), 1000);
+    setTimeout(() => setOpenPhase(4), 1580);
+    setTimeout(() => handleOpen(),    2100);
   };
 
   useEffect(() => {
@@ -705,12 +842,37 @@ export default function RevealPage() {
               />
             </div>
 
-            <motion.div
-              initial={{ scale: 0.88, opacity: 0, y: 16 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-              className="relative z-10 flex flex-col items-center text-center"
-            >
+            {/* Screen flash when box opens */}
+            <AnimatePresence>
+              {openPhase >= 4 && (
+                <motion.div
+                  key="flash"
+                  className="absolute inset-0 pointer-events-none z-20"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 1, 0] }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.55, times: [0, 0.28, 1] }}
+                  style={{
+                    background: isDark
+                      ? "radial-gradient(ellipse at center, rgba(180,160,255,0.95), rgba(100,80,220,0.6))"
+                      : "radial-gradient(ellipse at center, rgba(255,255,220,1), rgba(255,220,120,0.7))",
+                  }}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* Content switches: normal pre-reveal ↔ gift box opening */}
+            <AnimatePresence mode="wait">
+              {!isOpening ? (
+                <motion.div
+                  key="idle"
+                  exit={{ opacity: 0, scale: 0.88, y: -10 }}
+                  transition={{ duration: 0.22 }}
+                  initial={{ scale: 0.88, opacity: 0, y: 16 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  className="relative z-10 flex flex-col items-center text-center"
+                >
+              
               {/* Animated icon with aura rings */}
               <div className="relative mb-8 flex items-center justify-center" style={{ width: 96, height: 96 }}>
                 {/* Pulsing aura rings */}
@@ -821,7 +983,29 @@ export default function RevealPage() {
               >
                 scroll to explore
               </motion.p>
-            </motion.div>
+                </motion.div>
+              ) : (
+                /* ── Gift box opening sequence ── */
+                <motion.div
+                  key="opening"
+                  className="relative z-10 flex flex-col items-center justify-center gap-0"
+                  initial={{ opacity: 0, scale: 0.72, y: 40 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <GiftBoxOpening phase={openPhase} experience={experience} isDark={isDark} />
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: openPhase < 4 ? 1 : 0 }}
+                    transition={{ delay: 0.3, duration: 0.4 }}
+                    className={`mt-7 text-sm font-medium tracking-wide ${isDark ? "text-white/55" : "text-muted-foreground"}`}
+                  >
+                    {openPhase >= 3 ? "✨ Opening…" : openPhase >= 2 ? "Almost there…" : "Opening your gift…"}
+                  </motion.p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
           </motion.div>
         )}
       </AnimatePresence>
