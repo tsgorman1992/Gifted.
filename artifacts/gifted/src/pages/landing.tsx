@@ -29,7 +29,7 @@ export default function LandingPage() {
   const [phase, setPhase] = useState<Phase>("sealed");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function handleReveal() {
+  function startReveal() {
     setPhase("opening");
     timerRef.current = setTimeout(() => setPhase("revealed"), 1400);
   }
@@ -37,9 +37,13 @@ export default function LandingPage() {
   function handleReplay() {
     if (timerRef.current) clearTimeout(timerRef.current);
     setPhase("sealed");
+    timerRef.current = setTimeout(startReveal, 1200);
   }
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  useEffect(() => {
+    timerRef.current = setTimeout(startReveal, 1600);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   return (
     <div className="w-full flex flex-col items-center overflow-hidden">
@@ -330,9 +334,9 @@ export default function LandingPage() {
                         <RotateCcw className="w-3 h-3" />Replay
                       </Button>
                     ) : (
-                      <Button size="sm" variant="secondary" className="rounded-full h-8 text-xs transition-all duration-300" onClick={handleReveal} disabled={phase === "opening"}>
-                        {phase === "opening" ? "Opening…" : "Reveal ✨"}
-                      </Button>
+                      <span className="text-xs text-muted-foreground animate-pulse">
+                        {phase === "opening" ? "Opening…" : ""}
+                      </span>
                     )}
                   </div>
                 </div>

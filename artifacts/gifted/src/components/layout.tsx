@@ -86,7 +86,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex gap-6 text-sm text-muted-foreground">
             <Link href="/terms"   className="hover:text-foreground transition-colors">Terms</Link>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link href="/faq"     className="hover:text-foreground transition-colors">Help</Link>
+            <Link href="/faq"     className="hover:text-foreground transition-colors">FAQ</Link>
           </div>
         </div>
       </footer>

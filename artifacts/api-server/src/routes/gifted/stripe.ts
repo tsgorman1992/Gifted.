@@ -1,7 +1,28 @@
 import { Router } from "express";
 import Stripe from "stripe";
+import twilio from "twilio";
 import { db, gifts } from "@workspace/db";
 import { eq } from "drizzle-orm";
+
+function getTwilioClient() {
+  const sid   = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) return null;
+  return twilio(sid, token);
+}
+
+async function notifyOperator(message: string) {
+  const operatorPhone = process.env.OPERATOR_PHONE;
+  const fromPhone     = process.env.TWILIO_PHONE_NUMBER;
+  if (!operatorPhone || !fromPhone) return;
+  try {
+    const client = getTwilioClient();
+    if (!client) return;
+    await client.messages.create({ to: operatorPhone, from: fromPhone, body: message });
+  } catch (err) {
+    console.error("Operator SMS failed:", err);
+  }
+}
 
 const router = Router();
 
@@ -110,12 +131,17 @@ router.post("/gifted/confirm-payment", async (req, res) => {
 
 /**
  * POST /gifted/redeem
- * Marks a gift as redeemed (sets redeemedAt timestamp).
- * Body: { giftId }
+ * Marks a gift as redeemed and notifies the operator via SMS.
+ * Body: { giftId, payoutName, payoutMethod, payoutHandle }
  */
 router.post("/gifted/redeem", async (req, res) => {
   try {
-    const { giftId } = req.body as { giftId: string };
+    const { giftId, payoutName, payoutMethod, payoutHandle } = req.body as {
+      giftId: string;
+      payoutName?: string;
+      payoutMethod?: string;
+      payoutHandle?: string;
+    };
 
     if (!giftId) {
       res.status(400).json({ error: "giftId is required" });
@@ -136,6 +162,16 @@ router.post("/gifted/redeem", async (req, res) => {
       .update(gifts)
       .set({ redeemedAt: new Date() })
       .where(eq(gifts.id, giftId));
+
+    // Notify operator via SMS
+    if (payoutName && payoutMethod && payoutHandle) {
+      const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "unknown amount";
+      const methodLabel = payoutMethod.charAt(0).toUpperCase() + payoutMethod.slice(1);
+      const senderLabel = gift.senderName ? ` from ${gift.senderName}` : "";
+      await notifyOperator(
+        `gifted. redemption 🎁\n${amount} — ${payoutName}\n${methodLabel}: ${payoutHandle}\nGift${senderLabel} → send now`
+      );
+    }
 
     res.json({ success: true });
   } catch (err) {

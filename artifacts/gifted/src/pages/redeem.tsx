@@ -15,6 +15,8 @@ export default function RedeemPage() {
   const [selectedMethod, setSelectedMethod] = useState<"venmo" | "paypal" | "zelle" | null>(null);
   const [isProcessing, setIsProcessing]     = useState(false);
   const [error, setError]                   = useState<string | null>(null);
+  const [payoutName, setPayoutName]         = useState("");
+  const [payoutHandle, setPayoutHandle]     = useState("");
   const [amount, setAmount]                 = useState<string>("0");
   const [giftId, setGiftId]                 = useState<string | null>(null);
   const [senderName, setSenderName]         = useState<string | null>(null);
@@ -124,7 +126,12 @@ export default function RedeemPage() {
         const res = await fetch(`${BASE}/api/gifted/redeem`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ giftId }),
+          body: JSON.stringify({
+            giftId,
+            payoutName,
+            payoutMethod: selectedMethod,
+            payoutHandle,
+          }),
         });
         if (!res.ok) throw new Error("Redeem request failed");
       }
@@ -304,7 +311,7 @@ export default function RedeemPage() {
                       <button
                         key={method}
                         type="button"
-                        onClick={() => setSelectedMethod(method)}
+                        onClick={() => { setSelectedMethod(method); setPayoutHandle(""); }}
                         className={`p-4 rounded-2xl border-2 text-center transition-all font-semibold text-sm ${
                           isSelected ? colors[method] : "border-border hover:border-primary/40 text-muted-foreground"
                         }`}
@@ -327,7 +334,13 @@ export default function RedeemPage() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label>Your Name</Label>
-                          <Input placeholder="e.g. Sarah Connor" className="h-12 rounded-xl" required />
+                          <Input
+                            placeholder="e.g. Sarah Connor"
+                            className="h-12 rounded-xl"
+                            value={payoutName}
+                            onChange={(e) => setPayoutName(e.target.value)}
+                            required
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label>
@@ -342,6 +355,8 @@ export default function RedeemPage() {
                               "Phone number or email"
                             }
                             className="h-12 rounded-xl"
+                            value={payoutHandle}
+                            onChange={(e) => setPayoutHandle(e.target.value)}
                             required
                           />
                         </div>
@@ -366,7 +381,7 @@ export default function RedeemPage() {
 
                       <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                         <Lock className="w-3.5 h-3.5 shrink-0" />
-                        <span>Every payout is reviewed by our team and sent within 24 hours. Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a></span>
+                        <span>We'll send your balance directly to your {selectedMethod === "venmo" ? "Venmo" : selectedMethod === "paypal" ? "PayPal" : "Zelle"} — usually within a couple hours. Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a></span>
                       </div>
                     </motion.form>
                   )}
@@ -406,7 +421,7 @@ export default function RedeemPage() {
               <p className="text-lg text-muted-foreground max-w-md mx-auto mb-3">
                 We'll send your <span className="font-semibold text-foreground">${displayAmount}</span> to your{" "}
                 {selectedMethod === "venmo" ? "Venmo" : selectedMethod === "paypal" ? "PayPal" : "Zelle"}{" "}
-                within 24 hours.
+                — usually within a couple hours.
               </p>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-10">
                 Questions? Reach us at <a href="mailto:help@gifted.page" className="underline">help@gifted.page</a>
