@@ -155,10 +155,10 @@ export default function LandingPage() {
             {/* Visual Mockup */}
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-[2.5rem] transform rotate-3 blur-xl opacity-50" />
-              <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[4/5] flex flex-col">
+              <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[9/16] sm:aspect-[4/5] flex flex-col">
 
                 {/* ── HEADER: envelope (sealed/opening) or gradient (revealed) ── */}
-                <div className="h-64 relative overflow-hidden flex-shrink-0">
+                <div className="h-44 sm:h-64 relative overflow-hidden flex-shrink-0">
                   <AnimatePresence mode="wait">
                     {phase !== "revealed" ? (
                       /* ── ENVELOPE ── */
