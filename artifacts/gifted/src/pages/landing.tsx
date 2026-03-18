@@ -6,6 +6,7 @@ import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, Arr
 
 export default function LandingPage() {
   const [revealed, setRevealed] = useState(false);
+  const [playingMusic, setPlayingMusic] = useState(false);
 
   return (
     <div className="w-full flex flex-col items-center overflow-hidden">
@@ -154,7 +155,7 @@ export default function LandingPage() {
                     <h3 className="font-serif text-4xl">Sarah</h3>
                   </div>
                 </div>
-                <div className="flex-1 p-6 flex flex-col gap-3 overflow-hidden">
+                <div className="flex-1 p-5 flex flex-col gap-2.5 overflow-hidden">
                   <AnimatePresence mode="wait">
                     {!revealed ? (
                       <motion.div
@@ -164,34 +165,117 @@ export default function LandingPage() {
                         transition={{ duration: 0.25 }}
                         className="flex flex-col gap-3"
                       >
-                        <div className="w-3/4 h-4 bg-muted rounded-full" />
-                        <div className="w-full h-4 bg-muted rounded-full" />
-                        <div className="w-5/6 h-4 bg-muted rounded-full" />
+                        {/* Skeleton lines */}
+                        <div className="w-3/4 h-3.5 bg-muted rounded-full" />
+                        <div className="w-full h-3.5 bg-muted rounded-full" />
+                        {/* Feature pills hinting what's inside */}
+                        <div className="flex gap-1.5 mt-1">
+                          {[
+                            { icon: ImageIcon, label: "3 Photos" },
+                            { icon: Play,      label: "Video" },
+                            { icon: Music,     label: "Playlist" },
+                          ].map(({ icon: Icon, label }) => (
+                            <span key={label} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs">
+                              <Icon className="w-3 h-3" />{label}
+                            </span>
+                          ))}
+                        </div>
                       </motion.div>
                     ) : (
                       <motion.div
                         key="revealed"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                        className="flex flex-col gap-1.5"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex flex-col gap-2.5"
                       >
-                        <p className="font-serif text-lg font-medium leading-snug">Happy Birthday, Sarah 🎂</p>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          You deserve something special today. Treat yourself to something wonderful.
-                        </p>
+                        {/* Message */}
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                          <p className="font-serif text-base font-medium leading-snug">Happy Birthday, Sarah 🎂</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">You deserve something wonderful today.</p>
+                        </motion.div>
+
+                        {/* Photo strip */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                          className="flex gap-1.5"
+                        >
+                          {[
+                            "linear-gradient(135deg,#FBBF9A,#F7875B)",
+                            "linear-gradient(135deg,#A8D8F0,#7BB8E8)",
+                            "linear-gradient(135deg,#B5EAD7,#7DC9AD)",
+                          ].map((bg, i) => (
+                            <div key={i} className="flex-1 h-14 rounded-lg flex items-center justify-center" style={{ background: bg }}>
+                              <ImageIcon className="w-4 h-4 text-white/70" />
+                            </div>
+                          ))}
+                        </motion.div>
+
+                        {/* Video row */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                          className="flex items-center gap-2.5 px-3 h-11 rounded-xl"
+                          style={{ background: "linear-gradient(135deg,#1a1a2e,#2d1b4e)" }}
+                        >
+                          <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                            <Play className="w-3 h-3 text-white ml-0.5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-xs font-medium">Video message</p>
+                            <div className="w-16 h-1 rounded-full bg-white/20 mt-1 overflow-hidden">
+                              <motion.div
+                                className="h-full rounded-full bg-white/60"
+                                animate={{ width: ["0%", "45%"] }}
+                                transition={{ delay: 0.6, duration: 1.5, ease: "easeOut" }}
+                              />
+                            </div>
+                          </div>
+                          <p className="text-white/50 text-xs shrink-0">0:42</p>
+                        </motion.div>
+
+                        {/* Playlist row */}
+                        <motion.button
+                          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+                          onClick={() => setPlayingMusic(p => !p)}
+                          className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-green-200/60 dark:border-green-800/40 bg-green-50 dark:bg-green-950/30 w-full cursor-pointer"
+                        >
+                          <div className="w-7 h-7 rounded-md bg-green-500 flex items-center justify-center shrink-0">
+                            <Music className="w-3.5 h-3.5 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-xs font-medium truncate">Golden Hour – JVKE</p>
+                            <p className="text-xs text-muted-foreground">Your birthday playlist</p>
+                          </div>
+                          <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                            {playingMusic ? (
+                              <div className="flex gap-[2px] items-end h-3.5">
+                                {[0, 1, 2].map(i => (
+                                  <motion.div
+                                    key={i}
+                                    className="w-[3px] rounded-full bg-white"
+                                    animate={{ height: ["4px", "10px", "6px", "12px", "4px"] }}
+                                    transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.18, ease: "easeInOut" }}
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <Play className="w-2.5 h-2.5 text-white ml-0.5" />
+                            )}
+                          </div>
+                        </motion.button>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  <div className="mt-auto p-4 rounded-xl border border-border flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  {/* Balance + Reveal */}
+                  <div className="mt-auto p-3.5 rounded-xl border border-border flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
                       <motion.div
-                        animate={revealed ? { scale: [1, 1.25, 1], backgroundColor: ["hsl(var(--primary)/0.1)", "hsl(var(--primary)/0.25)", "hsl(var(--primary)/0.1)"] } : {}}
-                        transition={{ duration: 0.5 }}
-                        className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
+                        animate={revealed ? { scale: [1, 1.3, 1] } : {}}
+                        transition={{ duration: 0.45 }}
+                        className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center"
                       >
-                        <Gift className="w-5 h-5 text-primary" />
+                        <Gift className="w-4 h-4 text-primary" />
                       </motion.div>
                       <div>
                         <p className="text-sm font-bold">$150.00</p>
@@ -201,12 +285,12 @@ export default function LandingPage() {
                     <Button
                       size="sm"
                       variant={revealed ? "default" : "secondary"}
-                      className="rounded-full transition-all duration-300"
+                      className="rounded-full transition-all duration-300 h-8 text-xs"
                       onClick={() => setRevealed(true)}
                       disabled={revealed}
                     >
                       {revealed
-                        ? <><Check className="w-3.5 h-3.5 mr-1" /> Opened</>
+                        ? <><Check className="w-3 h-3 mr-1" />Opened</>
                         : "Reveal"
                       }
                     </Button>
