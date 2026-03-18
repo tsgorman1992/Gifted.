@@ -24,7 +24,6 @@ export default function LandingPage() {
   function handleReplay() {
     if (timerRef.current) clearTimeout(timerRef.current);
     setPhase("sealed");
-    setPlayingMusic(false);
   }
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
