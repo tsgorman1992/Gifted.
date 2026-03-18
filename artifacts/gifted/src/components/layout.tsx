@@ -62,7 +62,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </DropdownMenu>
               ) : (
                 <Link href="/sign-in"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground hidden sm:block transition-colors"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Sign in
                 </Link>

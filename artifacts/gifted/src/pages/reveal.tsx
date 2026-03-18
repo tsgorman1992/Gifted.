@@ -566,6 +566,7 @@ export default function RevealPage() {
   const [experience, setExperience]       = useState(DEFAULT_EXPERIENCE);
   const [giftAmount, setGiftAmount]       = useState<string | null>(null);
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
+  const [isOpening, setIsOpening]         = useState(false);
 
   const amountRef  = useRef<HTMLDivElement>(null);
   const amountInView = useInView(amountRef, { once: true });
@@ -633,8 +634,38 @@ export default function RevealPage() {
     }
   };
 
+  const handleOpenClick = () => {
+    if (isOpening) return;
+    setIsOpening(true);
+    setTimeout(() => handleOpen(), 340);
+  };
+
   useEffect(() => {
     return () => { ambientCleanup.current?.(); };
+  }, []);
+
+  useEffect(() => {
+    const sid = "gifted-epic-anim-styles";
+    if (!document.getElementById(sid)) {
+      const s = document.createElement("style");
+      s.id = sid;
+      s.textContent = `
+        @keyframes gifted-ring-out {
+          0%   { transform: scale(1);   opacity: 0.55; }
+          100% { transform: scale(2.7); opacity: 0;    }
+        }
+        @keyframes gifted-shimmer-sweep {
+          0%   { transform: translateX(-150%); }
+          40%  { transform: translateX(250%);  }
+          100% { transform: translateX(250%);  }
+        }
+        @keyframes gifted-pre-breathe {
+          0%, 100% { opacity: 0.4; transform: scale(1);    }
+          50%       { opacity: 0.7; transform: scale(1.04); }
+        }
+      `;
+      document.head.appendChild(s);
+    }
   }, []);
 
   const gStyle = gradientStyle(experience);
@@ -666,9 +697,12 @@ export default function RevealPage() {
               : { backgroundColor: "hsl(var(--background))" }
             }
           >
-            {/* Background gradient glow */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-50">
-              <div className="w-full h-full blur-3xl" style={gStyle} />
+            {/* Background gradient glow — breathing */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div
+                className="w-full h-full blur-3xl"
+                style={{ ...gStyle, animation: "gifted-pre-breathe 4s ease-in-out infinite" }}
+              />
             </div>
 
             <motion.div
@@ -677,42 +711,116 @@ export default function RevealPage() {
               transition={{ delay: 0.15, duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
               className="relative z-10 flex flex-col items-center text-center"
             >
-              {/* Animated icon */}
-              <div className="relative mb-8">
-                <div
-                  className="w-24 h-24 rounded-full flex items-center justify-center"
-                  style={{
-                    background: isDark
-                      ? "rgba(255,255,255,0.08)"
-                      : "rgba(var(--primary), 0.1)",
-                    backdropFilter: "blur(12px)",
-                  }}
+              {/* Animated icon with aura rings */}
+              <div className="relative mb-8 flex items-center justify-center" style={{ width: 96, height: 96 }}>
+                {/* Pulsing aura rings */}
+                {!isOpening && [0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: "50%",
+                      border: `1.5px solid ${isDark ? "rgba(255,255,255,0.28)" : "hsl(var(--primary)/0.38)"}`,
+                      animation: `gifted-ring-out 2.4s ${i * 0.8}s ease-out infinite`,
+                      pointerEvents: "none",
+                    }}
+                  />
+                ))}
+                <motion.div
+                  animate={isOpening ? { scale: [1, 1.5, 0.2], opacity: [1, 1, 0] } : {}}
+                  transition={{ duration: 0.34, ease: [0.4, 0, 0.6, 1] }}
                 >
-                  <motion.div {...iconProps}>
-                    <PreIcon className={`w-10 h-10 ${cfg.preIconColorClass}`} />
-                  </motion.div>
-                </div>
+                  <div
+                    className="w-24 h-24 rounded-full flex items-center justify-center"
+                    style={{
+                      background: isDark
+                        ? "rgba(255,255,255,0.08)"
+                        : "rgba(var(--primary), 0.1)",
+                      backdropFilter: "blur(12px)",
+                    }}
+                  >
+                    <motion.div {...iconProps}>
+                      <PreIcon className={`w-10 h-10 ${cfg.preIconColorClass}`} />
+                    </motion.div>
+                  </div>
+                </motion.div>
               </div>
 
-              <p className={`text-base font-medium mb-2 ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
+              <motion.p
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55, duration: 0.5 }}
+                className={`text-base font-medium mb-2 ${isDark ? "text-white/60" : "text-muted-foreground"}`}
+              >
                 A gift for
-              </p>
-              <h1 className={`font-serif text-5xl sm:text-6xl md:text-7xl mb-10 break-words max-w-xs sm:max-w-sm ${isDark ? "text-white" : ""}`}>
-                {recipientName}
+              </motion.p>
+
+              {/* Recipient name — character stagger */}
+              <h1
+                aria-label={recipientName}
+                className={`font-serif text-5xl sm:text-6xl md:text-7xl mb-10 break-words max-w-xs sm:max-w-sm ${isDark ? "text-white" : ""}`}
+                style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}
+              >
+                {recipientName.split("").map((char, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0, y: 22, filter: "blur(6px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    transition={{ delay: 0.6 + i * 0.042, type: "spring", stiffness: 380, damping: 30 }}
+                    style={{ display: "inline-block" }}
+                  >
+                    {char === " " ? "\u00A0" : char}
+                  </motion.span>
+                ))}
               </h1>
 
-              <Button
-                onClick={handleOpen}
-                size="lg"
-                className="rounded-full h-16 px-10 sm:px-14 text-xl w-full max-w-xs shadow-2xl shadow-primary/30 hover:scale-105 transition-all duration-300"
-                style={isDark ? { background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" } : {}}
+              {/* CTA button with shimmer */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 + recipientName.length * 0.042, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                className="relative w-full max-w-xs"
               >
-                {experience === "midnight-stars" ? "Reveal" : experience === "snow-flurry" ? "Open" : "Tap to open"}
-              </Button>
+                <Button
+                  onClick={handleOpenClick}
+                  disabled={isOpening}
+                  size="lg"
+                  className="relative overflow-hidden rounded-full h-16 px-10 sm:px-14 text-xl w-full shadow-2xl shadow-primary/30 transition-all duration-200 active:scale-95"
+                  style={isDark ? { background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.2)" } : {}}
+                >
+                  <motion.span
+                    animate={isOpening ? { scale: 0.94, opacity: 0.7 } : { scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.12 }}
+                    className="relative z-10"
+                  >
+                    {experience === "midnight-stars" ? "Reveal" : experience === "snow-flurry" ? "Open" : "Tap to open"}
+                  </motion.span>
+                  {/* Shimmer sweep — loops every 3.5s */}
+                  {!isOpening && (
+                    <span
+                      aria-hidden
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.26) 50%, transparent 70%)",
+                        animation: "gifted-shimmer-sweep 3.5s 1.2s ease-in-out infinite",
+                        pointerEvents: "none",
+                        borderRadius: "inherit",
+                      }}
+                    />
+                  )}
+                </Button>
+              </motion.div>
 
-              <p className={`mt-5 text-xs tracking-widest uppercase ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.1, duration: 0.8 }}
+                className={`mt-5 text-xs tracking-widest uppercase ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}
+              >
                 scroll to explore
-              </p>
+              </motion.p>
             </motion.div>
           </motion.div>
         )}

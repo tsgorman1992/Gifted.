@@ -283,6 +283,30 @@ export default function CreatePage() {
   useEffect(() => {
     localStorage.removeItem("gifted_video_path");
     localStorage.removeItem("gifted_photo_paths");
+    const rn = localStorage.getItem("gifted_recipient_name");
+    if (rn) setRecipientName(rn);
+    const sn = localStorage.getItem("gifted_sender_name");
+    if (sn) setSenderName(sn);
+    const rp = localStorage.getItem("gifted_recipient_phone");
+    if (rp) setRecipientPhone(rp);
+    const occ = localStorage.getItem("gifted_occasion");
+    if (occ) setOccasion(occ);
+    const gt = localStorage.getItem("gifted_gift_title");
+    if (gt) setGiftTitle(gt);
+    const pn = localStorage.getItem("gifted_personal_note");
+    if (pn) setPersonalNote(pn);
+    const pl = localStorage.getItem("gifted_playlist_url");
+    if (pl) setPlaylistUrl(pl);
+    const amt = localStorage.getItem("gifted_amount");
+    if (amt) setAmount(amt);
+    const int = localStorage.getItem("gifted_intent");
+    if (int) setIntent(int);
+    const exp = localStorage.getItem("gifted_experience");
+    if (exp && EXPERIENCE_LIST.find(e => e.id === exp)) {
+      setSelectedExperience(exp as ExperienceId);
+      setSuggestedExperience(exp as ExperienceId);
+      setHasManuallyChosen(true);
+    }
   }, []);
 
   // Suggest a title when recipient + occasion are both set
@@ -736,30 +760,37 @@ export default function CreatePage() {
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                      <div className="flex items-center gap-2">
+                      {!personalNote.trim() ? (
                         <button
                           type="button"
-                          disabled={aiLoading !== null || !personalNote.trim()}
-                          title={!personalNote.trim() ? "Write a note first, then AI can help improve it" : undefined}
-                          onClick={() => handleAI("rewrite")}
+                          disabled={aiLoading !== null}
+                          onClick={() => handleAI("regenerate")}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-primary/20"
                         >
-                          {aiLoading === "rewrite" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                          {aiLoading === "rewrite" ? "Rewriting..." : "Rewrite"}
+                          {aiLoading === "regenerate" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                          {aiLoading === "regenerate" ? "Writing..." : "Write it for me"}
                         </button>
-                        <button
-                          type="button"
-                          disabled={aiLoading !== null || !personalNote.trim()}
-                          title={!personalNote.trim() ? "Write a note first, then AI can help improve it" : undefined}
-                          onClick={() => handleAI("regenerate")}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-border"
-                        >
-                          {aiLoading === "regenerate" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                          {aiLoading === "regenerate" ? "Generating..." : "Generate"}
-                        </button>
-                      </div>
-                      {!personalNote.trim() && (
-                        <p className="text-xs text-muted-foreground">Write a note to enable AI assist</p>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={aiLoading !== null}
+                            onClick={() => handleAI("rewrite")}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-primary/20"
+                          >
+                            {aiLoading === "rewrite" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            {aiLoading === "rewrite" ? "Polishing..." : "Polish it"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={aiLoading !== null}
+                            onClick={() => handleAI("regenerate")}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-border"
+                          >
+                            {aiLoading === "regenerate" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                            {aiLoading === "regenerate" ? "Writing..." : "Start fresh"}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
