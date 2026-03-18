@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight } from "lucide-react";
+import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight, Check } from "lucide-react";
 
 export default function LandingPage() {
+  const [revealed, setRevealed] = useState(false);
+
   return (
     <div className="w-full flex flex-col items-center overflow-hidden">
       {/* Hero Section */}
@@ -152,24 +154,62 @@ export default function LandingPage() {
                     <h3 className="font-serif text-4xl">Sarah</h3>
                   </div>
                 </div>
-                <div className="flex-1 p-8 flex flex-col gap-4">
-                  <div className="w-3/4 h-4 bg-muted rounded-full" />
-                  <div className="w-full h-4 bg-muted rounded-full" />
-                  <div className="w-5/6 h-4 bg-muted rounded-full" />
+                <div className="flex-1 p-6 flex flex-col gap-3 overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    {!revealed ? (
+                      <motion.div
+                        key="sealed"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.25 }}
+                        className="flex flex-col gap-3"
+                      >
+                        <div className="w-3/4 h-4 bg-muted rounded-full" />
+                        <div className="w-full h-4 bg-muted rounded-full" />
+                        <div className="w-5/6 h-4 bg-muted rounded-full" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="revealed"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        className="flex flex-col gap-1.5"
+                      >
+                        <p className="font-serif text-lg font-medium leading-snug">Happy Birthday, Sarah 🎂</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          You deserve something special today. Treat yourself to something wonderful.
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="mt-auto p-4 rounded-xl border border-border flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <motion.div
+                        animate={revealed ? { scale: [1, 1.25, 1], backgroundColor: ["hsl(var(--primary)/0.1)", "hsl(var(--primary)/0.25)", "hsl(var(--primary)/0.1)"] } : {}}
+                        transition={{ duration: 0.5 }}
+                        className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
+                      >
                         <Gift className="w-5 h-5 text-primary" />
-                      </div>
+                      </motion.div>
                       <div>
                         <p className="text-sm font-bold">$150.00</p>
                         <p className="text-xs text-muted-foreground">Treat yourself</p>
                       </div>
                     </div>
-                    <Link href="/reveal">
-                      <Button size="sm" variant="secondary" className="rounded-full">Reveal</Button>
-                    </Link>
+                    <Button
+                      size="sm"
+                      variant={revealed ? "default" : "secondary"}
+                      className="rounded-full transition-all duration-300"
+                      onClick={() => setRevealed(true)}
+                      disabled={revealed}
+                    >
+                      {revealed
+                        ? <><Check className="w-3.5 h-3.5 mr-1" /> Opened</>
+                        : "Reveal"
+                      }
+                    </Button>
                   </div>
                 </div>
               </div>
