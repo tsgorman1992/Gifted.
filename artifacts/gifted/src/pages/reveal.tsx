@@ -359,12 +359,12 @@ function GoldenHourBokeh() {
   const circles = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => ({
       id: i,
-      left: 5 + (i * 13.5 + 7) % 88,
-      top: 15 + (i * 17 + 11) % 68,
-      size: 130 + (i * 47) % 180,
-      dur: 14 + (i * 3.1) % 9,
-      del: (i * 1.7) % 6,
-      opacity: 0.055 + (i * 0.011) % 0.055,
+      left: 5 + Math.random() * 88,
+      top: 10 + Math.random() * 75,
+      size: 120 + Math.random() * 200,
+      dur: 12 + Math.random() * 10,
+      del: Math.random() * 7,
+      opacity: 0.04 + Math.random() * 0.07,
     })),
     []
   );
@@ -434,6 +434,29 @@ function SunriseLightRay() {
         }}
       />
     </>
+  );
+}
+
+// ─── Garden Bloom floral watermark ───────────────────────────────────────────
+
+function GardenBloomWatermark() {
+  const motifs: Array<React.CSSProperties & { emoji: string }> = [
+    { top: "6%", right: "5%", fontSize: 38, transform: "rotate(12deg)", opacity: 0.11, emoji: "🌸" },
+    { top: "55%", left: "3%", fontSize: 26, transform: "rotate(-8deg)", opacity: 0.09, emoji: "🌿" },
+    { bottom: "8%", right: "14%", fontSize: 30, transform: "rotate(25deg)", opacity: 0.1, emoji: "🌸" },
+    { top: "32%", right: "2%", fontSize: 18, transform: "rotate(-20deg)", opacity: 0.08, emoji: "🌿" },
+  ];
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden select-none" style={{ borderRadius: "inherit" }}>
+      {motifs.map((m, i) => {
+        const { emoji, ...style } = m;
+        return (
+          <span key={i} className="absolute leading-none" style={style}>
+            {emoji}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1283,11 +1306,10 @@ export default function RevealPage() {
                         }
                     }
                   >
-                    {/* Garden Bloom: botanical corner accent */}
+                    {/* Garden Bloom: botanical watermark + accent */}
                     {experience === "garden-bloom" && (
                       <>
-                        <div className="absolute top-5 right-5 opacity-20 select-none pointer-events-none" style={{ fontSize: 38, lineHeight: 1 }}>🌿</div>
-                        <div className="absolute bottom-5 left-5 opacity-15 select-none pointer-events-none" style={{ fontSize: 28, lineHeight: 1 }}>🌸</div>
+                        <GardenBloomWatermark />
                         <div style={{ borderTop: "1.5px solid rgba(181,234,215,0.55)", marginBottom: "1.5rem", width: "100%" }} />
                       </>
                     )}
@@ -1378,7 +1400,10 @@ export default function RevealPage() {
                           duration: cfg.sectionStyle === "fade-drift" || cfg.sectionStyle === "rise-stagger" ? 0.7 : undefined,
                         }}
                         className={`rounded-3xl overflow-hidden aspect-square ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}
-                        style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}
+                        style={isDark
+                          ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow }
+                          : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }
+                        }
                       >
                         <img src={url} alt="Memory" className="w-full h-full object-cover" />
                       </motion.div>
@@ -1394,12 +1419,13 @@ export default function RevealPage() {
                     href={playlistUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99]"
+                    className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden"
                     style={isDark
                       ? { background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.06)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
                       : { background: cfg.cardStyle.bg ?? "hsl(var(--card)/0.8)", backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
                     }
                   >
+                    {experience === "garden-bloom" && <GardenBloomWatermark />}
                     <div className="flex items-center gap-4">
                       <div
                         className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
