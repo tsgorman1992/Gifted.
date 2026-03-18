@@ -55,7 +55,7 @@ if (googleClientId && googleClientSecret) {
     {
       clientID:     googleClientId,
       clientSecret: googleClientSecret,
-      callbackURL:  "/api/auth/google/callback",
+      callbackURL:  process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback",
       scope: ["profile", "email"],
     },
     async (_at, _rt, profile, done) => {
