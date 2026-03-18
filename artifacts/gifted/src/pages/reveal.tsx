@@ -973,6 +973,16 @@ export default function RevealPage() {
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+    // URL params (set by preview flow) take priority over localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlExperience = urlParams.get("experience");
+    const urlAmount     = urlParams.get("amount");
+    const urlIntent     = urlParams.get("intent");
+    const urlRecipient  = urlParams.get("recipientName");
+    const urlSender     = urlParams.get("senderName");
+    const urlTitle      = urlParams.get("giftTitle");
+
     const vp = localStorage.getItem("gifted_video_path");
     if (vp) setVideoUrl(`${base}/api/storage${vp}`);
 
@@ -990,26 +1000,30 @@ export default function RevealPage() {
     const pl = localStorage.getItem("gifted_playlist_url");
     if (pl) setPlaylistUrl(pl);
 
-    const rn = localStorage.getItem("gifted_recipient_name");
+    const rn = urlRecipient || localStorage.getItem("gifted_recipient_name");
     if (rn) setRecipientName(rn);
 
-    const sn = localStorage.getItem("gifted_sender_name");
+    const sn = urlSender || localStorage.getItem("gifted_sender_name");
     if (sn) setSenderName(sn);
 
-    const gt = localStorage.getItem("gifted_gift_title");
+    const gt = urlTitle || localStorage.getItem("gifted_gift_title");
     if (gt) setGiftTitle(gt);
 
-    const stored = localStorage.getItem("gifted_experience");
+    const stored = urlExperience || localStorage.getItem("gifted_experience");
     if (stored && CONFIGS[stored]) setExperience(stored);
 
-    const amt = localStorage.getItem("gifted_amount");
+    const amt = urlAmount || localStorage.getItem("gifted_amount");
     if (amt && parseFloat(amt) > 0) setGiftAmount(amt);
 
-    const intn = localStorage.getItem("gifted_intent");
+    const intn = urlIntent || localStorage.getItem("gifted_intent");
     if (intn) setGiftIntent(intn);
 
-    const paid = localStorage.getItem("gifted_gift_paid");
-    if (paid === "false") setGiftPaid(false);
+    if (urlParams.get("preview") === "true") {
+      setGiftPaid(false);
+    } else {
+      const paid = localStorage.getItem("gifted_gift_paid");
+      if (paid === "false") setGiftPaid(false);
+    }
   }, []);
 
   useEffect(() => {

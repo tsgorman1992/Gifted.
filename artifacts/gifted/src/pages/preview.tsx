@@ -255,12 +255,16 @@ export default function PreviewPage() {
   };
 
   const handleRevealPreview = () => {
-    localStorage.setItem("gifted_experience", experience);
-    if (giftAmount && parseFloat(giftAmount) > 0) localStorage.setItem("gifted_amount", giftAmount);
-    else localStorage.removeItem("gifted_amount");
-    if (giftIntent) localStorage.setItem("gifted_intent", giftIntent);
-    else localStorage.removeItem("gifted_intent");
-    setLocation("/reveal");
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const params = new URLSearchParams();
+    params.set("experience", experience);
+    params.set("recipientName", recipientName);
+    params.set("senderName", senderName);
+    if (giftTitle) params.set("giftTitle", giftTitle);
+    if (giftAmount && parseFloat(giftAmount) > 0) params.set("amount", giftAmount);
+    if (giftIntent) params.set("intent", giftIntent);
+    params.set("preview", "true");
+    window.open(`${base}/reveal?${params.toString()}`, "_blank");
   };
 
   const handleDesktopSend = async () => {
