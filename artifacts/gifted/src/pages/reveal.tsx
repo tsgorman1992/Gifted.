@@ -253,7 +253,7 @@ function useCountUp(target: number, duration = 1500, delay = 0, enabled = false)
       const tick = () => {
         const p = Math.min((Date.now() - start) / duration, 1);
         const eased = 1 - Math.pow(1 - p, 3);
-        setVal(Math.round(eased * target));
+        setVal(p >= 1 ? target : Math.round(eased * target));
         if (p < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
@@ -261,6 +261,13 @@ function useCountUp(target: number, duration = 1500, delay = 0, enabled = false)
     return () => clearTimeout(t);
   }, [enabled, target, duration, delay]);
   return val;
+}
+
+function formatAmt(raw: string | null): string {
+  if (!raw) return "0";
+  const n = parseFloat(raw);
+  if (isNaN(n)) return raw;
+  return n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2);
 }
 
 function TypewriterText({ text, delayS = 0, speed = 55 }: { text: string; delayS?: number; speed?: number }) {
@@ -1581,7 +1588,7 @@ export default function RevealPage() {
                             className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter text-white"
                             style={{ textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
                           >
-                            ${giftAmount}
+                            ${formatAmt(giftAmount)}
                           </motion.div>
                           <p className="text-lg mb-10 max-w-md mx-auto text-white/60">
                             Sent with intention. Yours to use however you need.
@@ -1640,7 +1647,7 @@ export default function RevealPage() {
                                 viewport={{ once: true }}
                                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                               >
-                                ${countedAmount}
+                                ${formatAmt(String(countedAmount))}
                               </motion.span>
                             ) : cfg.amountStyle === "crystallize" ? (
                               <motion.span
@@ -1650,7 +1657,7 @@ export default function RevealPage() {
                                 transition={{ duration: 1.0 }}
                                 style={{ display: "inline-block" }}
                               >
-                                ${giftAmount}
+                                ${formatAmt(giftAmount)}
                               </motion.span>
                             ) : cfg.amountStyle === "bloom-pop" ? (
                               <motion.span
@@ -1660,7 +1667,7 @@ export default function RevealPage() {
                                 transition={{ type: "spring", stiffness: 240, damping: 18 }}
                                 style={{ display: "inline-block" }}
                               >
-                                ${giftAmount}
+                                ${formatAmt(giftAmount)}
                               </motion.span>
                             ) : (
                               <motion.span
@@ -1670,7 +1677,7 @@ export default function RevealPage() {
                                 transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
                                 style={{ display: "inline-block" }}
                               >
-                                ${giftAmount}
+                                ${formatAmt(giftAmount)}
                               </motion.span>
                             )}
                           </div>

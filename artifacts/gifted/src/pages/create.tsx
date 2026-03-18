@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, AlertCircle,
 } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
 
@@ -1102,6 +1102,25 @@ export default function CreatePage() {
                         />
                       </div>
                     </div>
+
+                    {/* $10 minimum inline warning */}
+                    <AnimatePresence>
+                      {amount && parseFloat(amount) > 0 && parseFloat(amount) < 10 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border"
+                          style={{ background: "hsl(45 100% 96%)", borderColor: "hsl(38 92% 50% / 0.3)", color: "hsl(32 94% 32%)" }}
+                        >
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <p className="text-xs font-medium">
+                            Minimum is $10 — enter $10 or more, or leave this blank.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* Live preview of balance + intent */}
                     {(amount || intent) && (

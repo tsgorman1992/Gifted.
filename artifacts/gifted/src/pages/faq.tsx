@@ -28,7 +28,7 @@ const FAQS = [
   {
     question: "Is there a fee?",
     answer:
-      "gifted. passes through standard card processing fees (2.9% + 30¢ per transaction). There are no monthly fees, subscription costs, or hidden charges. The amount you set is what your recipient receives, minus processing.",
+      "gifted. charges a 5% platform fee on top of the gift amount, shown as a separate line item at checkout. This covers card processing, SMS delivery, and platform operations. There are no monthly fees, subscriptions, or hidden charges.",
   },
   {
     question: "Do gifts expire?",
