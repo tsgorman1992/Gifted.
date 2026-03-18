@@ -458,6 +458,20 @@ export default function CreatePage() {
   };
 
   // Navigation
+  // Sync steps with browser history so the browser back button goes back one step
+  useEffect(() => {
+    window.history.replaceState({ step: 1 }, "");
+    const handlePopState = (e: PopStateEvent) => {
+      const target = (e.state as { step?: number } | null)?.step ?? 1;
+      setDirection(-1);
+      setStepError(null);
+      setStep(target);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   const goNext = () => {
     setStepError(null);
     if (step === 1) {
@@ -467,16 +481,16 @@ export default function CreatePage() {
     if (step === 2) {
       if (!giftTitle.trim()) { setStepError("Please add a gift headline."); return; }
     }
+    const next = step + 1;
+    window.history.pushState({ step: next }, "");
     setDirection(1);
-    setStep((s) => s + 1);
+    setStep(next);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const goBack = () => {
     setStepError(null);
-    setDirection(-1);
-    setStep((s) => s - 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.history.back();
   };
 
   // Context pill shown in steps 2+
