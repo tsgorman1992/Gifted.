@@ -110,6 +110,7 @@ router.get("/gifted/my-gifts", async (req, res) => {
         senderName: g.senderName,
         giftTitle: g.giftTitle,
         occasion: g.occasion,
+        experience: g.experience,
         amount: g.amount,
         paid: g.paid,
         redeemedAt: g.redeemedAt,
