@@ -11,9 +11,22 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { User, Gift, LogOut, ChevronDown } from "lucide-react";
 
+const GIFT_KEYS = [
+  "gifted_recipient_name","gifted_sender_name","gifted_recipient_phone",
+  "gifted_occasion","gifted_gift_title","gifted_personal_note",
+  "gifted_playlist_url","gifted_amount","gifted_intent","gifted_scheduled_for",
+  "gifted_experience","gifted_video_path","gifted_photo_paths",
+  "gifted_paid_id","gifted_gift_id","gifted_gift_paid",
+];
+
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isLoading, isAuthenticated, logout } = useAuth();
+
+  function handleSendGift() {
+    GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
+    setLocation("/create");
+  }
   const isReveal = location === "/reveal" || location.startsWith("/open/");
 
   if (isReveal) {
@@ -68,11 +81,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               )
             )}
-            <Link href="/create">
-              <Button className="rounded-full px-6 shadow-md hover:-translate-y-0.5 transition-transform duration-300">
-                Send a gift
-              </Button>
-            </Link>
+            <Button onClick={handleSendGift} className="rounded-full px-6 shadow-md hover:-translate-y-0.5 transition-transform duration-300">
+              Send a gift
+            </Button>
           </nav>
         </div>
       </header>

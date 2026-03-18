@@ -284,8 +284,8 @@ export default function CreatePage() {
   const currentExperience = EXPERIENCE_LIST.find((e) => e.id === selectedExperience) ?? EXPERIENCE_LIST[0];
 
   useEffect(() => {
-    localStorage.removeItem("gifted_video_path");
-    localStorage.removeItem("gifted_photo_paths");
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
     const rn = localStorage.getItem("gifted_recipient_name");
     if (rn) setRecipientName(rn);
     const sn = localStorage.getItem("gifted_sender_name");
@@ -301,7 +301,7 @@ export default function CreatePage() {
     const pl = localStorage.getItem("gifted_playlist_url");
     if (pl) setPlaylistUrl(pl);
     const amt = localStorage.getItem("gifted_amount");
-    if (amt) setAmount(amt);
+    if (amt && parseFloat(amt) > 0) setAmount(amt);
     const int = localStorage.getItem("gifted_intent");
     if (int) {
       setIntent(int);
@@ -314,6 +314,24 @@ export default function CreatePage() {
       setSelectedExperience(exp as ExperienceId);
       setSuggestedExperience(exp as ExperienceId);
       setHasManuallyChosen(true);
+    }
+    // Restore video from previous session
+    const vp = localStorage.getItem("gifted_video_path");
+    if (vp) {
+      setVideoObjectPath(vp);
+      setVideoPreviewUrl(`${base}/api/storage${vp}`);
+    }
+    // Restore photos from previous session
+    const pp = localStorage.getItem("gifted_photo_paths");
+    if (pp) {
+      try {
+        const paths: string[] = JSON.parse(pp);
+        setPhotos(paths.map((objectPath) => ({
+          id: crypto.randomUUID(),
+          objectPath,
+          previewUrl: `${base}/api/storage${objectPath}`,
+        })));
+      } catch { /* ignore */ }
     }
   }, []);
 

@@ -1,8 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight, RotateCcw, ExternalLink } from "lucide-react";
+
+const GIFT_KEYS = [
+  "gifted_recipient_name","gifted_sender_name","gifted_recipient_phone",
+  "gifted_occasion","gifted_gift_title","gifted_personal_note",
+  "gifted_playlist_url","gifted_amount","gifted_intent","gifted_scheduled_for",
+  "gifted_experience","gifted_video_path","gifted_photo_paths",
+  "gifted_paid_id","gifted_gift_id","gifted_gift_paid",
+];
+function clearGiftSession() {
+  GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
+}
 
 type Phase = "sealed" | "opening" | "revealed";
 
@@ -26,8 +37,14 @@ const FEATURES = [
 ];
 
 export default function LandingPage() {
+  const [, setLocation] = useLocation();
   const [phase, setPhase] = useState<Phase>("sealed");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleNewGift() {
+    clearGiftSession();
+    setLocation("/create");
+  }
 
   function startReveal() {
     setPhase("opening");
@@ -94,11 +111,9 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
             className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"
           >
-            <Link href="/create">
-              <Button size="lg" className="w-full sm:w-auto rounded-full text-base md:text-lg px-8 h-13 md:h-14 shadow-xl shadow-primary/20 hover:-translate-y-1 transition-all duration-300">
-                Create a gift
-              </Button>
-            </Link>
+            <Button onClick={handleNewGift} size="lg" className="w-full sm:w-auto rounded-full text-base md:text-lg px-8 h-13 md:h-14 shadow-xl shadow-primary/20 hover:-translate-y-1 transition-all duration-300">
+              Create a gift
+            </Button>
             <Button
               size="lg"
               variant="outline"
@@ -380,11 +395,9 @@ export default function LandingPage() {
           <h2 className="font-serif text-3xl md:text-6xl font-medium">Ready to send <br />something meaningful?</h2>
           <p className="text-base md:text-xl text-muted-foreground">Create your first gift in minutes. No sign up required to build a preview.</p>
           <div className="pt-2 md:pt-4">
-            <Link href="/create">
-              <Button size="lg" className="w-full sm:w-auto rounded-full text-base md:text-lg px-10 h-13 md:h-14 shadow-xl hover:-translate-y-1 transition-all duration-300">
-                Get Started <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
+            <Button onClick={handleNewGift} size="lg" className="w-full sm:w-auto rounded-full text-base md:text-lg px-10 h-13 md:h-14 shadow-xl hover:-translate-y-1 transition-all duration-300">
+              Get Started <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
           </div>
         </div>
       </section>
