@@ -228,4 +228,15 @@
   .glass-panel {
     @apply bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10;
   }
+
+  .animate-gradient-shift {
+    background-size: 300% 300%;
+    animation: gifted-gradient-shift 7s ease infinite;
+  }
+
+  @keyframes gifted-gradient-shift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
 }

@@ -133,9 +133,20 @@ export default function LandingPage() {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-[2.5rem] transform rotate-3 blur-xl opacity-50" />
               <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[4/5] flex flex-col">
-                <div className="h-64 relative">
-                  <img src={`${import.meta.env.BASE_URL}images/theme-warm-glow.png`} alt="Gift theme" className="w-full h-full object-cover" />
+                <div className="h-64 relative overflow-hidden">
+                  <div
+                    className="absolute inset-0 animate-gradient-shift"
+                    style={{ background: "linear-gradient(270deg, #F7C59F, #E8A87C, #c9622a, #e8956a, #F7C59F)" }}
+                  />
                   <div className="absolute inset-0 bg-black/20" />
+                  {/* Subtle inner glow rings */}
+                  <motion.div
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    animate={{ scale: [1, 1.08, 1], opacity: [0.15, 0.25, 0.15] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <div className="w-48 h-48 rounded-full border border-white/30" />
+                  </motion.div>
                   <div className="absolute bottom-6 left-6 text-white">
                     <p className="text-sm font-medium opacity-80 mb-1">A gift for</p>
                     <h3 className="font-serif text-4xl">Sarah</h3>
@@ -145,7 +156,7 @@ export default function LandingPage() {
                   <div className="w-3/4 h-4 bg-muted rounded-full" />
                   <div className="w-full h-4 bg-muted rounded-full" />
                   <div className="w-5/6 h-4 bg-muted rounded-full" />
-                  
+
                   <div className="mt-auto p-4 rounded-xl border border-border flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -156,7 +167,9 @@ export default function LandingPage() {
                         <p className="text-xs text-muted-foreground">Treat yourself</p>
                       </div>
                     </div>
-                    <Button size="sm" variant="secondary" className="rounded-full">Reveal</Button>
+                    <Link href="/reveal">
+                      <Button size="sm" variant="secondary" className="rounded-full">Reveal</Button>
+                    </Link>
                   </div>
                 </div>
               </div>
