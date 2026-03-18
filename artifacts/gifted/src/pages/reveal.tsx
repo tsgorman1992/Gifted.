@@ -15,6 +15,12 @@ type AmountStyle   = "count-up" | "glow-reveal" | "bloom-pop" | "stellar-reveal"
 type AmbientEffect = "petals" | "rose-petals" | "snow" | "stars";
 type PreIconAnim   = "bounce" | "pulse-slow" | "float" | "twinkle" | "heartbeat" | "spin-slow" | "rise";
 
+interface CardStyle {
+  shadow: string;
+  border: string;
+  bg?: string;
+}
+
 interface RevealCfg {
   titleStyle: TitleStyle;
   sectionStyle: SectionStyle;
@@ -28,8 +34,10 @@ interface RevealCfg {
   envelopeExit: Record<string, unknown>;
   envelopeTransition: Record<string, unknown>;
   ambientEffect?: AmbientEffect;
+  ambientIntensity: "low" | "medium" | "high";
   preIconAnim: PreIconAnim;
   preIconColorClass: string;
+  cardStyle: CardStyle;
 }
 
 const CONFIGS: Record<string, RevealCfg> = {
@@ -47,6 +55,11 @@ const CONFIGS: Record<string, RevealCfg> = {
     envelopeTransition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] },
     preIconAnim: "bounce",
     preIconColorClass: "text-rose-500",
+    ambientIntensity: "medium",
+    cardStyle: {
+      shadow: "0 8px 40px rgba(255,107,107,0.22), 0 2px 12px rgba(255,217,61,0.15)",
+      border: "rgba(255,107,107,0.22)",
+    },
   },
   "golden-hour": {
     titleStyle: "blur-in",
@@ -62,6 +75,12 @@ const CONFIGS: Record<string, RevealCfg> = {
     envelopeTransition: { duration: 0.9, ease: "easeInOut" },
     preIconAnim: "pulse-slow",
     preIconColorClass: "text-amber-400",
+    ambientIntensity: "low",
+    cardStyle: {
+      shadow: "0 8px 40px rgba(232,168,124,0.22)",
+      border: "rgba(232,168,124,0.3)",
+      bg: "rgba(247,197,159,0.07)",
+    },
   },
   "garden-bloom": {
     titleStyle: "bloom",
@@ -76,8 +95,14 @@ const CONFIGS: Record<string, RevealCfg> = {
     envelopeExit: { opacity: 0, scale: 1.15, filter: "blur(10px)" },
     envelopeTransition: { duration: 0.7, ease: "easeOut" },
     ambientEffect: "petals",
+    ambientIntensity: "high",
     preIconAnim: "float",
     preIconColorClass: "text-pink-400",
+    cardStyle: {
+      shadow: "0 8px 32px rgba(181,234,215,0.35)",
+      border: "rgba(199,206,234,0.4)",
+      bg: "rgba(181,234,215,0.08)",
+    },
   },
   "midnight-stars": {
     titleStyle: "typewriter",
@@ -92,8 +117,14 @@ const CONFIGS: Record<string, RevealCfg> = {
     envelopeExit: { opacity: 0, scale: 0.84 },
     envelopeTransition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
     ambientEffect: "stars",
+    ambientIntensity: "medium",
     preIconAnim: "twinkle",
     preIconColorClass: "text-indigo-300",
+    cardStyle: {
+      shadow: "0 0 60px rgba(150,140,255,0.18), 0 25px 50px rgba(0,0,0,0.5)",
+      border: "rgba(255,255,255,0.12)",
+      bg: "rgba(255,255,255,0.05)",
+    },
   },
   "rose-petal": {
     titleStyle: "elegant-fade",
@@ -108,8 +139,14 @@ const CONFIGS: Record<string, RevealCfg> = {
     envelopeExit: { opacity: 0, x: 60, rotateZ: 2 },
     envelopeTransition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
     ambientEffect: "rose-petals",
+    ambientIntensity: "high",
     preIconAnim: "heartbeat",
     preIconColorClass: "text-rose-400",
+    cardStyle: {
+      shadow: "0 8px 36px rgba(255,143,171,0.25)",
+      border: "rgba(255,183,197,0.4)",
+      bg: "rgba(255,183,197,0.06)",
+    },
   },
   "snow-flurry": {
     titleStyle: "crisp-fall",
@@ -124,8 +161,14 @@ const CONFIGS: Record<string, RevealCfg> = {
     envelopeExit: { opacity: 0, y: 35, scale: 0.94 },
     envelopeTransition: { duration: 0.38, ease: "easeIn" },
     ambientEffect: "snow",
+    ambientIntensity: "high",
     preIconAnim: "spin-slow",
     preIconColorClass: "text-sky-400",
+    cardStyle: {
+      shadow: "0 0 18px rgba(147,197,253,0.45), 0 8px 32px rgba(147,197,253,0.18)",
+      border: "rgba(147,197,253,0.5)",
+      bg: "rgba(219,234,254,0.32)",
+    },
   },
   "sunrise": {
     titleStyle: "rise",
@@ -141,6 +184,12 @@ const CONFIGS: Record<string, RevealCfg> = {
     envelopeTransition: { duration: 0.72, ease: [0.16, 1, 0.3, 1] },
     preIconAnim: "rise",
     preIconColorClass: "text-orange-400",
+    ambientIntensity: "low",
+    cardStyle: {
+      shadow: "0 8px 36px rgba(251,146,60,0.18)",
+      border: "rgba(253,186,116,0.3)",
+      bg: "rgba(254,215,170,0.07)",
+    },
   },
 };
 
@@ -304,6 +353,90 @@ function StarfieldBg() {
   );
 }
 
+// ─── Golden Hour bokeh atmosphere ────────────────────────────────────────────
+
+function GoldenHourBokeh() {
+  const circles = useMemo(() =>
+    Array.from({ length: 7 }, (_, i) => ({
+      id: i,
+      left: 5 + (i * 13.5 + 7) % 88,
+      top: 15 + (i * 17 + 11) % 68,
+      size: 130 + (i * 47) % 180,
+      dur: 14 + (i * 3.1) % 9,
+      del: (i * 1.7) % 6,
+      opacity: 0.055 + (i * 0.011) % 0.055,
+    })),
+    []
+  );
+
+  useEffect(() => {
+    const sid = "gifted-bokeh-kf";
+    if (!document.getElementById(sid)) {
+      const s = document.createElement("style");
+      s.id = sid;
+      s.textContent = `@keyframes gifted-bokeh-drift{0%{transform:translate(-50%,-50%) translateY(0);}50%{transform:translate(-50%,-50%) translateY(-28px);}100%{transform:translate(-50%,-50%) translateY(0);}}`;
+      document.head.appendChild(s);
+    }
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
+      {circles.map(c => (
+        <div
+          key={c.id}
+          style={{
+            position: "absolute",
+            left: `${c.left}%`,
+            top: `${c.top}%`,
+            width: c.size,
+            height: c.size,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, rgba(247,197,130,${c.opacity * 2.2}) 0%, rgba(232,168,80,${c.opacity}) 45%, transparent 70%)`,
+            animation: `gifted-bokeh-drift ${c.dur}s ${c.del}s ease-in-out infinite`,
+            transform: "translate(-50%, -50%)",
+            filter: "blur(2px)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Sunrise light ray overlay ────────────────────────────────────────────────
+
+function SunriseLightRay() {
+  useEffect(() => {
+    const sid = "gifted-sunrise-kf";
+    if (!document.getElementById(sid)) {
+      const s = document.createElement("style");
+      s.id = sid;
+      s.textContent = `@keyframes gifted-sunrise-pulse{0%,100%{opacity:0.55;}50%{opacity:1;}}`;
+      document.head.appendChild(s);
+    }
+  }, []);
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          zIndex: 1,
+          background: "radial-gradient(ellipse 90% 55% at 50% 85%, rgba(255,203,130,0.14), transparent 70%)",
+          animation: "gifted-sunrise-pulse 4.5s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          zIndex: 1,
+          background: "conic-gradient(from 250deg at 50% 100%, transparent 30deg, rgba(255,160,80,0.06) 50deg, transparent 70deg, transparent 100%)",
+          animation: "gifted-sunrise-pulse 6s 1.5s ease-in-out infinite",
+        }}
+      />
+    </>
+  );
+}
+
 // ─── Pre-reveal icon animation ────────────────────────────────────────────────
 
 function preIconMotionProps(anim: PreIconAnim) {
@@ -395,27 +528,27 @@ type ParticleCfg = {
 
 const PARTICLE_CFGS: Partial<Record<AmbientEffect, ParticleCfg>> = {
   petals: {
-    colors: ["#FFB7C5", "#C7CEEA", "#B5EAD7", "#FFFFFF", "#E8D5E0", "#D4F0E7"],
-    sizes: [8, 18],
-    batchSize: 6,
-    batchInterval: 1100,
-    duration: [4000, 7000],
+    colors: ["#FFB7C5", "#C7CEEA", "#B5EAD7", "#FFFFFF", "#E8D5E0", "#D4F0E7", "#fde68a", "#fbcfe8"],
+    sizes: [10, 22],
+    batchSize: 16,
+    batchInterval: 480,
+    duration: [3500, 6500],
     keyframe: "gifted-petal-fall",
   },
   "rose-petals": {
-    colors: ["#FFB7C5", "#FF8FAB", "#E8A7B1", "#FFC0CB", "#FFFFFF"],
-    sizes: [14, 26],
-    batchSize: 4,
-    batchInterval: 1400,
-    duration: [4500, 8000],
+    colors: ["#FFB7C5", "#FF8FAB", "#E8A7B1", "#FFC0CB", "#FFFFFF", "#fda4af", "#fb7185"],
+    sizes: [16, 30],
+    batchSize: 12,
+    batchInterval: 560,
+    duration: [4000, 7500],
     keyframe: "gifted-petal-fall",
   },
   snow: {
-    colors: ["#FFFFFF", "#E8F4FD", "#BDE0FE", "#E0EFFF"],
-    sizes: [5, 13],
-    batchSize: 12,
-    batchInterval: 600,
-    duration: [3000, 6500],
+    colors: ["#FFFFFF", "#E8F4FD", "#BDE0FE", "#E0EFFF", "#f0f9ff"],
+    sizes: [4, 14],
+    batchSize: 24,
+    batchInterval: 260,
+    duration: [2800, 5800],
     keyframe: "gifted-snow-fall",
     shape: "circle",
   },
@@ -758,12 +891,36 @@ export default function RevealPage() {
 
   // Cleanup ref for ambient particles
   const ambientCleanup = useRef<(() => void) | null>(null);
+  const confettiTrickleActive = useRef(false);
 
   const handleOpen = () => {
     setIsOpen(true);
     fireEntryBurst(experience);
     if (cfg.ambientEffect && cfg.ambientEffect !== "stars") {
       ambientCleanup.current = startAmbientParticles(cfg.ambientEffect);
+    }
+    // Confetti Burst: after entry burst settles, keep a gentle rain going
+    if (experience === "confetti-burst") {
+      confettiTrickleActive.current = false;
+      setTimeout(() => {
+        confettiTrickleActive.current = true;
+        const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#FF9500", "#BF5AF2"];
+        const tick = () => {
+          if (!confettiTrickleActive.current) return;
+          confetti({
+            particleCount: 2,
+            angle: 45 + Math.random() * 90,
+            spread: 55,
+            origin: { x: Math.random(), y: -0.08 },
+            colors,
+            gravity: 0.52,
+            scalar: 0.82,
+            drift: (Math.random() - 0.5) * 0.5,
+          });
+          setTimeout(tick, 160 + Math.random() * 300);
+        };
+        tick();
+      }, 4400);
     }
   };
 
@@ -778,7 +935,10 @@ export default function RevealPage() {
   };
 
   useEffect(() => {
-    return () => { ambientCleanup.current?.(); };
+    return () => {
+      ambientCleanup.current?.();
+      confettiTrickleActive.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -821,6 +981,12 @@ export default function RevealPage() {
 
       {/* Midnight Stars starfield */}
       {isOpen && isDark && <StarfieldBg />}
+
+      {/* Golden Hour bokeh */}
+      {isOpen && experience === "golden-hour" && <GoldenHourBokeh />}
+
+      {/* Sunrise light rays */}
+      {isOpen && experience === "sunrise" && <SunriseLightRay />}
 
       {/* ── Pre-reveal overlay ── */}
       <AnimatePresence>
@@ -1102,12 +1268,39 @@ export default function RevealPage() {
               {personalNote?.trim() && (
                 <Section cfg={cfg} idx={0}>
                   <div
-                    className="rounded-[2rem] p-6 md:p-12 border shadow-xl"
+                    className="rounded-[2rem] p-6 md:p-12 border relative overflow-hidden"
                     style={isDark
-                      ? { background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.12)" }
-                      : { background: "hsl(var(--card)/0.8)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.2)" }
+                      ? {
+                          background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.06)",
+                          borderColor: cfg.cardStyle.border,
+                          boxShadow: cfg.cardStyle.shadow,
+                        }
+                      : {
+                          background: cfg.cardStyle.bg ?? "hsl(var(--card)/0.85)",
+                          backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)",
+                          borderColor: cfg.cardStyle.border,
+                          boxShadow: cfg.cardStyle.shadow,
+                        }
                     }
                   >
+                    {/* Garden Bloom: botanical corner accent */}
+                    {experience === "garden-bloom" && (
+                      <>
+                        <div className="absolute top-5 right-5 opacity-20 select-none pointer-events-none" style={{ fontSize: 38, lineHeight: 1 }}>🌿</div>
+                        <div className="absolute bottom-5 left-5 opacity-15 select-none pointer-events-none" style={{ fontSize: 28, lineHeight: 1 }}>🌸</div>
+                        <div style={{ borderTop: "1.5px solid rgba(181,234,215,0.55)", marginBottom: "1.5rem", width: "100%" }} />
+                      </>
+                    )}
+
+                    {/* Rose Petal: stationery double-rule decoration */}
+                    {experience === "rose-petal" && (
+                      <div className="flex items-center gap-3 mb-6">
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
+                        <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
+                      </div>
+                    )}
+
                     {cfg.titleStyle === "typewriter" ? (
                       <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
                         &ldquo;<TypewriterText text={personalNote} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />&rdquo;
@@ -1117,6 +1310,20 @@ export default function RevealPage() {
                         &ldquo;{personalNote}&rdquo;
                       </p>
                     )}
+
+                    {/* Garden Bloom: bottom accent line */}
+                    {experience === "garden-bloom" && (
+                      <div style={{ borderBottom: "1.5px solid rgba(181,234,215,0.55)", marginTop: "1.5rem", width: "100%" }} />
+                    )}
+
+                    {/* Rose Petal: bottom stationery line */}
+                    {experience === "rose-petal" && (
+                      <div className="flex items-center gap-3 mt-6">
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
+                        <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
+                      </div>
+                    )}
                   </div>
                 </Section>
               )}
@@ -1124,7 +1331,13 @@ export default function RevealPage() {
               {/* Video — section 1 (hidden when no video) */}
               {videoUrl && (
                 <Section cfg={cfg} idx={1}>
-                  <div className="w-full rounded-[2rem] overflow-hidden border" style={isDark ? { borderColor: "rgba(255,255,255,0.1)" } : {}}>
+                  <div
+                    className="w-full rounded-[2rem] overflow-hidden border"
+                    style={{
+                      borderColor: cfg.cardStyle.border,
+                      boxShadow: cfg.cardStyle.shadow,
+                    }}
+                  >
                     <div className="w-full aspect-video relative group">
                       <video
                         ref={videoRef}
@@ -1183,8 +1396,8 @@ export default function RevealPage() {
                     rel="noopener noreferrer"
                     className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99]"
                     style={isDark
-                      ? { background: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.12)" }
-                      : { background: "hsl(var(--card)/0.8)", backdropFilter: "blur(20px)", borderColor: "rgba(255,255,255,0.2)" }
+                      ? { background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.06)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
+                      : { background: cfg.cardStyle.bg ?? "hsl(var(--card)/0.8)", backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
                     }
                   >
                     <div className="flex items-center gap-4">
@@ -1258,7 +1471,7 @@ export default function RevealPage() {
                     ) : (
                       /* Standard card for all other experiences */
                       <div
-                        className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden shadow-2xl shadow-primary/20"
+                        className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden"
                         style={
                           cfg.amountStyle === "glow-reveal"
                             ? {
@@ -1266,7 +1479,15 @@ export default function RevealPage() {
                                 boxShadow: "0 0 80px rgba(180,110,40,0.35), 0 25px 50px rgba(180,110,40,0.2)",
                                 color: "white",
                               }
-                            : { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }
+                            : cfg.amountStyle === "crystallize"
+                            ? {
+                                background: "linear-gradient(135deg, rgba(191,219,254,0.85), rgba(147,197,253,0.75))",
+                                backdropFilter: "blur(28px) saturate(1.4)",
+                                border: `1px solid ${cfg.cardStyle.border}`,
+                                boxShadow: cfg.cardStyle.shadow,
+                                color: "#1e3a5f",
+                              }
+                            : { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", boxShadow: cfg.cardStyle.shadow }
                         }
                       >
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
