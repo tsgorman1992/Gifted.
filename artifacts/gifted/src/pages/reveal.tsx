@@ -1556,8 +1556,8 @@ export default function RevealPage() {
                 </Section>
               )}
 
-              {/* Balance — section 3 (only shown when an amount was set) */}
-              {giftAmount && (
+              {/* Balance — section 3 (only shown when a non-zero amount was set) */}
+              {giftAmount && parseFloat(giftAmount) > 0 && (
                 <div ref={amountRef}>
                   <Section cfg={cfg} idx={3}>
                     {/* Midnight Stars gets a distinct dark card */}

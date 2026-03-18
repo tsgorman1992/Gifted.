@@ -258,6 +258,7 @@ export default function CreatePage() {
   const [hasManuallyChosen, setHasManuallyChosen] = useState(false);
   const [amount, setAmount] = useState("");
   const [intent, setIntent] = useState("");
+  const [customIntentMode, setCustomIntentMode] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
   const [occasion, setOccasion] = useState("Birthday");
@@ -302,7 +303,10 @@ export default function CreatePage() {
     const amt = localStorage.getItem("gifted_amount");
     if (amt) setAmount(amt);
     const int = localStorage.getItem("gifted_intent");
-    if (int) setIntent(int);
+    if (int) {
+      setIntent(int);
+      if (!INTENTS.includes(int)) setCustomIntentMode(true);
+    }
     const sf = localStorage.getItem("gifted_scheduled_for");
     if (sf) { setScheduledFor(sf); setScheduleEnabled(true); }
     const exp = localStorage.getItem("gifted_experience");
@@ -421,7 +425,7 @@ export default function CreatePage() {
     if (recipientPhone) localStorage.setItem("gifted_recipient_phone", recipientPhone);
     else localStorage.removeItem("gifted_recipient_phone");
     if (senderName) localStorage.setItem("gifted_sender_name", senderName);
-    if (amount) localStorage.setItem("gifted_amount", amount);
+    if (amount && parseFloat(amount) > 0) localStorage.setItem("gifted_amount", amount);
     else localStorage.removeItem("gifted_amount");
     if (intent) localStorage.setItem("gifted_intent", intent);
     else localStorage.removeItem("gifted_intent");
@@ -1060,9 +1064,12 @@ export default function CreatePage() {
                         <button
                           key={lbl}
                           type="button"
-                          onClick={() => setIntent(intent === lbl ? "" : lbl)}
+                          onClick={() => {
+                            setCustomIntentMode(false);
+                            setIntent(intent === lbl ? "" : lbl);
+                          }}
                           className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                            intent === lbl
+                            !customIntentMode && intent === lbl
                               ? "bg-foreground text-background border-foreground"
                               : "bg-background text-foreground border-border hover:border-foreground/30"
                           }`}
@@ -1070,7 +1077,44 @@ export default function CreatePage() {
                           {lbl}
                         </button>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCustomIntentMode(true);
+                          if (INTENTS.includes(intent)) setIntent("");
+                        }}
+                        className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
+                          customIntentMode
+                            ? "bg-foreground text-background border-foreground"
+                            : "bg-background text-foreground border-border hover:border-foreground/30"
+                        }`}
+                      >
+                        Other…
+                      </button>
                     </div>
+                    <AnimatePresence>
+                      {customIntentMode && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <Input
+                            autoFocus
+                            placeholder="e.g. Dinner on me, Spa day, Whatever you need…"
+                            maxLength={60}
+                            value={customIntentMode && !INTENTS.includes(intent) ? intent : ""}
+                            onChange={(e) => setIntent(e.target.value)}
+                            className="h-11 rounded-2xl mt-1"
+                          />
+                          {intent.length > 40 && (
+                            <p className="text-xs text-muted-foreground mt-1 text-right">{intent.length}/60</p>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Amount second */}

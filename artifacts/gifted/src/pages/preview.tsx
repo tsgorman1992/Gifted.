@@ -366,11 +366,11 @@ export default function PreviewPage() {
                       </span>
                     )}
                   </div>
-                  {giftAmount && (
+                  {hasBalance && (
                     <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
                       <div>
                         {giftIntent && <p className="text-xs text-muted-foreground mb-0.5">{giftIntent}</p>}
-                        <p className="text-2xl font-bold font-serif text-primary">${giftAmount}</p>
+                        <p className="text-2xl font-bold font-serif text-primary">${displayAmt}</p>
                       </div>
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <Sparkles className="w-5 h-5 text-primary" />
