@@ -21,6 +21,7 @@ export default function SignInPage() {
   const [showPass, setShowPass]       = useState(false);
   const [submitting, setSubmitting]   = useState(false);
   const [error, setError]             = useState<string | null>(null);
+  const [googleOnly, setGoogleOnly]   = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
@@ -47,7 +48,15 @@ export default function SignInPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Something went wrong. Please try again."); return; }
+      if (!res.ok) {
+        if (data.error === "__GOOGLE_ACCOUNT__") {
+          setGoogleOnly(true);
+          setError(null);
+        } else {
+          setError(data.error || "Something went wrong. Please try again.");
+        }
+        return;
+      }
       await refetch();
       setLocation("/my-gifts");
     } catch {
@@ -147,7 +156,7 @@ export default function SignInPage() {
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Email address</label>
               <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
+                type="email" value={email} onChange={e => { setEmail(e.target.value); setGoogleOnly(false); setError(null); }}
                 placeholder="you@example.com" required autoComplete="email"
                 className="w-full h-11 px-4 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
               />
@@ -170,6 +179,33 @@ export default function SignInPage() {
               </div>
             </div>
 
+            {googleOnly && (
+              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-center space-y-3">
+                <p className="text-sm font-medium text-amber-900">This account uses Google Sign-In</p>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  {googleEnabled
+                    ? "Use the Google button above to sign in — no password needed."
+                    : "This account was created with Google. To sign in, visit gifted.page where Google Sign-In is available."}
+                </p>
+                {googleEnabled && (
+                  <button
+                    type="button"
+                    onClick={() => { window.location.href = `${BASE}/api/auth/google`; }}
+                    className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-white border border-amber-300 text-sm font-medium text-amber-900 hover:bg-amber-50 transition-colors shadow-sm"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/>
+                      <path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/>
+                      <path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/>
+                      <path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/>
+                    </svg>
+                    Sign in with Google
+                  </button>
+                )}
+              </motion.div>
+            )}
+
             {error && (
               <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                 className="text-sm text-red-500 text-center">{error}</motion.p>
@@ -184,7 +220,7 @@ export default function SignInPage() {
 
           <p className="text-center text-sm text-muted-foreground">
             {mode === "sign-in" ? "Don't have an account? " : "Already have an account? "}
-            <button type="button" onClick={() => { setMode(mode === "sign-in" ? "sign-up" : "sign-in"); setError(null); }}
+            <button type="button" onClick={() => { setMode(mode === "sign-in" ? "sign-up" : "sign-in"); setError(null); setGoogleOnly(false); }}
               className="text-primary font-medium hover:underline">
               {mode === "sign-in" ? "Sign up" : "Sign in"}
             </button>

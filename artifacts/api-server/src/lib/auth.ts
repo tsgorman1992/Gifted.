@@ -39,9 +39,10 @@ passport.deserializeUser(async (id: string, done) => {
 passport.use("local", new LocalStrategy({ usernameField: "email" }, async (email, password, done) => {
   try {
     const [u] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase().trim())).limit(1);
-    if (!u || !u.passwordHash) return done(null, false, { message: "Invalid email or password." });
+    if (!u) return done(null, false, { message: "No account found with that email. Try signing up instead." });
+    if (!u.passwordHash) return done(null, false, { message: "__GOOGLE_ACCOUNT__" });
     const valid = await bcrypt.compare(password, u.passwordHash);
-    if (!valid) return done(null, false, { message: "Invalid email or password." });
+    if (!valid) return done(null, false, { message: "Incorrect password. Please try again." });
     return done(null, toSafe(u));
   } catch (err) { return done(err); }
 }));
