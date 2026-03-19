@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw,
 } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { touchGiftSession } from "@/lib/session";
@@ -202,17 +202,45 @@ function ProgressBar({ step }: { step: number }) {
 
 // ─── Live preview card ────────────────────────────────────────────────────────
 
+type PreviewPhase = "sealed" | "opening" | "revealed";
+
 function PreviewCard({
   experience,
   recipientName,
-  onTapOpen,
+  giftTitle,
+  personalNote,
+  amount,
 }: {
   experience: ExperienceMeta;
   recipientName: string;
-  onTapOpen: () => void;
+  giftTitle?: string;
+  personalNote?: string;
+  amount?: string;
 }) {
   const Icon = EXPERIENCE_ICONS[experience.id];
   const isDark = experience.isDark;
+  const [phase, setPhase] = useState<PreviewPhase>("sealed");
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setPhase("sealed");
+  }, [experience.id]);
+
+  function handleOpen() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setPhase("opening");
+    timerRef.current = setTimeout(() => setPhase("revealed"), 900);
+  }
+
+  function handleReplay() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setPhase("sealed");
+  }
+
+  const textColor = isDark ? "text-white" : "text-white";
+  const mutedColor = isDark ? "text-white/50" : "text-white/70";
+  const glassBg = "rgba(255,255,255,0.15)";
 
   return (
     <div className="hidden lg:block w-64 flex-shrink-0">
@@ -221,51 +249,148 @@ function PreviewCard({
           Their reveal
         </p>
         <div
-          className="w-full rounded-[2rem] overflow-hidden shadow-2xl"
+          className="w-full rounded-[2rem] overflow-hidden shadow-2xl relative"
           style={{ aspectRatio: "9/16", background: `linear-gradient(155deg, ${experience.palette.from}, ${experience.palette.via}, ${experience.palette.to})` }}
         >
-          {/* Top area */}
-          <div className="flex flex-col items-center justify-center h-full px-5 text-center">
-            <motion.div
-              key={experience.id}
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 22 }}
-              className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
-              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
-            >
-              <Icon className={`w-7 h-7 ${isDark ? "text-indigo-200" : "text-white"}`} />
-            </motion.div>
+          <AnimatePresence mode="wait">
 
-            <p className={`text-xs mb-1.5 font-medium ${isDark ? "text-white/50" : "text-white/70"}`}>
-              A gift for
-            </p>
-            <motion.h2
-              key={recipientName}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className={`font-serif text-3xl leading-tight mb-8 ${isDark ? "text-white" : "text-white"}`}
-              style={{ textShadow: "0 2px 20px rgba(0,0,0,0.15)" }}
-            >
-              {recipientName || "Someone special"}
-            </motion.h2>
+            {/* ── Sealed ── */}
+            {phase === "sealed" && (
+              <motion.div
+                key="sealed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, scale: 1.04 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center"
+              >
+                <motion.div
+                  key={experience.id}
+                  initial={{ scale: 0.7, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                  className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
+                  style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
+                >
+                  <Icon className={`w-7 h-7 ${isDark ? "text-indigo-200" : "text-white"}`} />
+                </motion.div>
+                <p className={`text-xs mb-1.5 font-medium ${mutedColor}`}>A gift for</p>
+                <motion.h2
+                  key={recipientName}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className={`font-serif text-3xl leading-tight mb-8 ${textColor}`}
+                  style={{ textShadow: "0 2px 20px rgba(0,0,0,0.15)" }}
+                >
+                  {recipientName || "Someone special"}
+                </motion.h2>
+                <button
+                  onClick={handleOpen}
+                  className="w-full rounded-full py-2.5 px-4 text-center text-sm font-medium cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95"
+                  style={{ background: glassBg, backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.85)" : "white", border: "none", outline: "none" }}
+                  type="button"
+                >
+                  Tap to open
+                </button>
+              </motion.div>
+            )}
 
-            <button
-              onClick={onTapOpen}
-              className="w-full rounded-full py-2.5 px-4 text-center text-sm font-medium cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95"
-              style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.85)" : "white", border: "none", outline: "none" }}
-              type="button"
-            >
-              Tap to open
-            </button>
-          </div>
+            {/* ── Opening ── */}
+            {phase === "opening" && (
+              <motion.div
+                key="opening"
+                className="absolute inset-0 flex items-center justify-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <motion.div
+                  className="w-16 h-16 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(255,255,255,0.25)", backdropFilter: "blur(8px)" }}
+                  animate={{ scale: [1, 1.18, 0.9, 1.06, 1], opacity: [1, 1, 1, 1, 0] }}
+                  transition={{ duration: 0.85, ease: "easeOut" }}
+                >
+                  <Icon className={`w-8 h-8 ${isDark ? "text-indigo-200" : "text-white"}`} />
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* ── Revealed ── */}
+            {phase === "revealed" && (
+              <motion.div
+                key="revealed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.35 }}
+                className="absolute inset-0 flex flex-col"
+              >
+                {/* Header strip */}
+                <div className="px-5 pt-6 pb-4 text-center shrink-0">
+                  <p className={`text-[10px] font-medium mb-0.5 ${mutedColor}`}>Opened by</p>
+                  <p className={`font-serif text-2xl ${textColor}`} style={{ textShadow: "0 2px 12px rgba(0,0,0,0.2)" }}>
+                    {recipientName || "Someone special"}
+                  </p>
+                </div>
+
+                {/* Content cards */}
+                <div className="flex-1 px-3 pb-3 flex flex-col gap-2 overflow-hidden">
+                  {/* Title + note */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="rounded-2xl p-3 flex-1 min-h-0 overflow-hidden"
+                    style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(12px)" }}
+                  >
+                    <p className={`font-serif text-sm font-semibold leading-snug mb-1.5 ${textColor}`}>
+                      {giftTitle || "Your headline will appear here"}
+                    </p>
+                    <p className={`text-[11px] leading-relaxed line-clamp-4 ${mutedColor}`} style={{ color: isDark ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.8)" }}>
+                      {personalNote || "Your personal message will appear here — write something meaningful."}
+                    </p>
+                  </motion.div>
+
+                  {/* Balance */}
+                  {amount && parseFloat(amount) > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="rounded-2xl px-3 py-2.5 flex items-center justify-between shrink-0"
+                      style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(12px)" }}
+                    >
+                      <div>
+                        <p className={`text-[10px] font-medium ${mutedColor}`}>Gift balance</p>
+                        <p className={`text-sm font-bold ${textColor}`}>${parseFloat(amount).toFixed(2)}</p>
+                      </div>
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.2)" }}>
+                        <Gift className={`w-3.5 h-3.5 ${isDark ? "text-indigo-200" : "text-white"}`} />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Replay */}
+                  <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    onClick={handleReplay}
+                    className="w-full rounded-full py-2 text-xs font-medium cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                    style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.85)", border: "none" }}
+                    type="button"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Replay
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
         </div>
 
         <div className="mt-3 text-center">
-          <p className={`text-xs font-semibold ${isDark ? "text-foreground" : "text-foreground"}`}>
-            {experience.name}
-          </p>
+          <p className="text-xs font-semibold text-foreground">{experience.name}</p>
           <p className="text-[11px] text-muted-foreground">{experience.tagline}</p>
         </div>
       </div>
@@ -527,11 +652,6 @@ export default function CreatePage() {
     }
     saveToLocalStorage();
     setLocation("/preview");
-  };
-
-  const handleTapOpen = () => {
-    saveToLocalStorage();
-    setLocation("/reveal");
   };
 
   const handleAI = async (mode: "rewrite" | "regenerate") => {
@@ -820,7 +940,13 @@ export default function CreatePage() {
                 </div>
 
                 {/* Live preview panel */}
-                <PreviewCard experience={currentExperience} recipientName={recipientName} onTapOpen={handleTapOpen} />
+                <PreviewCard
+                  experience={currentExperience}
+                  recipientName={recipientName}
+                  giftTitle={giftTitle}
+                  personalNote={personalNote}
+                  amount={amount}
+                />
               </div>
             </motion.div>
           )}
