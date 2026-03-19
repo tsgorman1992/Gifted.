@@ -59,6 +59,7 @@ export default function LandingPage() {
   }
 
   function startReveal() {
+    if (timerRef.current) clearTimeout(timerRef.current);
     setPhase("opening");
     timerRef.current = setTimeout(() => setPhase("revealed"), 1400);
   }
@@ -70,7 +71,7 @@ export default function LandingPage() {
   }
 
   useEffect(() => {
-    timerRef.current = setTimeout(startReveal, 1600);
+    timerRef.current = setTimeout(startReveal, 4000);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
@@ -216,6 +217,16 @@ export default function LandingPage() {
                           </span>
                         ))}
                       </div>
+                      <motion.button
+                        onClick={startReveal}
+                        className="mt-1 w-full py-2.5 rounded-xl text-sm font-medium text-white shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                        style={{ background: "linear-gradient(135deg, hsl(28,62%,36%), hsl(28,62%,48%))" }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Tap to open
+                      </motion.button>
                     </motion.div>
                   )}
                   {phase === "opening" && (
