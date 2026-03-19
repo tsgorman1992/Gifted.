@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, AlertCircle, Link2,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2,
 } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { touchGiftSession } from "@/lib/session";
@@ -292,6 +292,7 @@ export default function CreatePage() {
   const [customIntentMode, setCustomIntentMode] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("09:00");
   const [occasion, setOccasion] = useState("Birthday");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
@@ -344,6 +345,8 @@ export default function CreatePage() {
     }
     const sf = localStorage.getItem("gifted_scheduled_for");
     if (sf) { setScheduledFor(sf); setScheduleEnabled(true); }
+    const st = localStorage.getItem("gifted_scheduled_time");
+    if (st) setScheduledTime(st);
     const exp = localStorage.getItem("gifted_experience");
     if (exp && EXPERIENCE_LIST.find(e => e.id === exp)) {
       setSelectedExperience(exp as ExperienceId);
@@ -504,8 +507,13 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_amount");
     if (intent) localStorage.setItem("gifted_intent", intent);
     else localStorage.removeItem("gifted_intent");
-    if (scheduleEnabled && scheduledFor) localStorage.setItem("gifted_scheduled_for", scheduledFor);
-    else localStorage.removeItem("gifted_scheduled_for");
+    if (scheduleEnabled && scheduledFor) {
+      localStorage.setItem("gifted_scheduled_for", scheduledFor);
+      localStorage.setItem("gifted_scheduled_time", scheduledTime);
+    } else {
+      localStorage.removeItem("gifted_scheduled_for");
+      localStorage.removeItem("gifted_scheduled_time");
+    }
   };
 
   const handlePreview = () => {
@@ -1342,10 +1350,21 @@ export default function CreatePage() {
                           className="h-11 rounded-xl text-base flex-1"
                         />
                       </div>
+                      <div className="flex items-center gap-3">
+                        <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <Input
+                          type="time"
+                          value={scheduledTime}
+                          onChange={(e) => setScheduledTime(e.target.value)}
+                          className="h-11 rounded-xl text-base flex-1"
+                        />
+                      </div>
                       {scheduledFor && (
-                        <p className="text-xs text-muted-foreground mt-2 pl-7">
+                        <p className="text-xs text-muted-foreground mt-1 pl-7">
                           {recipientName || "Your recipient"} will get the link on{" "}
-                          {new Date(scheduledFor + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}.
+                          {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}{" "}
+                          at{" "}
+                          {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.
                         </p>
                       )}
                     </motion.div>

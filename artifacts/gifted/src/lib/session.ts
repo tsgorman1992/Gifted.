@@ -9,6 +9,7 @@ const GIFT_KEYS = [
   "gifted_amount",
   "gifted_intent",
   "gifted_scheduled_for",
+  "gifted_scheduled_time",
   "gifted_experience",
   "gifted_video_path",
   "gifted_photo_paths",

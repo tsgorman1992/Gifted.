@@ -27,6 +27,7 @@ export default function PreviewPage() {
   const [giftAmount,     setGiftAmount]     = useState<string | null>(null);
   const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
   const [scheduledFor,   setScheduledFor]   = useState<string | null>(null);
+  const [scheduledTime,  setScheduledTime]  = useState<string>("09:00");
 
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -79,6 +80,8 @@ export default function PreviewPage() {
 
     const sf = localStorage.getItem("gifted_scheduled_for");
     if (sf) setScheduledFor(sf);
+    const st = localStorage.getItem("gifted_scheduled_time");
+    if (st) setScheduledTime(st);
 
     setCanShare(typeof navigator?.share === "function");
     setIsDesktop(window.innerWidth >= 768);
@@ -171,7 +174,8 @@ export default function PreviewPage() {
       if (intn) payload.intent = intn;
 
       const sf = localStorage.getItem("gifted_scheduled_for");
-      if (sf) payload.scheduledFor = sf;
+      const st = localStorage.getItem("gifted_scheduled_time") || "09:00";
+      if (sf) payload.scheduledFor = `${sf}T${st}:00`;
 
       const res = await fetch(`${base}/api/gifted/gifts`, {
         method: "POST",
@@ -487,8 +491,11 @@ export default function PreviewPage() {
                   <p className="text-sm font-semibold text-foreground">Scheduled delivery</p>
                   <p className="text-xs text-muted-foreground">
                     {recipientName} will receive the link on{" "}
-                    {new Date(scheduledFor + "T12:00:00").toLocaleDateString("en-US", {
+                    {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", {
                       weekday: "long", month: "long", day: "numeric",
+                    })}{" "}at{" "}
+                    {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", {
+                      hour: "numeric", minute: "2-digit",
                     })}.
                   </p>
                 </div>
