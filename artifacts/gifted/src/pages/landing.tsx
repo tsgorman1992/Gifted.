@@ -27,16 +27,31 @@ const FEATURES = [
   { icon: CreditCard, title: "Flexible Funds",  desc: "No more restrictive gift cards. They cash out how they want." },
 ];
 
+const LINK_DEMOS = [
+  { label: "2 Tickets · The Weeknd",  sub: "Tap to view tickets"    },
+  { label: "8pm Friday at Nobu",       sub: "Tap to view reservation" },
+  { label: "Golden Hour – JVKE",       sub: "Tap to listen"           },
+  { label: "Cabin in Big Sur",         sub: "Tap to view stay"        },
+  { label: "Spa day · Sunday 2pm",     sub: "Tap to open"             },
+];
+
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [phase, setPhase] = useState<Phase>("sealed");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [linkDemoIdx, setLinkDemoIdx] = useState(0);
 
   // Clear stale sessions when someone visits the homepage after 8+ hours.
-  // This handles the "I came back days later and saw my old draft" case.
   useEffect(() => {
     if (isGiftSessionStale()) clearGiftSession();
   }, []);
+
+  // Cycle the link demo card when in revealed state
+  useEffect(() => {
+    if (phase !== "revealed") return;
+    const id = setInterval(() => setLinkDemoIdx(i => (i + 1) % LINK_DEMOS.length), 2600);
+    return () => clearInterval(id);
+  }, [phase]);
 
   function handleNewGift() {
     clearGiftSession();
@@ -316,13 +331,24 @@ export default function LandingPage() {
                           </div>
                           <p className="text-white/50 text-xs shrink-0">0:42</p>
                         </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-primary/20 bg-primary/5">
-                          <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ background: "hsl(28,62%,36%)" }}>
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
+                          <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 flex-shrink-0" style={{ background: "hsl(28,62%,36%)" }}>
                             <Link2 className="w-3.5 h-3.5 text-white" />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium truncate">2× Tickets — Taylor Swift</p>
-                            <p className="text-xs text-muted-foreground">Tap to view tickets</p>
+                          <div className="flex-1 min-w-0 relative h-9 flex flex-col justify-center">
+                            <AnimatePresence mode="wait">
+                              <motion.div
+                                key={linkDemoIdx}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.28 }}
+                                className="absolute inset-0 flex flex-col justify-center"
+                              >
+                                <p className="text-xs font-medium truncate">{LINK_DEMOS[linkDemoIdx].label}</p>
+                                <p className="text-xs text-muted-foreground">{LINK_DEMOS[linkDemoIdx].sub}</p>
+                              </motion.div>
+                            </AnimatePresence>
                           </div>
                           <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         </motion.div>
