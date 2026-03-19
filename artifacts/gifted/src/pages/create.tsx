@@ -72,6 +72,20 @@ const LINK_IDEAS = [
   "Anything with a URL...",
 ];
 
+// ─── Phone formatting ─────────────────────────────────────────────────────────
+
+function formatPhoneNumber(value: string): string {
+  // Strip everything non-digit
+  let digits = value.replace(/\D/g, "");
+  // If they pasted a +1 US number (11 digits starting with 1), strip the country code
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  // Cap at 10 digits
+  digits = digits.slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 // ─── AI note streaming ────────────────────────────────────────────────────────
 
 async function streamAINote(
@@ -312,7 +326,7 @@ export default function CreatePage() {
     const sn = localStorage.getItem("gifted_sender_name");
     if (sn) setSenderName(sn);
     const rp = localStorage.getItem("gifted_recipient_phone");
-    if (rp) setRecipientPhone(rp);
+    if (rp) setRecipientPhone(formatPhoneNumber(rp));
     const occ = localStorage.getItem("gifted_occasion");
     if (occ) setOccasion(occ);
     const gt = localStorage.getItem("gifted_gift_title");
@@ -573,6 +587,9 @@ export default function CreatePage() {
     if (step === 1) {
       if (!recipientName.trim()) { setStepError("Please enter the recipient's name."); return; }
       if (!senderName.trim()) { setStepError("Please enter your name."); return; }
+      if (recipientPhone && recipientPhone.replace(/\D/g, "").length < 10) {
+        setStepError("Please enter a complete 10-digit phone number."); return;
+      }
     }
     if (step === 2) {
       if (!giftTitle.trim()) { setStepError("Please add a gift headline."); return; }
@@ -744,9 +761,10 @@ export default function CreatePage() {
                     <Input
                       id="recipientPhone"
                       type="tel"
-                      placeholder="+1 (555) 000-0000"
+                      inputMode="numeric"
+                      placeholder="(555) 000-0000"
                       value={recipientPhone}
-                      onChange={(e) => setRecipientPhone(e.target.value)}
+                      onChange={(e) => setRecipientPhone(formatPhoneNumber(e.target.value))}
                       className="h-12 rounded-xl text-base"
                     />
                     <p className="text-xs text-muted-foreground">
