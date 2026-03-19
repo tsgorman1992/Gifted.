@@ -316,22 +316,28 @@ export default function CreatePage() {
       setSuggestedExperience(exp as ExperienceId);
       setHasManuallyChosen(true);
     }
-    // Restore video from previous session
+    // Restore video from previous session — use a signed GCS URL for reliable playback
     const vp = localStorage.getItem("gifted_video_path");
     if (vp) {
       setVideoObjectPath(vp);
-      setVideoPreviewUrl(`${base}/api/storage${vp}`);
+      fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(vp)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setVideoPreviewUrl(d?.url ?? `${base}/api/storage${vp}`))
+        .catch(() => setVideoPreviewUrl(`${base}/api/storage${vp}`));
     }
     // Restore photos from previous session
     const pp = localStorage.getItem("gifted_photo_paths");
     if (pp) {
       try {
         const paths: string[] = JSON.parse(pp);
-        setPhotos(paths.map((objectPath) => ({
-          id: crypto.randomUUID(),
-          objectPath,
-          previewUrl: `${base}/api/storage${objectPath}`,
-        })));
+        Promise.all(
+          paths.map(objectPath =>
+            fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(objectPath)}`)
+              .then(r => r.ok ? r.json() : null)
+              .then(d => ({ id: crypto.randomUUID(), objectPath, previewUrl: d?.url ?? `${base}/api/storage${objectPath}` }))
+              .catch(() => ({ id: crypto.randomUUID(), objectPath, previewUrl: `${base}/api/storage${objectPath}` }))
+          )
+        ).then(items => setPhotos(items));
       } catch { /* ignore */ }
     }
   }, []);

@@ -79,6 +79,32 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
 });
 
 /**
+ * GET /storage/object-url?path=/objects/...
+ *
+ * Returns a short-lived signed GCS URL for direct browser access.
+ * Use this for <video> and <img> src instead of the proxied endpoint —
+ * GCS serves range requests natively, which iOS Safari requires for video.
+ */
+router.get("/storage/object-url", async (req: Request, res: Response) => {
+  const rawPath = req.query.path as string | undefined;
+  if (!rawPath) {
+    res.status(400).json({ error: "Missing path query parameter" });
+    return;
+  }
+  try {
+    const signedUrl = await objectStorageService.getObjectEntitySignedUrl(rawPath, 3600);
+    res.json({ url: signedUrl });
+  } catch (error) {
+    if (error instanceof ObjectNotFoundError) {
+      res.status(404).json({ error: "Object not found" });
+      return;
+    }
+    console.error("Error generating signed URL:", error);
+    res.status(500).json({ error: "Failed to generate signed URL" });
+  }
+});
+
+/**
  * GET /storage/objects/*
  *
  * Serve object entities from PRIVATE_OBJECT_DIR.

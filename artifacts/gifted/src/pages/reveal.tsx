@@ -984,13 +984,25 @@ export default function RevealPage() {
     const urlTitle      = urlParams.get("giftTitle");
 
     const vp = localStorage.getItem("gifted_video_path");
-    if (vp) setVideoUrl(`${base}/api/storage${vp}`);
+    if (vp) {
+      fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(vp)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setVideoUrl(d?.url ?? `${base}/api/storage${vp}`))
+        .catch(() => setVideoUrl(`${base}/api/storage${vp}`));
+    }
 
     const pp = localStorage.getItem("gifted_photo_paths");
     if (pp) {
       try {
         const paths: string[] = JSON.parse(pp);
-        setPhotoUrls(paths.map(p => `${base}/api/storage${p}`));
+        Promise.all(
+          paths.map(p =>
+            fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(p)}`)
+              .then(r => r.ok ? r.json() : null)
+              .then(d => d?.url ?? `${base}/api/storage${p}`)
+              .catch(() => `${base}/api/storage${p}`)
+          )
+        ).then(urls => setPhotoUrls(urls));
       } catch { /* ignore */ }
     }
 
@@ -1483,10 +1495,10 @@ export default function RevealPage() {
                     <div className="w-full aspect-video relative group">
                       <video
                         ref={videoRef}
-                        src={videoUrl}
-                        preload="metadata"
+                        src={videoUrl ?? undefined}
                         playsInline
                         controls
+                        preload="auto"
                         className="w-full h-full object-cover"
                         onError={() => setVideoError(true)}
                       />
