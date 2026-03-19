@@ -497,12 +497,12 @@ export default function PreviewPage() {
                   <CheckCircle2 className="w-7 h-7 text-green-600" />
                 </motion.div>
                 <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">
-                  {paymentStatus === "confirming" ? "Confirming payment…" : "Gift sent!"}
+                  {paymentStatus === "confirming" ? "Confirming payment…" : "Payment confirmed."}
                 </h1>
                 <p className="text-muted-foreground mb-7 text-base">
                   {paymentStatus === "confirming"
                     ? "Just a moment while we confirm your payment…"
-                    : `$${displayAmt} paid. Now send ${recipientName} the link below — their experience is ready.`}
+                    : `$${displayAmt} loaded. Now share the link with ${recipientName} below — their experience is ready.`}
                 </p>
               </>
             ) : (
@@ -607,7 +607,7 @@ export default function PreviewPage() {
                   >
                     <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-green-800">Gift sent!</p>
+                      <p className="text-sm font-semibold text-green-800">Link sent!</p>
                       <p className="text-xs text-green-700">{recipientName} will receive the link shortly.</p>
                     </div>
                     <button
