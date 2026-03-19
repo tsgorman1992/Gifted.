@@ -803,7 +803,7 @@ export default function CreatePage() {
                       type="button"
                       size="lg"
                       onClick={goNext}
-                      className="rounded-full h-13 px-8 text-base shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
+                      className="w-full sm:w-auto rounded-full h-13 px-8 text-base shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
                     >
                       Write the moment <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
@@ -978,15 +978,15 @@ export default function CreatePage() {
               </AnimatePresence>
 
               {/* Navigation */}
-              <div className="flex justify-between mt-8">
-                <Button type="button" variant="ghost" size="lg" onClick={goBack} className="rounded-full h-13 px-6 text-base">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-8">
+                <Button type="button" variant="ghost" size="lg" onClick={goBack} className="rounded-full h-13 px-6 text-base w-full sm:w-auto">
                   <ArrowLeft className="mr-2 w-4 h-4" /> Back
                 </Button>
                 <Button
                   type="button"
                   size="lg"
                   onClick={goNext}
-                  className="rounded-full h-13 px-8 text-base shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
+                  className="w-full sm:w-auto rounded-full h-13 px-8 text-base shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
                 >
                   Complete the gift <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
@@ -1353,15 +1353,15 @@ export default function CreatePage() {
               </div>
 
               {/* Navigation */}
-              <div className="flex justify-between mt-8">
-                <Button type="button" variant="ghost" size="lg" onClick={goBack} className="rounded-full h-13 px-6 text-base">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-8">
+                <Button type="button" variant="ghost" size="lg" onClick={goBack} className="rounded-full h-13 px-6 text-base w-full sm:w-auto">
                   <ArrowLeft className="mr-2 w-4 h-4" /> Back
                 </Button>
                 <Button
                   type="button"
                   size="lg"
                   onClick={handlePreview}
-                  className="rounded-full h-13 px-8 text-base shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all"
+                  className="w-full sm:w-auto rounded-full h-13 px-8 text-base shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all"
                 >
                   Preview your gift <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>

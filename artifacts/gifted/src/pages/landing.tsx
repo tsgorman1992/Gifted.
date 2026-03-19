@@ -78,7 +78,7 @@ export default function LandingPage() {
     <div className="w-full flex flex-col items-center overflow-hidden">
 
       {/* ── Hero ── */}
-      <section className="w-full relative py-16 md:py-24 px-6">
+      <section className="w-full relative py-12 md:py-24 px-6">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img
             src={`${import.meta.env.BASE_URL}images/hero-abstract.png`}
@@ -139,7 +139,7 @@ export default function LandingPage() {
           </div>{/* end left col */}
 
           {/* Right column: interactive demo */}
-          <div className="relative w-full max-w-xs sm:max-w-sm lg:max-w-none mx-auto lg:mx-0">
+          <div className="relative w-full mx-auto lg:mx-0">
             <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-[2.5rem] transform rotate-3 blur-xl opacity-50 pointer-events-none" />
             <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[3/5] flex flex-col">
 
