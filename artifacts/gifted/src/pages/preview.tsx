@@ -371,7 +371,7 @@ export default function PreviewPage() {
                     )}
                     {hasPlaylist && (
                       <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
-                        <Music className="w-3 h-3 text-primary" /> Playlist
+                        <Music className="w-3 h-3 text-primary" /> Link
                       </span>
                     )}
                   </div>

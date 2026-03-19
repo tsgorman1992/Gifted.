@@ -1555,43 +1555,69 @@ export default function RevealPage() {
                 </Section>
               )}
 
-              {/* Playlist — between photos and balance */}
-              {playlistUrl && (
-                <Section cfg={cfg} idx={2}>
-                  <a
-                    href={playlistUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden"
-                    style={isDark
-                      ? { background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.06)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
-                      : { background: cfg.cardStyle.bg ?? "hsl(var(--card)/0.8)", backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
-                    }
-                  >
-                    {experience === "garden-bloom" && <GardenBloomWatermark />}
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-                        style={isDark
-                          ? { background: "rgba(255,255,255,0.1)" }
-                          : { background: "hsl(var(--primary)/0.1)" }
-                        }
-                      >
-                        <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+              {/* Link card — anything with a URL */}
+              {playlistUrl && (() => {
+                const u = playlistUrl.toLowerCase();
+                const isMusic = u.includes("spotify.com") || u.includes("music.apple.com") || u.includes("soundcloud.com") || u.includes("tidal.com") || u.includes("deezer.com");
+                const isTickets = u.includes("ticketmaster.com") || u.includes("axs.com") || u.includes("stubhub.com") || u.includes("seatgeek.com") || u.includes("livenation.com");
+                const isFood = u.includes("opentable.com") || u.includes("resy.com") || u.includes("yelp.com/biz") || u.includes("tock.com");
+                const isTravel = u.includes("airbnb.com") || u.includes("vrbo.com") || u.includes("hotels.com") || u.includes("booking.com");
+                const label =
+                  u.includes("spotify.com") ? "Spotify" :
+                  u.includes("music.apple.com") ? "Apple Music" :
+                  u.includes("soundcloud.com") ? "SoundCloud" :
+                  u.includes("tidal.com") ? "Tidal" :
+                  u.includes("youtube.com") || u.includes("youtu.be") ? "YouTube" :
+                  isTickets ? "Event Tickets" :
+                  u.includes("opentable.com") ? "OpenTable Reservation" :
+                  u.includes("resy.com") ? "Resy Reservation" :
+                  isFood ? "Reservation" :
+                  u.includes("airbnb.com") ? "Airbnb Stay" :
+                  isTravel ? "Travel Link" :
+                  u.includes("eventbrite.com") ? "Event" :
+                  u.includes("amazon.com") ? "Amazon" :
+                  u.includes("netflix.com") ? "Netflix" :
+                  "Open link";
+                const subtitle =
+                  isMusic ? "Tap to listen" :
+                  u.includes("youtube.com") || u.includes("youtu.be") ? "Tap to watch" :
+                  isTickets ? "Tap to view tickets" :
+                  isFood ? "Tap to view reservation" :
+                  isTravel ? "Tap to view" :
+                  "Tap to open";
+                return (
+                  <Section cfg={cfg} idx={2}>
+                    <a
+                      href={playlistUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden"
+                      style={isDark
+                        ? { background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.06)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
+                        : { background: cfg.cardStyle.bg ?? "hsl(var(--card)/0.8)", backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
+                      }
+                    >
+                      {experience === "garden-bloom" && <GardenBloomWatermark />}
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                          style={isDark ? { background: "rgba(255,255,255,0.1)" } : { background: "hsl(var(--primary)/0.1)" }}
+                        >
+                          {isMusic
+                            ? <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                            : <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold text-base ${isDark ? "text-white" : "text-foreground"}`}>{label}</p>
+                          <p className={`text-sm truncate ${isDark ? "text-white/50" : "text-muted-foreground"}`}>{subtitle}</p>
+                        </div>
+                        <ExternalLink className={`w-5 h-5 flex-shrink-0 ${isDark ? "text-white/40" : "text-muted-foreground"}`} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-semibold text-base ${isDark ? "text-white" : "text-foreground"}`}>
-                          {playlistUrl.includes("spotify") ? "Spotify Playlist" : playlistUrl.includes("apple") ? "Apple Music Playlist" : "Playlist"}
-                        </p>
-                        <p className={`text-sm truncate ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
-                          Curated just for you
-                        </p>
-                      </div>
-                      <ExternalLink className={`w-5 h-5 flex-shrink-0 ${isDark ? "text-white/40" : "text-muted-foreground"}`} />
-                    </div>
-                  </a>
-                </Section>
-              )}
+                    </a>
+                  </Section>
+                );
+              })()}
 
               {/* Balance — section 3 (only shown when a non-zero amount was set) */}
               {giftAmount && parseFloat(giftAmount) > 0 && (

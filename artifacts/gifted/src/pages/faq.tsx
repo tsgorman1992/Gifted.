@@ -13,7 +13,7 @@ const FAQS = [
   {
     question: "Do I need to include a cash balance?",
     answer:
-      "Not at all. The balance is completely optional. gifted. is built around the personal moment — the video, photos, note, and playlist. You can send a purely emotional gift with no money attached, and it'll be just as meaningful.",
+      "Not at all. The balance is completely optional. gifted. is built around the personal moment — the video, photos, note, and a link to something meaningful. You can send a purely emotional gift with no money attached, and it'll be just as meaningful.",
   },
   {
     question: "How long does the payout take?",
@@ -53,7 +53,7 @@ const FAQS = [
   {
     question: "What media formats are supported?",
     answer:
-      "For video: MP4, MOV, and WebM files up to 200MB. For photos: JPG, PNG, HEIC, and WebP, up to 10MB each. You can add up to 6 photos per gift. Playlists can be linked from Spotify or Apple Music.",
+      "For video: MP4, MOV, and WebM files up to 200MB. For photos: JPG, PNG, HEIC, and WebP, up to 20MB each. You can add up to 6 photos per gift. You can also add any link — a Spotify playlist, Apple Music mix, concert tickets, restaurant reservation, Airbnb stay, and more.",
   },
   {
     question: "Can I cancel or refund a gift?",

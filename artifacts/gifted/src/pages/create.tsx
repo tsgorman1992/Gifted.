@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, AlertCircle,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, AlertCircle, Link2,
 } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
 
@@ -54,6 +54,22 @@ const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
 const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+
+const LINK_IDEAS = [
+  "Spotify playlist...",
+  "Concert tickets...",
+  "Dinner reservation...",
+  "A song you love...",
+  "Airbnb stay...",
+  "Movie tickets...",
+  "OpenTable booking...",
+  "Apple Music mix...",
+  "Event link...",
+  "Podcast episode...",
+  "YouTube video...",
+  "SoundCloud track...",
+  "Anything with a URL...",
+];
 
 // ─── AI note streaming ────────────────────────────────────────────────────────
 
@@ -271,6 +287,7 @@ export default function CreatePage() {
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
+  const [linkPlaceholderIdx, setLinkPlaceholderIdx] = useState(0);
 
   // Media state
   const [videoObjectPath, setVideoObjectPath] = useState<string | null>(null);
@@ -341,6 +358,15 @@ export default function CreatePage() {
       } catch { /* ignore */ }
     }
   }, []);
+
+  // Cycle link placeholder ideas when the field is empty and not focused
+  useEffect(() => {
+    if (playlistUrl) return;
+    const id = setInterval(() => {
+      setLinkPlaceholderIdx(i => (i + 1) % LINK_IDEAS.length);
+    }, 2400);
+    return () => clearInterval(id);
+  }, [playlistUrl]);
 
   // Suggest a title when recipient + occasion are both set
   useEffect(() => {
@@ -1079,14 +1105,19 @@ export default function CreatePage() {
                   {photoError && <p className="text-sm text-destructive">{photoError}</p>}
                   {uploadError && <p className="text-sm text-destructive">Upload failed: {uploadError.message}</p>}
 
-                  {/* Playlist */}
+                  {/* Link — anything with a URL */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Playlist <span className="text-muted-foreground font-normal">(Spotify or Apple Music)</span></Label>
+                    <Label className="text-sm font-medium">Add a link <span className="text-muted-foreground font-normal">— anything with a URL</span></Label>
                     <div className="relative">
-                      <Music className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input placeholder="Paste playlist URL..." className="h-11 rounded-xl text-sm pl-10" value={playlistUrl} onChange={(e) => setPlaylistUrl(e.target.value)} />
+                      <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder={LINK_IDEAS[linkPlaceholderIdx]}
+                        className="h-11 rounded-xl text-sm pl-10 transition-all"
+                        value={playlistUrl}
+                        onChange={(e) => setPlaylistUrl(e.target.value)}
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground">They'll see a tap-to-open playlist card in their reveal.</p>
+                    <p className="text-xs text-muted-foreground">Tickets, a reservation, a song, a playlist — they'll see a tap-to-open card.</p>
                   </div>
                 </div>
 
