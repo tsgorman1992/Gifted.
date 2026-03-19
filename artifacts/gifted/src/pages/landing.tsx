@@ -249,7 +249,7 @@ export default function LandingPage() {
                           </div>
                         ))}
                       </motion.div>
-                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="relative rounded-xl overflow-hidden" style={{ height: "88px", background: "linear-gradient(135deg,#1a1a2e,#2d1b4e)" }}>
+                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="relative rounded-xl overflow-hidden aspect-square w-full" style={{ background: "linear-gradient(135deg,#1a1a2e,#2d1b4e)" }}>
                         <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=320&h=180&fit=crop&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-[1px] scale-105" loading="lazy" />
                         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 55%)" }} />
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
