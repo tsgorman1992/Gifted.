@@ -334,55 +334,105 @@ function PreviewCard({
                 </div>
 
                 {/* Content cards */}
-                <div className="flex-1 px-3 pb-3 flex flex-col gap-2 overflow-hidden">
-                  {/* Title + note */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="rounded-2xl p-3 flex-1 min-h-0 overflow-hidden"
-                    style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(12px)" }}
-                  >
-                    <p className={`font-serif text-sm font-semibold leading-snug mb-1.5 ${textColor}`}>
-                      {giftTitle || "Your headline will appear here"}
-                    </p>
-                    <p className={`text-[11px] leading-relaxed line-clamp-4 ${mutedColor}`} style={{ color: isDark ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.8)" }}>
-                      {personalNote || "Your personal message will appear here — write something meaningful."}
-                    </p>
-                  </motion.div>
+                {(() => {
+                  const hasContent = !!(giftTitle || personalNote || (amount && parseFloat(amount) > 0));
+                  const iconStyle = { color: isDark ? "rgba(200,190,255,0.9)" : "rgba(255,255,255,0.9)" };
+                  const FEATURES = [
+                    { Icon: Heart,      label: "Personal message",  sub: "Words that land" },
+                    { Icon: Video,      label: "Video moment",      sub: "A clip just for them" },
+                    { Icon: Gift,       label: "Cash to spend",     sub: "Instant to their card" },
+                    { Icon: Link2,      label: "Something extra",   sub: "A link, ticket, playlist" },
+                  ];
+                  return (
+                    <div className="flex-1 px-3 pb-3 flex flex-col gap-2 overflow-hidden">
+                      {hasContent ? (
+                        <>
+                          {/* Filled: title + note */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="rounded-2xl p-3 flex-1 min-h-0 overflow-hidden"
+                            style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(12px)" }}
+                          >
+                            {giftTitle && (
+                              <p className={`font-serif text-sm font-semibold leading-snug mb-1.5 ${textColor}`}>
+                                {giftTitle}
+                              </p>
+                            )}
+                            {personalNote && (
+                              <p className="text-[11px] leading-relaxed line-clamp-4" style={{ color: isDark ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.8)" }}>
+                                {personalNote}
+                              </p>
+                            )}
+                          </motion.div>
 
-                  {/* Balance */}
-                  {amount && parseFloat(amount) > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="rounded-2xl px-3 py-2.5 flex items-center justify-between shrink-0"
-                      style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(12px)" }}
-                    >
-                      <div>
-                        <p className={`text-[10px] font-medium ${mutedColor}`}>Gift balance</p>
-                        <p className={`text-sm font-bold ${textColor}`}>${parseFloat(amount).toFixed(2)}</p>
-                      </div>
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.2)" }}>
-                        <Gift className={`w-3.5 h-3.5 ${isDark ? "text-indigo-200" : "text-white"}`} />
-                      </div>
-                    </motion.div>
-                  )}
+                          {/* Filled: balance */}
+                          {amount && parseFloat(amount) > 0 && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.2 }}
+                              className="rounded-2xl px-3 py-2.5 flex items-center justify-between shrink-0"
+                              style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(12px)" }}
+                            >
+                              <div>
+                                <p className={`text-[10px] font-medium ${mutedColor}`}>Gift balance</p>
+                                <p className={`text-sm font-bold ${textColor}`}>${parseFloat(amount).toFixed(2)}</p>
+                              </div>
+                              <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.2)" }}>
+                                <Gift className={`w-3.5 h-3.5`} style={iconStyle} />
+                              </div>
+                            </motion.div>
+                          )}
+                        </>
+                      ) : (
+                        /* Empty: feature showcase */
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.1 }}
+                          className="rounded-2xl p-3 flex-1 min-h-0 flex flex-col justify-center gap-2.5"
+                          style={{ background: "rgba(255,255,255,0.13)", backdropFilter: "blur(12px)" }}
+                        >
+                          <p className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5 ${mutedColor}`}>
+                            What's inside
+                          </p>
+                          {FEATURES.map(({ Icon: FIcon, label, sub }, i) => (
+                            <motion.div
+                              key={label}
+                              initial={{ opacity: 0, x: -6 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.12 + i * 0.07 }}
+                              className="flex items-center gap-2.5"
+                            >
+                              <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.18)" }}>
+                                <FIcon className="w-3 h-3" style={iconStyle} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`text-[11px] font-semibold leading-none ${textColor}`}>{label}</p>
+                                <p className="text-[9px] leading-snug mt-0.5" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.65)" }}>{sub}</p>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </motion.div>
+                      )}
 
-                  {/* Replay */}
-                  <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    onClick={handleReplay}
-                    className="w-full rounded-full py-2 text-xs font-medium cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-                    style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.85)", border: "none" }}
-                    type="button"
-                  >
-                    <RotateCcw className="w-3 h-3" /> Replay
-                  </motion.button>
-                </div>
+                      {/* Replay */}
+                      <motion.button
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: hasContent ? 0.3 : 0.5 }}
+                        onClick={handleReplay}
+                        className="w-full rounded-full py-2 text-xs font-medium cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                        style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.85)", border: "none" }}
+                        type="button"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Replay
+                      </motion.button>
+                    </div>
+                  );
+                })()}
               </motion.div>
             )}
 
