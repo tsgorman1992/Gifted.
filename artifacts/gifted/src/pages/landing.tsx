@@ -141,7 +141,7 @@ export default function LandingPage() {
           {/* Right column: interactive demo */}
           <div className="relative w-full max-w-xs sm:max-w-sm lg:max-w-none mx-auto lg:mx-0">
             <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-[2.5rem] transform rotate-3 blur-xl opacity-50 pointer-events-none" />
-            <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[3/4] sm:aspect-[4/5] flex flex-col">
+            <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[3/5] flex flex-col">
 
               {/* Header */}
               <div className="h-36 sm:h-52 relative overflow-hidden flex-shrink-0">
@@ -233,7 +233,7 @@ export default function LandingPage() {
                       </motion.div>
                       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="flex gap-1.5">
                         {PHOTOS.map((src, i) => (
-                          <div key={i} className="flex-1 h-14 rounded-lg overflow-hidden bg-muted">
+                          <div key={i} className="flex-1 h-16 rounded-lg overflow-hidden bg-muted">
                             <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
                           </div>
                         ))}
