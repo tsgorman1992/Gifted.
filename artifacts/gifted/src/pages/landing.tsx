@@ -319,17 +319,30 @@ export default function LandingPage() {
                             </div>
                           ))}
                         </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="flex items-center gap-2.5 px-3 h-11 rounded-xl" style={{ background: "linear-gradient(135deg,#1a1a2e,#2d1b4e)" }}>
-                          <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                            <Play className="w-3 h-3 text-white ml-0.5" />
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="relative rounded-xl overflow-hidden" style={{ height: "88px", background: "linear-gradient(135deg,#1a1a2e,#2d1b4e)" }}>
+                          {/* Blurred face to suggest a real video frame */}
+                          <img
+                            src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=320&h=180&fit=crop&auto=format"
+                            alt=""
+                            className="absolute inset-0 w-full h-full object-cover opacity-30 blur-[1px] scale-105"
+                            loading="lazy"
+                          />
+                          {/* Bottom vignette */}
+                          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 55%)" }} />
+                          {/* Centred play button */}
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
+                            <Play className="w-4 h-4 text-white ml-0.5" />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-white text-xs font-medium">Video message</p>
-                            <div className="w-20 h-1 rounded-full bg-white/20 mt-1 overflow-hidden">
-                              <motion.div className="h-full rounded-full bg-white/60" animate={{ width: ["0%", "45%"] }} transition={{ delay: 0.5, duration: 1.8, ease: "easeOut" }} />
+                          {/* Bottom bar */}
+                          <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 flex items-end gap-2">
+                            <div className="flex-1">
+                              <p className="text-white text-[10px] font-medium mb-1.5 leading-none">Video message</p>
+                              <div className="w-full h-[3px] rounded-full bg-white/25 overflow-hidden">
+                                <motion.div className="h-full rounded-full bg-white/80" animate={{ width: ["0%", "45%"] }} transition={{ delay: 0.5, duration: 1.8, ease: "easeOut" }} />
+                              </div>
                             </div>
+                            <p className="text-white/50 text-[10px] shrink-0 pb-0.5">0:42</p>
                           </div>
-                          <p className="text-white/50 text-xs shrink-0">0:42</p>
                         </motion.div>
                         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
                           <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 flex-shrink-0" style={{ background: "hsl(28,62%,36%)" }}>
