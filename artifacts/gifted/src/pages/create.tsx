@@ -385,23 +385,6 @@ export default function CreatePage() {
     return () => clearInterval(id);
   }, [playlistUrl]);
 
-  // Suggest a title when recipient + occasion are both set
-  useEffect(() => {
-    if (recipientName && occasion && !giftTitle) {
-      const suggestions: Record<string, string> = {
-        Birthday: `Happy Birthday, ${recipientName}!`,
-        Anniversary: `Here's to you, ${recipientName}.`,
-        Graduation: `Proud of you, ${recipientName}.`,
-        "New Baby": `Welcome to the world, little one.`,
-        Holiday: `Happy holidays, ${recipientName}!`,
-        "Just Because": `Thinking of you, ${recipientName}.`,
-        Wedding: `Wishing you both the best.`,
-        Other: `This one's for you, ${recipientName}.`,
-      };
-      setGiftTitle(suggestions[occasion] ?? `For ${recipientName}.`);
-    }
-  }, [recipientName, occasion]);
-
   // Revoke any blob URL when component unmounts to free memory
   useEffect(() => {
     return () => {
@@ -868,7 +851,22 @@ export default function CreatePage() {
                   </div>
                   <Input
                     id="title"
-                    placeholder="e.g. Happy Birthday to my favorite person!"
+                    placeholder={(() => {
+                      const name = recipientName || "Sarah";
+                      const placeholders: Record<string, string> = {
+                        Birthday: `e.g. Happy Birthday, ${name}!`,
+                        Anniversary: `e.g. Here's to you, ${name}.`,
+                        Graduation: `e.g. So proud of you, ${name}.`,
+                        "New Baby": `e.g. Welcome to the world, little one.`,
+                        Holiday: `e.g. Happy holidays, ${name}!`,
+                        "Just Because": `e.g. Thinking of you, ${name}.`,
+                        Wedding: `e.g. Wishing you both the very best.`,
+                        Other: `e.g. This one's for you, ${name}.`,
+                      };
+                      return occasion
+                        ? (placeholders[occasion] ?? `e.g. For ${name}.`)
+                        : `e.g. A little something for ${name}.`;
+                    })()}
                     value={giftTitle}
                     onChange={(e) => setGiftTitle(e.target.value)}
                     className="h-12 rounded-xl text-base font-medium"
