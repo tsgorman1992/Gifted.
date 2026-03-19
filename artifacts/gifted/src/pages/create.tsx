@@ -768,6 +768,11 @@ export default function CreatePage() {
     if (step === 1) {
       if (!recipientName.trim()) { setStepError("Please enter the recipient's name."); return; }
       if (!senderName.trim()) { setStepError("Please enter your name."); return; }
+      const storedAmount = parseFloat(giftAmount || "0");
+      if (storedAmount >= 10 && !recipientPhone.trim()) {
+        setStepError("A phone number is required to secure the cash balance — you'll add it in Step 3.");
+        return;
+      }
     }
     if (step === 2) {
       if (!giftTitle.trim()) { setStepError("Please add a gift headline."); return; }

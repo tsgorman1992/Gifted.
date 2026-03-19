@@ -9,9 +9,11 @@ import {
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
+import { useAuth } from "@/lib/auth-context";
 
 export default function PreviewPage() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [experience,     setExperience]     = useState(DEFAULT_EXPERIENCE);
   const [recipientName,  setRecipientName]  = useState(mockGiftData.recipientName);
@@ -712,12 +714,12 @@ export default function PreviewPage() {
             </div>
 
 
-            {/* Login prompt — subtle callout for unauthenticated senders */}
-            {!isPaid && (
+            {/* Login prompt — only shown to unauthenticated senders */}
+            {!isPaid && !authLoading && !isAuthenticated && (
               <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl border border-border bg-secondary/30">
                 <User className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                 <p className="text-sm text-muted-foreground leading-snug">
-                  <Link href="/my-gifts" className="font-medium text-foreground hover:underline">Sign in</Link> to track this gift and see when it's opened — view all your gifts in one place.
+                  <Link href="/sign-in" className="font-medium text-foreground hover:underline">Sign in</Link> to track this gift and see when it's opened — view all your gifts in one place.
                 </p>
               </div>
             )}
