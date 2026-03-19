@@ -63,7 +63,7 @@ function buildGiftSvg(
   const amountBadge = amount
     ? `
       <rect x="88" y="436" width="148" height="44" rx="22" fill="${dark ? "rgba(255,255,255,0.18)" : "rgba(122,74,30,0.15)"}" />
-      <text x="162" y="464" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="700" text-anchor="middle" fill="${dark ? "#fff" : "#7a4a1e"}">$${amount.toFixed(0)} inside</text>
+      <text x="162" y="464" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="700" text-anchor="middle" fill="${dark ? "#fff" : "#7a4a1e"}">Something inside</text>
     `
     : "";
 

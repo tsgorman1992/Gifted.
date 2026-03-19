@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink } from "lucide-react";
+import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 
@@ -959,6 +959,7 @@ export default function RevealPage() {
   const [isPreview, setIsPreview]         = useState(false);
   const [isOpening, setIsOpening]         = useState(false);
   const [openPhase, setOpenPhase]         = useState(0);
+  const [lightboxUrl, setLightboxUrl]     = useState<string | null>(null);
 
   const amountRef  = useRef<HTMLDivElement>(null);
   const amountInView = useInView(amountRef, { once: true });
@@ -1571,13 +1572,19 @@ export default function RevealPage() {
                           damping: 24,
                           duration: cfg.sectionStyle === "fade-drift" || cfg.sectionStyle === "rise-stagger" ? 0.7 : undefined,
                         }}
-                        className={`rounded-3xl overflow-hidden aspect-square ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}
+                        className={`rounded-3xl overflow-hidden aspect-square relative group cursor-pointer ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}
                         style={isDark
                           ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow }
                           : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }
                         }
+                        onClick={() => setLightboxUrl(url)}
                       >
-                        <img src={url} alt="Memory" className="w-full h-full object-cover" />
+                        <img src={url} alt="Memory" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
+                          <div className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                            <ZoomIn className="w-5 h-5 text-gray-800" />
+                          </div>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
@@ -1840,6 +1847,39 @@ export default function RevealPage() {
               </div>
             </div>
 
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Photo lightbox */}
+      <AnimatePresence>
+        {lightboxUrl && (
+          <motion.div
+            key="lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <motion.img
+              src={lightboxUrl}
+              alt="Photo"
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
