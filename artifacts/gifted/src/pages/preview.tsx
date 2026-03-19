@@ -68,8 +68,9 @@ export default function PreviewPage() {
       try { setPhotoCount(JSON.parse(pp).length); } catch { /* ignore */ }
     }
 
-    const pl = localStorage.getItem("gifted_playlist_url");
-    if (pl) setHasPlaylist(true);
+    const el2 = localStorage.getItem("gifted_extra_links");
+    if (el2) { try { const p = JSON.parse(el2); if (Array.isArray(p) && p.length > 0) setHasPlaylist(true); } catch { /* ignore */ } }
+    else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) setHasPlaylist(true); }
 
     const amt = localStorage.getItem("gifted_amount");
     if (amt && parseFloat(amt) > 0) setGiftAmount(amt);
@@ -164,8 +165,9 @@ export default function PreviewPage() {
       const pp = localStorage.getItem("gifted_photo_paths");
       if (pp) { try { payload.photoPaths = JSON.parse(pp); } catch { /* ignore */ } }
 
-      const pl = localStorage.getItem("gifted_playlist_url");
-      if (pl) payload.playlistUrl = pl;
+      const el = localStorage.getItem("gifted_extra_links");
+      if (el) { try { const parsed = JSON.parse(el); if (Array.isArray(parsed) && parsed.length > 0) payload.extraLinks = parsed; } catch { /* ignore */ } }
+      else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) payload.extraLinks = [pl]; }
 
       const amt = localStorage.getItem("gifted_amount");
       if (amt) payload.amount = amt;

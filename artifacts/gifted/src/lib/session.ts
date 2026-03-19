@@ -6,6 +6,7 @@ const GIFT_KEYS = [
   "gifted_gift_title",
   "gifted_personal_note",
   "gifted_playlist_url",
+  "gifted_extra_links",
   "gifted_amount",
   "gifted_intent",
   "gifted_scheduled_for",

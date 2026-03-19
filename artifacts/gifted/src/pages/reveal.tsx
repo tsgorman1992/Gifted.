@@ -948,7 +948,7 @@ export default function RevealPage() {
   const videoRef                          = useRef<HTMLVideoElement>(null);
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
-  const [playlistUrl, setPlaylistUrl]     = useState<string | null>(null);
+  const [extraLinks, setExtraLinks]       = useState<string[]>([]);
   const [recipientName, setRecipientName] = useState(mockGiftData.recipientName);
   const [senderName, setSenderName]       = useState(mockGiftData.senderName);
   const [giftTitle, setGiftTitle]         = useState(mockGiftData.title);
@@ -1011,8 +1011,9 @@ export default function RevealPage() {
     const pn = urlPersonalNote || localStorage.getItem("gifted_personal_note");
     if (pn) setPersonalNote(pn);
 
-    const pl = localStorage.getItem("gifted_playlist_url");
-    if (pl) setPlaylistUrl(pl);
+    const elRaw = localStorage.getItem("gifted_extra_links");
+    if (elRaw) { try { const parsed = JSON.parse(elRaw); if (Array.isArray(parsed)) setExtraLinks(parsed.filter(Boolean)); } catch { /* ignore */ } }
+    else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) setExtraLinks([pl]); }
 
     const rn = urlRecipient || localStorage.getItem("gifted_recipient_name");
     if (rn) setRecipientName(rn);
@@ -1578,9 +1579,10 @@ export default function RevealPage() {
                 </Section>
               )}
 
-              {/* Link card — anything with a URL */}
-              {playlistUrl && (() => {
-                const u = playlistUrl.toLowerCase();
+              {/* Link cards — one per extra link */}
+              {extraLinks.length > 0 && extraLinks.map((href, linkIdx) => {
+                if (!href) return null;
+                const u = href.toLowerCase();
                 const isMusic = u.includes("spotify.com") || u.includes("music.apple.com") || u.includes("soundcloud.com") || u.includes("tidal.com") || u.includes("deezer.com");
                 const isTickets = u.includes("ticketmaster.com") || u.includes("axs.com") || u.includes("stubhub.com") || u.includes("seatgeek.com") || u.includes("livenation.com");
                 const isFood = u.includes("opentable.com") || u.includes("resy.com") || u.includes("yelp.com/biz") || u.includes("tock.com");
@@ -1609,9 +1611,9 @@ export default function RevealPage() {
                   isTravel ? "Tap to view" :
                   "Tap to open";
                 return (
-                  <Section cfg={cfg} idx={2}>
+                  <Section key={linkIdx} cfg={cfg} idx={2 + linkIdx}>
                     <a
-                      href={playlistUrl}
+                      href={href}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden"
@@ -1640,7 +1642,7 @@ export default function RevealPage() {
                     </a>
                   </Section>
                 );
-              })()}
+              })}
 
               {/* Balance — section 3 (only shown when a non-zero amount was set) */}
               {giftAmount && parseFloat(giftAmount) > 0 && (

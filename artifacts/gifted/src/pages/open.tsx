@@ -38,8 +38,16 @@ export default function OpenPage() {
         if (gift.personalNote) localStorage.setItem("gifted_personal_note", gift.personalNote);
         else localStorage.removeItem("gifted_personal_note");
 
-        if (gift.playlistUrl) localStorage.setItem("gifted_playlist_url", gift.playlistUrl);
-        else localStorage.removeItem("gifted_playlist_url");
+        if (gift.extraLinks && gift.extraLinks.length > 0) {
+          localStorage.setItem("gifted_extra_links", JSON.stringify(gift.extraLinks));
+          localStorage.removeItem("gifted_playlist_url");
+        } else if (gift.playlistUrl) {
+          localStorage.setItem("gifted_extra_links", JSON.stringify([gift.playlistUrl]));
+          localStorage.removeItem("gifted_playlist_url");
+        } else {
+          localStorage.removeItem("gifted_extra_links");
+          localStorage.removeItem("gifted_playlist_url");
+        }
 
         if (gift.giftTitle) localStorage.setItem("gifted_gift_title", gift.giftTitle);
         else localStorage.removeItem("gifted_gift_title");

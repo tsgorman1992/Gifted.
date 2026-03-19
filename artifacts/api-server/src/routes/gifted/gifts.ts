@@ -33,6 +33,7 @@ router.post("/gifted/gifts", async (req, res) => {
       videoPath,
       photoPaths,
       playlistUrl,
+      extraLinks,
       amount,
       intent,
     } = req.body;
@@ -66,6 +67,7 @@ router.post("/gifted/gifts", async (req, res) => {
       videoPath: videoPath || null,
       photoPaths: photoPaths && photoPaths.length > 0 ? photoPaths : null,
       playlistUrl: playlistUrl || null,
+      extraLinks: (Array.isArray(extraLinks) && extraLinks.length > 0) ? extraLinks : null,
       amount: amount || null,
       intent: intent || null,
       scheduledFor: scheduledFor,
@@ -101,6 +103,7 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       videoPath: gift.videoPath,
       photoPaths: gift.photoPaths,
       playlistUrl: gift.playlistUrl,
+      extraLinks: gift.extraLinks,
       amount: (gift.amount && parseFloat(gift.amount) > 0) ? gift.amount : null,
       intent: gift.intent,
       paid: gift.paid,

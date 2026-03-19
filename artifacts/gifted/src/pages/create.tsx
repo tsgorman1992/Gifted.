@@ -50,7 +50,7 @@ const EXPERIENCE_ICONS: Record<ExperienceId, React.ComponentType<{ className?: s
 
 const INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Birthday money", "Baby fund", "Take a break"];
 const AMOUNTS = ["25", "50", "100", "250"];
-const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Other"];
+const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Thank You", "Other"];
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
@@ -474,11 +474,10 @@ export default function CreatePage() {
   const [senderName, setSenderName] = useState("");
   const [giftTitle, setGiftTitle] = useState("");
   const [personalNote, setPersonalNote] = useState("");
-  const [playlistUrl, setPlaylistUrl] = useState("");
+  const [extraLinks, setExtraLinks] = useState<string[]>([""]);
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
-  const [linkPlaceholderIdx, setLinkPlaceholderIdx] = useState(0);
 
   // Media state
   const [videoObjectPath, setVideoObjectPath] = useState<string | null>(null);
@@ -509,8 +508,13 @@ export default function CreatePage() {
     if (gt) setGiftTitle(gt);
     const pn = localStorage.getItem("gifted_personal_note");
     if (pn) setPersonalNote(pn);
-    const pl = localStorage.getItem("gifted_playlist_url");
-    if (pl) setPlaylistUrl(pl);
+    const el = localStorage.getItem("gifted_extra_links");
+    if (el) {
+      try { const parsed = JSON.parse(el); if (Array.isArray(parsed) && parsed.length > 0) setExtraLinks([...parsed, ""]); } catch { /* ignore */ }
+    } else {
+      const pl = localStorage.getItem("gifted_playlist_url");
+      if (pl) setExtraLinks([pl, ""]);
+    }
     const amt = localStorage.getItem("gifted_amount");
     if (amt && parseFloat(amt) > 0) setAmount(amt);
     const int = localStorage.getItem("gifted_intent");
@@ -554,14 +558,6 @@ export default function CreatePage() {
     }
   }, []);
 
-  // Cycle link placeholder ideas when the field is empty and not focused
-  useEffect(() => {
-    if (playlistUrl) return;
-    const id = setInterval(() => {
-      setLinkPlaceholderIdx(i => (i + 1) % LINK_IDEAS.length);
-    }, 2400);
-    return () => clearInterval(id);
-  }, [playlistUrl]);
 
   // Revoke any blob URL when component unmounts to free memory
   useEffect(() => {
@@ -668,8 +664,10 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_photo_paths");
     if (personalNote.trim()) localStorage.setItem("gifted_personal_note", personalNote.trim());
     else localStorage.removeItem("gifted_personal_note");
-    if (playlistUrl.trim()) localStorage.setItem("gifted_playlist_url", playlistUrl.trim());
-    else localStorage.removeItem("gifted_playlist_url");
+    const nonEmptyLinks = extraLinks.map(l => l.trim()).filter(Boolean);
+    if (nonEmptyLinks.length > 0) localStorage.setItem("gifted_extra_links", JSON.stringify(nonEmptyLinks));
+    else localStorage.removeItem("gifted_extra_links");
+    localStorage.removeItem("gifted_playlist_url");
     if (giftTitle.trim()) localStorage.setItem("gifted_gift_title", giftTitle.trim());
     else localStorage.removeItem("gifted_gift_title");
     localStorage.setItem("gifted_experience", selectedExperience);
@@ -1309,19 +1307,47 @@ export default function CreatePage() {
                   {photoError && <p className="text-sm text-destructive">{photoError}</p>}
                   {uploadError && <p className="text-sm text-destructive">Upload failed: {uploadError.message}</p>}
 
-                  {/* Link — anything with a URL */}
+                  {/* Links — anything with a URL, multiple allowed */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Add a link <span className="text-muted-foreground font-normal">— anything with a URL</span></Label>
-                    <div className="relative">
-                      <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        placeholder={LINK_IDEAS[linkPlaceholderIdx]}
-                        className="h-11 rounded-xl text-sm pl-10 transition-all"
-                        value={playlistUrl}
-                        onChange={(e) => setPlaylistUrl(e.target.value)}
-                      />
+                    <Label className="text-sm font-medium">Add links <span className="text-muted-foreground font-normal">— tickets, playlists, reservations, anything</span></Label>
+                    <div className="space-y-2">
+                      {extraLinks.map((link, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              placeholder={LINK_IDEAS[idx % LINK_IDEAS.length]}
+                              className="h-11 rounded-xl text-sm pl-10 transition-all"
+                              value={link}
+                              onChange={(e) => {
+                                const updated = [...extraLinks];
+                                updated[idx] = e.target.value;
+                                setExtraLinks(updated);
+                              }}
+                            />
+                          </div>
+                          {extraLinks.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setExtraLinks(extraLinks.filter((_, i) => i !== idx))}
+                              className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-xs text-muted-foreground">Tickets, a reservation, a song, a playlist — they'll see a tap-to-open card.</p>
+                    {extraLinks.length < 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setExtraLinks([...extraLinks, ""])}
+                        className="flex items-center gap-1.5 text-xs text-primary font-medium hover:underline mt-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add another link
+                      </button>
+                    )}
+                    <p className="text-xs text-muted-foreground">Each link shows as a tap-to-open card in their gift — perfect for layering experiences.</p>
                   </div>
                 </div>
 
