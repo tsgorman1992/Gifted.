@@ -969,7 +969,7 @@ export default function RevealPage() {
     Number(giftAmount || 0),
     1600,
     300,
-    cfg.amountStyle === "count-up" && amountInView,
+    cfg.amountStyle === "count-up" && (amountInView || isPreview),
   );
 
   useEffect(() => {

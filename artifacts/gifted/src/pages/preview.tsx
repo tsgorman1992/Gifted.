@@ -28,6 +28,7 @@ export default function PreviewPage() {
   const [hasPlaylist,    setHasPlaylist]    = useState(false);
   const [giftAmount,     setGiftAmount]     = useState<string | null>(null);
   const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
+  const [personalNote,   setPersonalNote]   = useState<string | null>(null);
   const [scheduledFor,   setScheduledFor]   = useState<string | null>(null);
   const [scheduledTime,  setScheduledTime]  = useState<string>("09:00");
 
@@ -80,6 +81,9 @@ export default function PreviewPage() {
 
     const intn = localStorage.getItem("gifted_intent");
     if (intn) setGiftIntent(intn);
+
+    const pn = localStorage.getItem("gifted_personal_note");
+    if (pn) setPersonalNote(pn);
 
     const sf = localStorage.getItem("gifted_scheduled_for");
     if (sf) setScheduledFor(sf);
@@ -385,7 +389,7 @@ export default function PreviewPage() {
                 <div className="p-5 space-y-7">
                   <div>
                     <h4 className="font-serif text-xl mb-2">{giftTitle}</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{mockGiftData.message}</p>
+                    {personalNote && <p className="text-sm text-muted-foreground leading-relaxed">{personalNote}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {hasVideo && (

@@ -49,7 +49,7 @@ const EXPERIENCE_ICONS: Record<ExperienceId, React.ComponentType<{ className?: s
 };
 
 const INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Birthday money", "Baby fund", "Take a break"];
-const AMOUNTS = ["25", "50", "100", "250"];
+const AMOUNTS = ["10", "25", "50", "100", "250"];
 const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Thank You", "Other"];
 
 const MAX_PHOTOS = 6;
