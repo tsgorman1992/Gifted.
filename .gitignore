@@ -47,6 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+replit.md
 
 # Environment variable files — never commit real values
 .env
