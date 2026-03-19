@@ -78,7 +78,7 @@ export default function LandingPage() {
     <div className="w-full flex flex-col items-center overflow-hidden">
 
       {/* ── Hero ── */}
-      <section className="w-full relative min-h-[88vh] flex items-center justify-center pt-10 pb-16 md:pb-24 px-6">
+      <section className="w-full relative py-16 md:py-24 px-6">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <img
             src={`${import.meta.env.BASE_URL}images/hero-abstract.png`}
@@ -88,7 +88,8 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background" />
         </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center flex flex-col items-center">
+        <div className="relative z-10 max-w-6xl mx-auto w-full grid lg:grid-cols-[1fr_400px] gap-10 lg:gap-16 items-center">
+          <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -135,7 +136,168 @@ export default function LandingPage() {
               See how it works
             </Button>
           </motion.div>
-        </div>
+          </div>{/* end left col */}
+
+          {/* Right column: interactive demo */}
+          <div className="relative w-full max-w-xs sm:max-w-sm lg:max-w-none mx-auto lg:mx-0">
+            <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-[2.5rem] transform rotate-3 blur-xl opacity-50 pointer-events-none" />
+            <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[3/4] sm:aspect-[4/5] flex flex-col">
+
+              {/* Header */}
+              <div className="h-36 sm:h-52 relative overflow-hidden flex-shrink-0">
+                <AnimatePresence mode="wait">
+                  {phase !== "revealed" ? (
+                    <motion.div key="envelope" className="absolute inset-0" exit={{ opacity: 0, scale: 1.04 }} transition={{ duration: 0.35 }}>
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #E8A87C, #D4813A, #b8632a)" }} />
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom-right, transparent 49.5%, rgba(0,0,0,0.12) 49.5%, rgba(0,0,0,0.12) 50.5%, transparent 50.5%)" }} />
+                        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom-left, transparent 49.5%, rgba(0,0,0,0.12) 49.5%, rgba(0,0,0,0.12) 50.5%, transparent 50.5%)" }} />
+                      </div>
+                      <motion.div
+                        className="absolute top-0 left-0 right-0 pointer-events-none"
+                        style={{ height: "55%", clipPath: "polygon(0 0, 100% 0, 50% 85%)", background: "linear-gradient(180deg, #c06b2a, #D4813A)", transformOrigin: "top center" }}
+                        animate={phase === "opening" ? { rotateX: -170, opacity: 0 } : { rotateX: 0, opacity: 1 }}
+                        transition={{ duration: 0.75, ease: [0.25, 0.1, 0.25, 1] }}
+                      />
+                      <motion.div
+                        className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+                        animate={phase === "opening" ? { opacity: 0, scale: 0.85, y: 10 } : { opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.4 }}
+                      >
+                        <motion.div
+                          className="w-14 h-14 rounded-full bg-red-700 shadow-lg flex items-center justify-center border-2 border-red-400/40"
+                          animate={phase === "sealed" ? { scale: [1, 1.05, 1] } : {}}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          <Heart className="w-7 h-7 text-white fill-white" />
+                        </motion.div>
+                        <div className="text-center mt-1">
+                          <p className="text-white/70 text-xs tracking-wide uppercase font-medium">A gift for</p>
+                          <p className="text-white font-serif text-3xl mt-0.5">Sarah</p>
+                        </div>
+                      </motion.div>
+                      {phase === "opening" && (
+                        <motion.div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{ background: "linear-gradient(105deg, transparent 30%, rgba(255,220,130,0.55) 50%, transparent 70%)", backgroundSize: "200% 100%" }}
+                          initial={{ backgroundPosition: "-100% 0" }}
+                          animate={{ backgroundPosition: "200% 0" }}
+                          transition={{ duration: 0.9, ease: "easeInOut" }}
+                        />
+                      )}
+                    </motion.div>
+                  ) : (
+                    <motion.div key="gradient-header" className="absolute inset-0" initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
+                      <div className="absolute inset-0 animate-gradient-shift" style={{ background: "linear-gradient(270deg, #F7C59F, #E8A87C, #c9622a, #e8956a, #F7C59F)" }} />
+                      <div className="absolute inset-0 bg-black/15" />
+                      <motion.div className="absolute inset-0 flex items-center justify-center pointer-events-none" animate={{ scale: [1, 1.08, 1], opacity: [0.12, 0.22, 0.12] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+                        <div className="w-44 h-44 rounded-full border border-white/25" />
+                      </motion.div>
+                      <div className="absolute bottom-5 left-6 text-white">
+                        <p className="text-xs font-medium opacity-75 mb-0.5">A gift for</p>
+                        <h3 className="font-serif text-4xl">Sarah</h3>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 p-4 flex flex-col gap-2 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  {phase === "sealed" && (
+                    <motion.div key="sealed-body" exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="flex flex-col gap-3">
+                      <div className="w-3/4 h-3.5 bg-muted rounded-full animate-pulse" />
+                      <div className="w-full h-3.5 bg-muted rounded-full animate-pulse" />
+                      <div className="flex gap-1.5 mt-0.5">
+                        {[{ icon: ImageIcon, label: "3 Photos" }, { icon: Play, label: "Video" }, { icon: Link2, label: "Link" }].map(({ icon: Icon, label }) => (
+                          <span key={label} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs">
+                            <Icon className="w-3 h-3" />{label}
+                          </span>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                  {phase === "opening" && (
+                    <motion.div key="opening-body" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-2.5">
+                      {[1, 2, 3].map(i => (
+                        <motion.div key={i} className="h-3.5 bg-muted rounded-full" style={{ width: `${[75, 100, 85][i - 1]}%` }} animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }} />
+                      ))}
+                    </motion.div>
+                  )}
+                  {phase === "revealed" && (
+                    <motion.div key="revealed-body" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="flex flex-col gap-2.5">
+                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                        <p className="font-serif text-base font-medium leading-snug">Happy Birthday, Sarah 🎂</p>
+                        <p className="text-xs text-muted-foreground">You deserve something wonderful today.</p>
+                      </motion.div>
+                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="flex gap-1.5">
+                        {PHOTOS.map((src, i) => (
+                          <div key={i} className="flex-1 h-14 rounded-lg overflow-hidden bg-muted">
+                            <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          </div>
+                        ))}
+                      </motion.div>
+                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="relative rounded-xl overflow-hidden" style={{ height: "88px", background: "linear-gradient(135deg,#1a1a2e,#2d1b4e)" }}>
+                        <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=320&h=180&fit=crop&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover opacity-30 blur-[1px] scale-105" loading="lazy" />
+                        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 55%)" }} />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
+                          <Play className="w-4 h-4 text-white ml-0.5" />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 flex items-end gap-2">
+                          <div className="flex-1">
+                            <p className="text-white text-[10px] font-medium mb-1.5 leading-none">Video message</p>
+                            <div className="w-full h-[3px] rounded-full bg-white/25 overflow-hidden">
+                              <motion.div className="h-full rounded-full bg-white/80" animate={{ width: ["0%", "45%"] }} transition={{ delay: 0.5, duration: 1.8, ease: "easeOut" }} />
+                            </div>
+                          </div>
+                          <p className="text-white/50 text-[10px] shrink-0 pb-0.5">0:42</p>
+                        </div>
+                      </motion.div>
+                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
+                        <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 flex-shrink-0" style={{ background: "hsl(28,62%,36%)" }}>
+                          <Link2 className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0 relative h-9 flex flex-col justify-center">
+                          <AnimatePresence mode="wait">
+                            <motion.div key={linkDemoIdx} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.28 }} className="absolute inset-0 flex flex-col justify-center">
+                              <p className="text-xs font-medium truncate">{LINK_DEMOS[linkDemoIdx].label}</p>
+                              <p className="text-xs text-muted-foreground">{LINK_DEMOS[linkDemoIdx].sub}</p>
+                            </motion.div>
+                          </AnimatePresence>
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Balance card */}
+                <div className="mt-auto p-3 rounded-xl border border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <motion.div animate={phase === "revealed" ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.45 }} className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Gift className="w-4 h-4 text-primary" />
+                    </motion.div>
+                    <div>
+                      <p className="text-sm font-bold">$150.00</p>
+                      <p className="text-xs text-muted-foreground">Treat yourself</p>
+                    </div>
+                  </div>
+                  {phase === "revealed" ? (
+                    <Button size="sm" variant="outline" className="rounded-full h-8 text-xs gap-1" onClick={handleReplay}>
+                      <RotateCcw className="w-3 h-3" />Replay
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground animate-pulse">
+                      {phase === "opening" ? "Opening…" : ""}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>{/* end right col */}
+
+        </div>{/* end grid */}
       </section>
 
       {/* ── How It Works ── */}
@@ -199,229 +361,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features + Mockup ── */}
-      <section className="w-full bg-secondary/30 py-12 md:py-24">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
-
-            {/* On mobile: mockup first so the interactive demo earns attention */}
-            <div className="relative order-first lg:order-last">
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-[2.5rem] transform rotate-3 blur-xl opacity-50" />
-              <div className="relative bg-card rounded-[2rem] border border-border shadow-2xl overflow-hidden aspect-[3/4] sm:aspect-[4/5] flex flex-col">
-
-                {/* Header */}
-                <div className="h-36 sm:h-52 relative overflow-hidden flex-shrink-0">
-                  <AnimatePresence mode="wait">
-                    {phase !== "revealed" ? (
-                      <motion.div
-                        key="envelope"
-                        className="absolute inset-0"
-                        exit={{ opacity: 0, scale: 1.04 }}
-                        transition={{ duration: 0.35 }}
-                      >
-                        <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #E8A87C, #D4813A, #b8632a)" }} />
-                        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom-right, transparent 49.5%, rgba(0,0,0,0.12) 49.5%, rgba(0,0,0,0.12) 50.5%, transparent 50.5%)" }} />
-                          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom-left, transparent 49.5%, rgba(0,0,0,0.12) 49.5%, rgba(0,0,0,0.12) 50.5%, transparent 50.5%)" }} />
-                        </div>
-                        <motion.div
-                          className="absolute top-0 left-0 right-0 pointer-events-none"
-                          style={{ height: "55%", clipPath: "polygon(0 0, 100% 0, 50% 85%)", background: "linear-gradient(180deg, #c06b2a, #D4813A)", transformOrigin: "top center" }}
-                          animate={phase === "opening" ? { rotateX: -170, opacity: 0 } : { rotateX: 0, opacity: 1 }}
-                          transition={{ duration: 0.75, ease: [0.25, 0.1, 0.25, 1] }}
-                        />
-                        <motion.div
-                          className="absolute inset-0 flex flex-col items-center justify-center gap-2"
-                          animate={phase === "opening" ? { opacity: 0, scale: 0.85, y: 10 } : { opacity: 1, scale: 1, y: 0 }}
-                          transition={{ duration: 0.4 }}
-                        >
-                          <motion.div
-                            className="w-14 h-14 rounded-full bg-red-700 shadow-lg flex items-center justify-center border-2 border-red-400/40"
-                            animate={phase === "sealed" ? { scale: [1, 1.05, 1] } : {}}
-                            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                          >
-                            <Heart className="w-7 h-7 text-white fill-white" />
-                          </motion.div>
-                          <div className="text-center mt-1">
-                            <p className="text-white/70 text-xs tracking-wide uppercase font-medium">A gift for</p>
-                            <p className="text-white font-serif text-3xl mt-0.5">Sarah</p>
-                          </div>
-                        </motion.div>
-                        {phase === "opening" && (
-                          <motion.div
-                            className="absolute inset-0 pointer-events-none"
-                            style={{ background: "linear-gradient(105deg, transparent 30%, rgba(255,220,130,0.55) 50%, transparent 70%)", backgroundSize: "200% 100%" }}
-                            initial={{ backgroundPosition: "-100% 0" }}
-                            animate={{ backgroundPosition: "200% 0" }}
-                            transition={{ duration: 0.9, ease: "easeInOut" }}
-                          />
-                        )}
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="gradient-header"
-                        className="absolute inset-0"
-                        initial={{ opacity: 0, scale: 1.06 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                      >
-                        <div className="absolute inset-0 animate-gradient-shift" style={{ background: "linear-gradient(270deg, #F7C59F, #E8A87C, #c9622a, #e8956a, #F7C59F)" }} />
-                        <div className="absolute inset-0 bg-black/15" />
-                        <motion.div
-                          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                          animate={{ scale: [1, 1.08, 1], opacity: [0.12, 0.22, 0.12] }}
-                          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                          <div className="w-44 h-44 rounded-full border border-white/25" />
-                        </motion.div>
-                        <div className="absolute bottom-5 left-6 text-white">
-                          <p className="text-xs font-medium opacity-75 mb-0.5">A gift for</p>
-                          <h3 className="font-serif text-4xl">Sarah</h3>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 p-4 flex flex-col gap-2 overflow-hidden">
-                  <AnimatePresence mode="wait">
-                    {phase === "sealed" && (
-                      <motion.div key="sealed-body" exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }} className="flex flex-col gap-3">
-                        <div className="w-3/4 h-3.5 bg-muted rounded-full animate-pulse" />
-                        <div className="w-full h-3.5 bg-muted rounded-full animate-pulse" />
-                        <div className="flex gap-1.5 mt-0.5">
-                          {[{ icon: ImageIcon, label: "3 Photos" }, { icon: Play, label: "Video" }, { icon: Link2, label: "Link" }].map(({ icon: Icon, label }) => (
-                            <span key={label} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs">
-                              <Icon className="w-3 h-3" />{label}
-                            </span>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                    {phase === "opening" && (
-                      <motion.div key="opening-body" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col gap-2.5">
-                        {[1, 2, 3].map(i => (
-                          <motion.div key={i} className="h-3.5 bg-muted rounded-full" style={{ width: `${[75, 100, 85][i - 1]}%` }} animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }} />
-                        ))}
-                      </motion.div>
-                    )}
-                    {phase === "revealed" && (
-                      <motion.div key="revealed-body" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="flex flex-col gap-2.5">
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-                          <p className="font-serif text-base font-medium leading-snug">Happy Birthday, Sarah 🎂</p>
-                          <p className="text-xs text-muted-foreground">You deserve something wonderful today.</p>
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="flex gap-1.5">
-                          {PHOTOS.map((src, i) => (
-                            <div key={i} className="flex-1 h-14 rounded-lg overflow-hidden bg-muted">
-                              <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
-                            </div>
-                          ))}
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="relative rounded-xl overflow-hidden" style={{ height: "88px", background: "linear-gradient(135deg,#1a1a2e,#2d1b4e)" }}>
-                          {/* Blurred face to suggest a real video frame */}
-                          <img
-                            src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=320&h=180&fit=crop&auto=format"
-                            alt=""
-                            className="absolute inset-0 w-full h-full object-cover opacity-30 blur-[1px] scale-105"
-                            loading="lazy"
-                          />
-                          {/* Bottom vignette */}
-                          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 55%)" }} />
-                          {/* Centred play button */}
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/25 backdrop-blur-sm flex items-center justify-center">
-                            <Play className="w-4 h-4 text-white ml-0.5" />
-                          </div>
-                          {/* Bottom bar */}
-                          <div className="absolute bottom-0 left-0 right-0 px-3 pb-2.5 flex items-end gap-2">
-                            <div className="flex-1">
-                              <p className="text-white text-[10px] font-medium mb-1.5 leading-none">Video message</p>
-                              <div className="w-full h-[3px] rounded-full bg-white/25 overflow-hidden">
-                                <motion.div className="h-full rounded-full bg-white/80" animate={{ width: ["0%", "45%"] }} transition={{ delay: 0.5, duration: 1.8, ease: "easeOut" }} />
-                              </div>
-                            </div>
-                            <p className="text-white/50 text-[10px] shrink-0 pb-0.5">0:42</p>
-                          </div>
-                        </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
-                          <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 flex-shrink-0" style={{ background: "hsl(28,62%,36%)" }}>
-                            <Link2 className="w-3.5 h-3.5 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0 relative h-9 flex flex-col justify-center">
-                            <AnimatePresence mode="wait">
-                              <motion.div
-                                key={linkDemoIdx}
-                                initial={{ opacity: 0, y: 6 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -6 }}
-                                transition={{ duration: 0.28 }}
-                                className="absolute inset-0 flex flex-col justify-center"
-                              >
-                                <p className="text-xs font-medium truncate">{LINK_DEMOS[linkDemoIdx].label}</p>
-                                <p className="text-xs text-muted-foreground">{LINK_DEMOS[linkDemoIdx].sub}</p>
-                              </motion.div>
-                            </AnimatePresence>
-                          </div>
-                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Balance card */}
-                  <div className="mt-auto p-3 rounded-xl border border-border flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <motion.div animate={phase === "revealed" ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.45 }} className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Gift className="w-4 h-4 text-primary" />
-                      </motion.div>
-                      <div>
-                        <p className="text-sm font-bold">$150.00</p>
-                        <p className="text-xs text-muted-foreground">Treat yourself</p>
-                      </div>
-                    </div>
-                    {phase === "revealed" ? (
-                      <Button size="sm" variant="outline" className="rounded-full h-8 text-xs gap-1" onClick={handleReplay}>
-                        <RotateCcw className="w-3 h-3" />Replay
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground animate-pulse">
-                        {phase === "opening" ? "Opening…" : ""}
-                      </span>
-                    )}
-                  </div>
-                </div>
+      {/* ── Features strip ── */}
+      <section className="w-full bg-secondary/30 py-10 md:py-16 px-6">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+          {FEATURES.map((feature, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08, duration: 0.4 }}
+              className="flex flex-col gap-3"
+            >
+              <div className="w-10 h-10 rounded-full bg-background shadow-sm flex items-center justify-center">
+                <feature.icon className="w-5 h-5 text-primary" />
               </div>
-            </div>
-
-            {/* Features list */}
-            <div className="space-y-6 md:space-y-8 order-last lg:order-first">
-              <h2 className="font-serif text-3xl md:text-5xl font-medium leading-tight">
-                Everything they need to feel special.
-              </h2>
-              <ul className="space-y-4 md:space-y-6">
-                {FEATURES.map((feature, i) => (
-                  <motion.li
-                    key={i}
-                    initial={{ opacity: 0, x: -12 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.1, duration: 0.4 }}
-                    className="flex gap-4"
-                  >
-                    <div className="mt-0.5 w-10 h-10 rounded-full bg-background shadow-sm flex items-center justify-center shrink-0">
-                      <feature.icon className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="text-base md:text-lg font-bold">{feature.title}</h4>
-                      <p className="text-sm md:text-base text-muted-foreground mt-0.5">{feature.desc}</p>
-                    </div>
-                  </motion.li>
-                ))}
-              </ul>
-            </div>
-
-          </div>
+              <div>
+                <h4 className="text-sm font-bold">{feature.title}</h4>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{feature.desc}</p>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 
