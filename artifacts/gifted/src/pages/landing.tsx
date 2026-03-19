@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight, RotateCcw, ExternalLink } from "lucide-react";
+import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight, RotateCcw, ExternalLink, Link2 } from "lucide-react";
 
 import { clearGiftSession, isGiftSessionStale } from "@/lib/session";
 
@@ -15,7 +15,7 @@ const PHOTOS = [
 ];
 
 const HOW_STEPS = [
-  { icon: Heart,      label: "Add Meaning",    desc: "Write a note, record a video, add photos, or link a playlist to set the mood." },
+  { icon: Heart,      label: "Add Meaning",    desc: "Write a note, record a video, add photos, or link anything with a URL — a song, concert tickets, a reservation." },
   { icon: Gift,       label: "Add a Balance",  desc: "Optionally add funds with an intention like 'Coffee on me' or 'Treat yourself'." },
   { icon: CreditCard, label: "They Redeem",    desc: "They experience the reveal, then instantly transfer their balance to a debit card or bank account." },
 ];
@@ -23,7 +23,7 @@ const HOW_STEPS = [
 const FEATURES = [
   { icon: Play,       title: "Video Messages",  desc: "Record a heartfelt message they can keep forever." },
   { icon: ImageIcon,  title: "Photo Memories",  desc: "Add up to 6 photos to remind them of the good times." },
-  { icon: Music,      title: "Curated Playlists", desc: "Attach a Spotify or Apple Music link to set the vibe." },
+  { icon: Link2,      title: "Add Any Link",     desc: "Concert tickets, a dinner reservation, a song — anything with a URL becomes part of the gift." },
   { icon: CreditCard, title: "Flexible Funds",  desc: "No more restrictive gift cards. They cash out how they want." },
 ];
 
@@ -276,7 +276,7 @@ export default function LandingPage() {
                         <div className="w-3/4 h-3.5 bg-muted rounded-full animate-pulse" />
                         <div className="w-full h-3.5 bg-muted rounded-full animate-pulse" />
                         <div className="flex gap-1.5 mt-0.5">
-                          {[{ icon: ImageIcon, label: "3 Photos" }, { icon: Play, label: "Video" }, { icon: Music, label: "Playlist" }].map(({ icon: Icon, label }) => (
+                          {[{ icon: ImageIcon, label: "3 Photos" }, { icon: Play, label: "Video" }, { icon: Link2, label: "Link" }].map(({ icon: Icon, label }) => (
                             <span key={label} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-muted-foreground text-xs">
                               <Icon className="w-3 h-3" />{label}
                             </span>
@@ -316,13 +316,13 @@ export default function LandingPage() {
                           </div>
                           <p className="text-white/50 text-xs shrink-0">0:42</p>
                         </motion.div>
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-green-200/60 dark:border-green-800/40 bg-green-50 dark:bg-green-950/30">
-                          <div className="w-7 h-7 rounded-md bg-green-500 flex items-center justify-center shrink-0">
-                            <Music className="w-3.5 h-3.5 text-white" />
+                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="flex items-center gap-2.5 px-3 h-11 rounded-xl border border-primary/20 bg-primary/5">
+                          <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ background: "hsl(28,62%,36%)" }}>
+                            <Link2 className="w-3.5 h-3.5 text-white" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium truncate">Golden Hour – JVKE</p>
-                            <p className="text-xs text-muted-foreground">Open in Spotify</p>
+                            <p className="text-xs font-medium truncate">2× Tickets — Taylor Swift</p>
+                            <p className="text-xs text-muted-foreground">Tap to view tickets</p>
                           </div>
                           <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         </motion.div>
