@@ -275,6 +275,7 @@ export default function CreatePage() {
   // Media state
   const [videoObjectPath, setVideoObjectPath] = useState<string | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const videoBlobUrlRef = useRef<string | null>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [photosUploading, setPhotosUploading] = useState<PhotoUploadingItem[]>([]);
@@ -352,12 +353,22 @@ export default function CreatePage() {
     }
   }, [recipientName, occasion]);
 
-  // Video upload
+  // Revoke any blob URL when component unmounts to free memory
+  useEffect(() => {
+    return () => {
+      if (videoBlobUrlRef.current) {
+        URL.revokeObjectURL(videoBlobUrlRef.current);
+        videoBlobUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  // Video upload — onSuccess only captures objectPath; preview URL is the local blob
   const { uploadFile, isUploading, progress, error: uploadError } = useUpload({
     basePath: `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage`,
     onSuccess: (response) => {
       setVideoObjectPath(response.objectPath);
-      setVideoPreviewUrl(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage${response.objectPath}`);
+      // Keep the local blob URL for preview — don't replace with server URL
     },
   });
 
@@ -366,11 +377,25 @@ export default function CreatePage() {
     if (!file) return;
     if (file.size > 100 * 1024 * 1024) { alert("Video must be under 100 MB."); return; }
     if (!file.type.startsWith("video/")) { alert("Please select a video file."); return; }
-    await uploadFile(file);
+    // Create a local blob URL immediately so the preview renders without server round-trip
+    if (videoBlobUrlRef.current) URL.revokeObjectURL(videoBlobUrlRef.current);
+    const blobUrl = URL.createObjectURL(file);
+    videoBlobUrlRef.current = blobUrl;
+    setVideoPreviewUrl(blobUrl);
+    const result = await uploadFile(file);
     if (videoInputRef.current) videoInputRef.current.value = "";
+    // If upload failed, clear preview so user knows to retry
+    if (!result) handleRemoveVideo();
   };
 
-  const handleRemoveVideo = () => { setVideoObjectPath(null); setVideoPreviewUrl(null); };
+  const handleRemoveVideo = () => {
+    if (videoBlobUrlRef.current) {
+      URL.revokeObjectURL(videoBlobUrlRef.current);
+      videoBlobUrlRef.current = null;
+    }
+    setVideoObjectPath(null);
+    setVideoPreviewUrl(null);
+  };
 
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
