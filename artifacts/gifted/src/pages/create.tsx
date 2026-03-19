@@ -532,6 +532,7 @@ export default function CreatePage() {
       setTimeout(() => setAiError(null), 4000);
       return;
     }
+    const noteToRewrite = personalNote;
     setAiLoading(mode);
     setAiError(null);
     setShowAiGlow(false);
@@ -539,7 +540,7 @@ export default function CreatePage() {
     setPersonalNote("");
     try {
       await streamAINote(
-        { currentNote: mode === "rewrite" ? personalNote : undefined, occasion, recipientName, senderName, intent: intent || undefined, giftTitle: giftTitle || undefined, mode },
+        { currentNote: mode === "rewrite" ? noteToRewrite : undefined, occasion, recipientName, senderName, intent: intent || undefined, giftTitle: giftTitle || undefined, mode },
         (chunk) => { generated += chunk; setPersonalNote(generated); },
         () => { setAiLoading(null); setShowAiGlow(true); setTimeout(() => setShowAiGlow(false), 2000); },
         (err) => { setAiError(err); setAiLoading(null); if (!generated) setPersonalNote(""); }
@@ -878,8 +879,8 @@ export default function CreatePage() {
                   className="rounded-3xl p-6 border space-y-4"
                   style={{ background: "hsl(var(--card))" }}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <Label htmlFor="message" className="text-base font-semibold">Personal Note <span className="text-muted-foreground font-normal text-sm">(optional)</span></Label>
                       <p className="text-xs text-muted-foreground mt-1">
                         Styled beautifully in their reveal — yours to edit, or let AI help.
