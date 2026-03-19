@@ -381,7 +381,7 @@ export default function CreatePage() {
   const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 100 * 1024 * 1024) { alert("Video must be under 100 MB."); return; }
+    if (file.size > 200 * 1024 * 1024) { alert("Video must be under 200 MB."); return; }
     if (!file.type.startsWith("video/")) { alert("Please select a video file."); return; }
     // Create a local blob URL immediately so the preview renders without server round-trip
     if (videoBlobUrlRef.current) URL.revokeObjectURL(videoBlobUrlRef.current);

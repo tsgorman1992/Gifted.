@@ -1503,10 +1503,21 @@ export default function RevealPage() {
                         onError={() => setVideoError(true)}
                       />
                       {videoError && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                          <p className={`text-sm font-medium ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
-                            Video couldn't be loaded
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/20 backdrop-blur-sm rounded-inherit">
+                          <p className={`text-sm font-medium ${isDark ? "text-white/80" : "text-white"}`}>
+                            Video couldn't play in this browser
                           </p>
+                          {videoUrl && (
+                            <a
+                              href={videoUrl}
+                              download
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-4 py-2 rounded-full text-xs font-semibold bg-white/90 text-gray-900 hover:bg-white transition-colors shadow"
+                            >
+                              Download video instead
+                            </a>
+                          )}
                         </div>
                       )}
                     </div>
