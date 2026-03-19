@@ -30,20 +30,21 @@ Return only the note text with no explanation.`;
   let userPrompt: string;
 
   if (mode === "rewrite" && currentNote) {
-    userPrompt = `Rewrite the following personal note to make it feel more heartfelt, genuine, and personal.
-Keep the core sentiment and meaning, but make it flow more naturally and feel more emotionally meaningful.
+    userPrompt = `Polish the following personal note. Your only job is to improve the prose — make it flow more naturally, feel warmer, and read more beautifully.
 
-Context:
-- Occasion: ${occasion}
-- Recipient: ${recipientName}
-- Sender: ${senderName}
-${intent ? `- Gift intention: ${intent}` : ""}
-${giftTitle ? `- Gift title: ${giftTitle}` : ""}
+Rules:
+- Preserve EXACTLY what the sender chose to include. Do not add new information, references to the occasion, or context they didn't write.
+- Keep their voice and their specific words where possible — only refine, never replace their meaning.
+- Do NOT add greetings, sign-offs, or occasion references unless they already appear in the note.
+- Stay the same length or slightly shorter.
 
-Current note to rewrite:
+Sender: ${senderName}
+Recipient: ${recipientName}
+
+Note to polish:
 "${currentNote}"
 
-Write the improved version only, no explanation.`;
+Write the polished version only, no explanation.`;
   } else {
     userPrompt = `Write a short, heartfelt personal note for this gift.
 
