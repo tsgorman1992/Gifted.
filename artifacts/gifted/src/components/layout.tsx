@@ -10,22 +10,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { User, Gift, LogOut, ChevronDown } from "lucide-react";
-
-const GIFT_KEYS = [
-  "gifted_recipient_name","gifted_sender_name","gifted_recipient_phone",
-  "gifted_occasion","gifted_gift_title","gifted_personal_note",
-  "gifted_playlist_url","gifted_amount","gifted_intent","gifted_scheduled_for",
-  "gifted_experience","gifted_video_path","gifted_photo_paths",
-  "gifted_paid_id","gifted_gift_id","gifted_gift_paid",
-];
+import { clearGiftSession } from "@/lib/session";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, isLoading, isAuthenticated, logout } = useAuth();
 
   function handleSendGift() {
-    GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
+    clearGiftSession();
     setLocation("/create");
+  }
+
+  function handleLogoClick(e: React.MouseEvent) {
+    e.preventDefault();
+    clearGiftSession();
+    setLocation("/");
   }
   const isReveal = location === "/reveal" || location.startsWith("/open/");
 
@@ -39,9 +38,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen w-full flex flex-col bg-background selection:bg-primary/20">
       <header className="sticky top-0 z-50 w-full glass-panel border-b-0 shadow-sm transition-all duration-300">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-80 transition-opacity">
+          <a href="/" onClick={handleLogoClick} className="font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-80 transition-opacity cursor-pointer">
             gifted.
-          </Link>
+          </a>
           <nav className="flex items-center gap-4">
             {!isLoading && (
               isAuthenticated && user ? (

@@ -4,16 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight, RotateCcw, ExternalLink } from "lucide-react";
 
-const GIFT_KEYS = [
-  "gifted_recipient_name","gifted_sender_name","gifted_recipient_phone",
-  "gifted_occasion","gifted_gift_title","gifted_personal_note",
-  "gifted_playlist_url","gifted_amount","gifted_intent","gifted_scheduled_for",
-  "gifted_experience","gifted_video_path","gifted_photo_paths",
-  "gifted_paid_id","gifted_gift_id","gifted_gift_paid",
-];
-function clearGiftSession() {
-  GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
-}
+import { clearGiftSession, isGiftSessionStale } from "@/lib/session";
 
 type Phase = "sealed" | "opening" | "revealed";
 
@@ -40,6 +31,12 @@ export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [phase, setPhase] = useState<Phase>("sealed");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear stale sessions when someone visits the homepage after 8+ hours.
+  // This handles the "I came back days later and saw my old draft" case.
+  useEffect(() => {
+    if (isGiftSessionStale()) clearGiftSession();
+  }, []);
 
   function handleNewGift() {
     clearGiftSession();

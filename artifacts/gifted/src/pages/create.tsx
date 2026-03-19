@@ -12,6 +12,7 @@ import {
   Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, AlertCircle, Link2,
 } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
+import { touchGiftSession } from "@/lib/session";
 
 import {
   EXPERIENCE_LIST,
@@ -303,6 +304,8 @@ export default function CreatePage() {
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    // Mark session start so landing page can detect stale drafts
+    touchGiftSession();
 
     const rn = localStorage.getItem("gifted_recipient_name");
     if (rn) setRecipientName(rn);

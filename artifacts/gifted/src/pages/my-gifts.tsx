@@ -10,17 +10,7 @@ import {
   DollarSign, Package, Flower2, Snowflake, Sun,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
-
-const GIFT_KEYS = [
-  "gifted_recipient_name","gifted_sender_name","gifted_recipient_phone",
-  "gifted_occasion","gifted_gift_title","gifted_personal_note",
-  "gifted_playlist_url","gifted_amount","gifted_intent","gifted_scheduled_for",
-  "gifted_experience","gifted_video_path","gifted_photo_paths",
-  "gifted_paid_id","gifted_gift_id","gifted_gift_paid",
-];
-function clearGiftSession() {
-  GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
-}
+import { clearGiftSession } from "@/lib/session";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
