@@ -956,6 +956,7 @@ export default function RevealPage() {
   const [giftAmount, setGiftAmount]       = useState<string | null>(null);
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
   const [giftPaid, setGiftPaid]           = useState<boolean>(true);
+  const [isPreview, setIsPreview]         = useState(false);
   const [isOpening, setIsOpening]         = useState(false);
   const [openPhase, setOpenPhase]         = useState(0);
 
@@ -976,12 +977,13 @@ export default function RevealPage() {
 
     // URL params (set by preview flow) take priority over localStorage
     const urlParams = new URLSearchParams(window.location.search);
-    const urlExperience = urlParams.get("experience");
-    const urlAmount     = urlParams.get("amount");
-    const urlIntent     = urlParams.get("intent");
-    const urlRecipient  = urlParams.get("recipientName");
-    const urlSender     = urlParams.get("senderName");
-    const urlTitle      = urlParams.get("giftTitle");
+    const urlExperience    = urlParams.get("experience");
+    const urlAmount        = urlParams.get("amount");
+    const urlIntent        = urlParams.get("intent");
+    const urlRecipient     = urlParams.get("recipientName");
+    const urlSender        = urlParams.get("senderName");
+    const urlTitle         = urlParams.get("giftTitle");
+    const urlPersonalNote  = urlParams.get("personalNote");
 
     const vp = localStorage.getItem("gifted_video_path");
     if (vp) {
@@ -1006,7 +1008,7 @@ export default function RevealPage() {
       } catch { /* ignore */ }
     }
 
-    const pn = localStorage.getItem("gifted_personal_note");
+    const pn = urlPersonalNote || localStorage.getItem("gifted_personal_note");
     if (pn) setPersonalNote(pn);
 
     const pl = localStorage.getItem("gifted_playlist_url");
@@ -1031,7 +1033,8 @@ export default function RevealPage() {
     if (intn) setGiftIntent(intn);
 
     if (urlParams.get("preview") === "true") {
-      setGiftPaid(false);
+      setIsPreview(true);
+      setGiftPaid(true);
     } else {
       const paid = localStorage.getItem("gifted_gift_paid");
       if (paid === "false") setGiftPaid(false);
@@ -1162,6 +1165,16 @@ export default function RevealPage() {
                 style={{ ...gStyle, animation: "gifted-pre-breathe 4s ease-in-out infinite" }}
               />
             </div>
+
+            {/* Preview mode banner — pre-reveal screen */}
+            {isPreview && (
+              <div className="absolute top-5 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold shadow-lg backdrop-blur-md" style={{ background: "rgba(0,0,0,0.55)", color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.18)" }}>
+                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                  Preview mode — only you can see this
+                </div>
+              </div>
+            )}
 
             {/* Screen flash when box opens */}
             <AnimatePresence>
@@ -1340,6 +1353,16 @@ export default function RevealPage() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="w-full pb-20 md:pb-32 relative z-10"
           >
+
+            {/* Preview mode banner */}
+            {isPreview && (
+              <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold shadow-lg backdrop-blur-md" style={{ background: "rgba(0,0,0,0.55)", color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.18)" }}>
+                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                  Preview mode — only you can see this
+                </div>
+              </div>
+            )}
 
             {/* Hero */}
             <div className="w-full h-[60vh] md:h-[70vh] relative flex items-end">
@@ -1657,11 +1680,17 @@ export default function RevealPage() {
                             Sent with intention. Yours to use however you need.
                           </p>
                           {giftPaid ? (
-                            <Link href="/redeem">
-                              <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
+                            isPreview ? (
+                              <Button size="lg" disabled className="rounded-full h-16 px-10 text-xl w-full sm:w-auto opacity-50 cursor-default" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
                                 Redeem your balance
                               </Button>
-                            </Link>
+                            ) : (
+                              <Link href="/redeem">
+                                <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
+                                  Redeem your balance
+                                </Button>
+                              </Link>
+                            )
                           ) : (
                             <p className="text-sm text-white/40 italic">Payment pending — check back soon.</p>
                           )}
@@ -1748,11 +1777,17 @@ export default function RevealPage() {
                             Sent with intention. Yours to use however you need.
                           </p>
                           {giftPaid ? (
-                            <Link href="/redeem">
-                              <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
+                            isPreview ? (
+                              <Button size="lg" disabled className="rounded-full h-16 px-10 text-xl bg-white text-primary opacity-50 cursor-default shadow-xl w-full sm:w-auto">
                                 Redeem your balance
                               </Button>
-                            </Link>
+                            ) : (
+                              <Link href="/redeem">
+                                <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
+                                  Redeem your balance
+                                </Button>
+                              </Link>
+                            )
                           ) : (
                             <p className="text-sm opacity-60 italic">Payment pending — check back soon.</p>
                           )}

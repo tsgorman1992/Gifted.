@@ -267,6 +267,8 @@ export default function PreviewPage() {
     if (giftTitle) params.set("giftTitle", giftTitle);
     if (giftAmount && parseFloat(giftAmount) > 0) params.set("amount", giftAmount);
     if (giftIntent) params.set("intent", giftIntent);
+    const pn = localStorage.getItem("gifted_personal_note");
+    if (pn) params.set("personalNote", pn);
     params.set("preview", "true");
     window.open(`${base}/reveal?${params.toString()}`, "_blank");
   };
