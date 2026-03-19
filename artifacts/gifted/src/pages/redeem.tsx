@@ -147,7 +147,7 @@ export default function RedeemPage() {
     <div className="min-h-screen w-full bg-background flex flex-col pt-12 pb-24 px-6">
       <div className="max-w-2xl mx-auto w-full">
 
-        <Link href="/reveal" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-12 transition-colors">
+        <Link href={giftId ? `/open/${giftId}` : "/"} className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-12 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to gift
         </Link>
 

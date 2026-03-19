@@ -488,6 +488,7 @@ export default function CreatePage() {
   const [photosUploading, setPhotosUploading] = useState<PhotoUploadingItem[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const currentExperience = EXPERIENCE_LIST.find((e) => e.id === selectedExperience) ?? EXPERIENCE_LIST[0];
 
@@ -581,8 +582,17 @@ export default function CreatePage() {
   const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 200 * 1024 * 1024) { alert("Video must be under 200 MB."); return; }
-    if (!file.type.startsWith("video/")) { alert("Please select a video file."); return; }
+    setVideoError(null);
+    if (file.size > 200 * 1024 * 1024) {
+      setVideoError("Video must be under 200 MB.");
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      return;
+    }
+    if (!file.type.startsWith("video/")) {
+      setVideoError("Please select a video file (MP4, MOV, etc.).");
+      if (videoInputRef.current) videoInputRef.current.value = "";
+      return;
+    }
     // Create a local blob URL immediately so the preview renders without server round-trip
     if (videoBlobUrlRef.current) URL.revokeObjectURL(videoBlobUrlRef.current);
     const blobUrl = URL.createObjectURL(file);
@@ -690,9 +700,19 @@ export default function CreatePage() {
   };
 
   const handlePreview = () => {
-    if (amount && parseFloat(amount) < 10) {
+    if (amount && parseFloat(amount) > 0 && parseFloat(amount) < 10) {
       setStepError("The minimum gift balance is $10. Choose $10 or more, or leave it blank.");
       return;
+    }
+    if (amount && parseFloat(amount) >= 10) {
+      if (!recipientPhone.trim()) {
+        setStepError("A phone number is required to protect the cash balance — add it above.");
+        return;
+      }
+      if (recipientPhone.replace(/\D/g, "").length < 10) {
+        setStepError("Please enter a complete 10-digit phone number.");
+        return;
+      }
     }
     if (scheduleEnabled && !scheduledFor) {
       setStepError("Please pick a delivery date, or switch back to \"Send now\".");
@@ -719,11 +739,12 @@ export default function CreatePage() {
         { currentNote: mode === "rewrite" ? noteToRewrite : undefined, occasion, recipientName, senderName, intent: intent || undefined, giftTitle: giftTitle || undefined, mode },
         (chunk) => { generated += chunk; setPersonalNote(generated); },
         () => { setAiLoading(null); setShowAiGlow(true); setTimeout(() => setShowAiGlow(false), 2000); },
-        (err) => { setAiError(err); setAiLoading(null); if (!generated) setPersonalNote(""); }
+        (err) => { setAiError(err); setAiLoading(null); if (!generated) setPersonalNote(noteToRewrite); }
       );
     } catch {
       setAiError("Something went wrong. Please try again.");
       setAiLoading(null);
+      if (!generated) setPersonalNote(noteToRewrite);
     }
   };
 
@@ -747,9 +768,6 @@ export default function CreatePage() {
     if (step === 1) {
       if (!recipientName.trim()) { setStepError("Please enter the recipient's name."); return; }
       if (!senderName.trim()) { setStepError("Please enter your name."); return; }
-      if (recipientPhone && recipientPhone.replace(/\D/g, "").length < 10) {
-        setStepError("Please enter a complete 10-digit phone number."); return;
-      }
     }
     if (step === 2) {
       if (!giftTitle.trim()) { setStepError("Please add a gift headline."); return; }
@@ -912,26 +930,6 @@ export default function CreatePage() {
                     </div>
                   </div>
 
-                  {/* Recipient phone */}
-                  <div className="space-y-2 mb-4">
-                    <Label htmlFor="recipientPhone">
-                      Their phone number{" "}
-                      <span className="text-muted-foreground text-xs font-normal">— required to secure a cash balance</span>
-                    </Label>
-                    <Input
-                      id="recipientPhone"
-                      type="tel"
-                      inputMode="numeric"
-                      placeholder="(555) 000-0000"
-                      value={recipientPhone}
-                      onChange={(e) => setRecipientPhone(formatPhoneNumber(e.target.value))}
-                      className="h-12 rounded-xl text-base"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Only used to verify the recipient's identity when they withdraw cash. Never shared or used for marketing.
-                    </p>
-                  </div>
-
                   {/* Occasion */}
                   <div className="space-y-2 mb-8">
                     <Label htmlFor="occasion">What's the occasion?</Label>
@@ -1044,6 +1042,7 @@ export default function CreatePage() {
                         Holiday: `e.g. Happy holidays, ${name}!`,
                         "Just Because": `e.g. Thinking of you, ${name}.`,
                         Wedding: `e.g. Wishing you both the very best.`,
+                        "Thank You": `e.g. Thank you so much, ${name}.`,
                         Other: `e.g. This one's for you, ${name}.`,
                       };
                       return occasion
@@ -1214,6 +1213,11 @@ export default function CreatePage() {
                   {/* Video + Photos row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoSelect} />
+                    {videoError && (
+                      <div className="col-span-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-xs font-medium">
+                        <AlertCircle className="w-4 h-4 shrink-0" /> {videoError}
+                      </div>
+                    )}
 
                     {!videoPreviewUrl && !isUploading && (
                       <button
@@ -1493,6 +1497,38 @@ export default function CreatePage() {
                         </div>
                       </motion.div>
                     )}
+
+                    {/* Phone number — only required when a cash balance is set */}
+                    <AnimatePresence>
+                      {amount && parseFloat(amount) >= 10 && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-2 pt-4 border-t border-border mt-2">
+                            <Label htmlFor="recipientPhone">
+                              Their phone number{" "}
+                              <span className="text-destructive text-xs font-normal">— required to secure the balance</span>
+                            </Label>
+                            <Input
+                              id="recipientPhone"
+                              type="tel"
+                              inputMode="numeric"
+                              placeholder="(555) 000-0000"
+                              value={recipientPhone}
+                              onChange={(e) => setRecipientPhone(formatPhoneNumber(e.target.value))}
+                              className="h-12 rounded-xl text-base"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Only used to verify the recipient's identity when they withdraw cash. Never shared or used for marketing.
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
               </div>

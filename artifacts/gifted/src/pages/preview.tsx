@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check, ExternalLink,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CreditCard, CheckCircle2, Send, Mail, Phone,
+  CreditCard, CheckCircle2, Send, Mail, Phone, User, ArrowLeft,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -86,6 +86,10 @@ export default function PreviewPage() {
 
     setCanShare(typeof navigator?.share === "function");
     setIsDesktop(window.innerWidth >= 768);
+
+    // Pre-fill desktop send form with recipient phone if available
+    const rp2 = localStorage.getItem("gifted_recipient_phone");
+    if (rp2 && !rp2.includes("@")) setSendContact(rp2);
 
     // Handle return from Stripe Checkout
     const params = new URLSearchParams(window.location.search);
@@ -271,6 +275,13 @@ export default function PreviewPage() {
     if (giftIntent) params.set("intent", giftIntent);
     const pn = localStorage.getItem("gifted_personal_note");
     if (pn) params.set("personalNote", pn);
+    const el = localStorage.getItem("gifted_extra_links");
+    if (el) {
+      try {
+        const links: string[] = JSON.parse(el);
+        links.filter(Boolean).forEach((l) => params.append("link", l));
+      } catch { /* ignore */ }
+    }
     params.set("preview", "true");
     window.open(`${base}/reveal?${params.toString()}`, "_blank");
   };
@@ -320,7 +331,15 @@ export default function PreviewPage() {
     }
   };
 
-  const displayUrl   = giftId ? `gifted./open/${giftId}` : "gifted./open/...";
+  const handleEdit = () => {
+    localStorage.removeItem("gifted_paid_id");
+    setGiftId(null);
+    setShareUrl(null);
+    setPaymentStatus("idle");
+    setLocation("/create");
+  };
+
+  const displayUrl   = giftId ? `gifted.page/open/${giftId}` : "gifted.page/open/...";
   const displayAmt   = giftAmount ? parseFloat(giftAmount).toFixed(2) : null;
   const hasBalance   = !!displayAmt && parseFloat(displayAmt) > 0;
   const isPaid       = paymentStatus === "confirmed" || paymentStatus === "confirming";
@@ -402,6 +421,17 @@ export default function PreviewPage() {
 
         {/* Right / main column */}
         <div className="flex-[0.9] flex flex-col">
+
+          {/* Edit link — subtle, above the card */}
+          {!isPaid && (
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="self-start inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Edit gift
+            </button>
+          )}
 
           {/* Experience summary card */}
           <motion.div {...fade(0)} className="rounded-[2rem] overflow-hidden mb-7 shadow-xl relative" style={{ minHeight: 160 }}>
@@ -682,15 +712,28 @@ export default function PreviewPage() {
             </div>
 
 
+            {/* Login prompt — subtle callout for unauthenticated senders */}
+            {!isPaid && (
+              <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl border border-border bg-secondary/30">
+                <User className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-sm text-muted-foreground leading-snug">
+                  <Link href="/my-gifts" className="font-medium text-foreground hover:underline">Sign in</Link> to track this gift and see when it's opened — view all your gifts in one place.
+                </p>
+              </div>
+            )}
+
             {/* Footer link */}
-            <div className="pt-1 text-center">
-              <Link
-                href="/create"
-                className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
-              >
-                Go back and edit
-              </Link>
-            </div>
+            {!isPaid && (
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors"
+                >
+                  Go back and edit
+                </button>
+              </div>
+            )}
 
           </motion.div>
         </div>

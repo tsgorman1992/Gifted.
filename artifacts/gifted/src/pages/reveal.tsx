@@ -1011,9 +1011,14 @@ export default function RevealPage() {
     const pn = urlPersonalNote || localStorage.getItem("gifted_personal_note");
     if (pn) setPersonalNote(pn);
 
-    const elRaw = localStorage.getItem("gifted_extra_links");
-    if (elRaw) { try { const parsed = JSON.parse(elRaw); if (Array.isArray(parsed)) setExtraLinks(parsed.filter(Boolean)); } catch { /* ignore */ } }
-    else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) setExtraLinks([pl]); }
+    const urlLinks = urlParams.getAll("link").filter(Boolean);
+    if (urlLinks.length > 0) {
+      setExtraLinks(urlLinks);
+    } else {
+      const elRaw = localStorage.getItem("gifted_extra_links");
+      if (elRaw) { try { const parsed = JSON.parse(elRaw); if (Array.isArray(parsed)) setExtraLinks(parsed.filter(Boolean)); } catch { /* ignore */ } }
+      else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) setExtraLinks([pl]); }
+    }
 
     const rn = urlRecipient || localStorage.getItem("gifted_recipient_name");
     if (rn) setRecipientName(rn);
@@ -1644,10 +1649,10 @@ export default function RevealPage() {
                 );
               })}
 
-              {/* Balance — section 3 (only shown when a non-zero amount was set) */}
+              {/* Balance — always animates after the last link card */}
               {giftAmount && parseFloat(giftAmount) > 0 && (
                 <div ref={amountRef}>
-                  <Section cfg={cfg} idx={3}>
+                  <Section cfg={cfg} idx={2 + extraLinks.length}>
                     {/* Midnight Stars gets a distinct dark card */}
                     {cfg.amountStyle === "stellar-reveal" ? (
                       <div
