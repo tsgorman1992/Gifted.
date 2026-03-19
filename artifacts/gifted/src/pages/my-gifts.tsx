@@ -11,6 +11,17 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
+const GIFT_KEYS = [
+  "gifted_recipient_name","gifted_sender_name","gifted_recipient_phone",
+  "gifted_occasion","gifted_gift_title","gifted_personal_note",
+  "gifted_playlist_url","gifted_amount","gifted_intent","gifted_scheduled_for",
+  "gifted_experience","gifted_video_path","gifted_photo_paths",
+  "gifted_paid_id","gifted_gift_id","gifted_gift_paid",
+];
+function clearGiftSession() {
+  GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface GiftSummary {
@@ -121,18 +132,24 @@ function CopyButton({ url }: { url: string }) {
 // ─── Gift card ────────────────────────────────────────────────────────────────
 
 function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
+  const [, setLocation] = useLocation();
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
   const statusMeta = STATUS_META[status];
   const shareUrl = `${window.location.origin}${BASE}/open/${gift.id}`;
   const ExpIcon = exp.Icon;
 
+  function handleCardClick() {
+    setLocation(`/open/${gift.id}`);
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 + idx * 0.07, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md transition-shadow"
+      onClick={handleCardClick}
+      className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
     >
       <div className="flex items-stretch">
         {/* Left experience accent */}
@@ -197,7 +214,8 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 href={shareUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Preview gift"
+                title="Open gift in new tab"
+                onClick={(e) => e.stopPropagation()}
                 className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -215,6 +233,11 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
 export default function MyGiftsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+
+  function handleNewGift() {
+    clearGiftSession();
+    setLocation("/create");
+  }
 
   const { data: myGifts, isLoading: giftsLoading } = useQuery({
     queryKey: ["my-gifts"],
@@ -263,11 +286,9 @@ export default function MyGiftsPage() {
           <Button size="lg" className="rounded-full px-10 h-13" onClick={() => setLocation("/sign-in")}>
             Sign in
           </Button>
-          <Link href="/create">
-            <Button size="lg" variant="outline" className="rounded-full px-10 h-13 w-full sm:w-auto">
-              Send a gift
-            </Button>
-          </Link>
+          <Button size="lg" variant="outline" className="rounded-full px-10 h-13" onClick={handleNewGift}>
+            Send a gift
+          </Button>
         </motion.div>
       </div>
     );
@@ -313,12 +334,10 @@ export default function MyGiftsPage() {
               <h1 className="font-serif text-2xl md:text-3xl font-medium leading-tight">Your gifts</h1>
             </div>
           </div>
-          <Link href="/create">
-            <Button className="rounded-full px-5 gap-2 hidden sm:flex shadow-md hover:-translate-y-0.5 transition-transform">
-              <Plus className="w-4 h-4" />
-              New gift
-            </Button>
-          </Link>
+          <Button onClick={handleNewGift} className="rounded-full px-5 gap-2 hidden sm:flex shadow-md hover:-translate-y-0.5 transition-transform">
+            <Plus className="w-4 h-4" />
+            New gift
+          </Button>
         </motion.div>
 
         {/* ── Stats row ── */}
@@ -352,12 +371,10 @@ export default function MyGiftsPage() {
             <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">
               Create your first gift — a personal video, photos, note, playlist, and optional cash balance — all in one beautiful reveal.
             </p>
-            <Link href="/create">
-              <Button className="rounded-full px-8 h-12 gap-2 shadow-md">
-                <Plus className="w-4 h-4" />
-                Send your first gift
-              </Button>
-            </Link>
+            <Button onClick={handleNewGift} className="rounded-full px-8 h-12 gap-2 shadow-md">
+              <Plus className="w-4 h-4" />
+              Send your first gift
+            </Button>
           </motion.div>
         ) : (
           <div className="space-y-3">
@@ -384,16 +401,15 @@ export default function MyGiftsPage() {
       </div>
 
       {/* ── Mobile FAB ── */}
-      <Link href="/create">
-        <motion.button
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.4, type: "spring", stiffness: 300, damping: 20 }}
-          className="fixed bottom-6 right-6 sm:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
-        >
-          <Plus className="w-6 h-6" />
-        </motion.button>
-      </Link>
+      <motion.button
+        onClick={handleNewGift}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.4, type: "spring", stiffness: 300, damping: 20 }}
+        className="fixed bottom-6 right-6 sm:hidden w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+      >
+        <Plus className="w-6 h-6" />
+      </motion.button>
     </div>
   );
 }
