@@ -1321,7 +1321,12 @@ export default function CreatePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setScheduleEnabled(true)}
+                    onClick={() => {
+                      setScheduleEnabled(true);
+                      if (!scheduledFor) {
+                        setScheduledFor(new Date(Date.now() + 86400000).toISOString().split("T")[0]);
+                      }
+                    }}
                     className={`flex-1 py-3 rounded-2xl text-sm font-medium border transition-all ${
                       scheduleEnabled
                         ? "bg-foreground text-background border-foreground"
