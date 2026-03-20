@@ -158,7 +158,7 @@ const stepVariants = {
 
 const STEP_LABELS = ["Set the scene", "Write the moment", "Complete the gift"];
 
-function ProgressBar({ step }: { step: number }) {
+function ProgressBar({ step, onStepClick }: { step: number; onStepClick: (s: number) => void }) {
   return (
     <div className="mb-10">
       <div className="flex items-center gap-0 mb-3">
@@ -166,16 +166,20 @@ function ProgressBar({ step }: { step: number }) {
           const stepNum = i + 1;
           const isActive = stepNum === step;
           const isDone = stepNum < step;
+          const isClickable = isDone;
           return (
             <React.Fragment key={i}>
               <div className="flex flex-col items-center gap-1.5">
-                <div
+                <button
+                  type="button"
+                  disabled={!isClickable}
+                  onClick={() => isClickable && onStepClick(stepNum)}
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${
                     isDone
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-foreground cursor-pointer hover:opacity-80 hover:scale-110"
                       : isActive
-                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                      : "bg-border text-muted-foreground"
+                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20 cursor-default"
+                      : "bg-border text-muted-foreground cursor-default"
                   }`}
                 >
                   {isDone ? (
@@ -183,11 +187,12 @@ function ProgressBar({ step }: { step: number }) {
                   ) : (
                     stepNum
                   )}
-                </div>
+                </button>
                 <span
                   className={`text-[11px] font-medium hidden sm:block transition-colors duration-300 ${
-                    isActive ? "text-foreground" : "text-muted-foreground"
+                    isActive ? "text-foreground" : isDone ? "text-muted-foreground hover:text-foreground cursor-pointer" : "text-muted-foreground"
                   }`}
+                  onClick={() => isClickable && onStepClick(stepNum)}
                 >
                   {label}
                 </span>
@@ -833,7 +838,7 @@ export default function CreatePage() {
       <div className={`mx-auto px-6 py-12 transition-all duration-500 ${step === 1 ? "max-w-5xl" : "max-w-3xl"}`}>
 
         {/* Progress */}
-        <ProgressBar step={step} />
+        <ProgressBar step={step} onStepClick={(s) => { setStep(s); setStepError(null); }} />
 
         {/* Step content */}
         <AnimatePresence mode="wait" custom={direction}>
