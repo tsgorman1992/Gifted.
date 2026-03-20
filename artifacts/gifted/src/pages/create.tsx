@@ -768,11 +768,6 @@ export default function CreatePage() {
     if (step === 1) {
       if (!recipientName.trim()) { setStepError("Please enter the recipient's name."); return; }
       if (!senderName.trim()) { setStepError("Please enter your name."); return; }
-      const storedAmount = parseFloat(amount || "0");
-      if (storedAmount >= 10 && !recipientPhone.trim()) {
-        setStepError("A phone number is required to secure the cash balance — you'll add it in Step 3.");
-        return;
-      }
     }
     if (step === 2) {
       if (!giftTitle.trim()) { setStepError("Please add a gift headline."); return; }
@@ -1503,37 +1498,30 @@ export default function CreatePage() {
                       </motion.div>
                     )}
 
-                    {/* Phone number — only required when a cash balance is set */}
-                    <AnimatePresence>
-                      {amount && parseFloat(amount) >= 10 && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.25 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="space-y-2 pt-4 border-t border-border mt-2">
-                            <Label htmlFor="recipientPhone">
-                              Their phone number{" "}
-                              <span className="text-destructive text-xs font-normal">— required to secure the balance</span>
-                            </Label>
-                            <Input
-                              id="recipientPhone"
-                              type="tel"
-                              inputMode="numeric"
-                              placeholder="(555) 000-0000"
-                              value={recipientPhone}
-                              onChange={(e) => setRecipientPhone(formatPhoneNumber(e.target.value))}
-                              className="h-12 rounded-xl text-base"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              Only used to verify the recipient's identity when they withdraw cash. Never shared or used for marketing.
-                            </p>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    {/* Phone number */}
+                    <div className="space-y-2 pt-4 border-t border-border mt-2">
+                      <Label htmlFor="recipientPhone">
+                        Their phone number{" "}
+                        {amount && parseFloat(amount) >= 10
+                          ? <span className="text-destructive text-xs font-normal">— required to secure the balance</span>
+                          : <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                        }
+                      </Label>
+                      <Input
+                        id="recipientPhone"
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="(555) 000-0000"
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(formatPhoneNumber(e.target.value))}
+                        className="h-12 rounded-xl text-base"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {amount && parseFloat(amount) >= 10
+                          ? "Required to verify their identity when they withdraw cash. Never shared or used for marketing."
+                          : "Add their number and we'll deliver the link via SMS — or skip it and share the link yourself."}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
