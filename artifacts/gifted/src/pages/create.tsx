@@ -1432,6 +1432,17 @@ export default function CreatePage() {
                   <div className="space-y-3 pt-2">
                     <Label className="text-sm font-semibold">How much to add?</Label>
                     <div className="flex flex-wrap gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setAmount("")}
+                        className={`px-5 h-11 rounded-full font-semibold text-base border transition-all ${
+                          !amount
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-secondary text-secondary-foreground border-transparent hover:border-border"
+                        }`}
+                      >
+                        None
+                      </button>
                       {AMOUNTS.map((amt) => (
                         <button
                           key={amt}
