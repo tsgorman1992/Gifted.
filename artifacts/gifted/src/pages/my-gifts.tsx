@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
-  DollarSign, Package, Flower2, Snowflake, Sun, Eye,
+  DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { clearGiftSession } from "@/lib/session";
@@ -27,6 +27,8 @@ interface GiftSummary {
   redeemedAt: string | null;
   reaction: string | null;
   reactionAt: string | null;
+  scheduledFor: string | null;
+  scheduleDelivered: boolean;
   createdAt: string;
 }
 
@@ -54,20 +56,22 @@ async function fetchMyGifts(): Promise<GiftSummary[]> {
   return res.json();
 }
 
-type GiftStatus = "draft" | "sent" | "opened" | "redeemed";
+type GiftStatus = "draft" | "scheduled" | "sent" | "opened" | "redeemed";
 
 function getStatus(gift: GiftSummary): GiftStatus {
   if (gift.redeemedAt) return "redeemed";
   if (gift.openedAt)   return "opened";
   if (gift.paid)       return "sent";
+  if (gift.scheduledFor && !gift.scheduleDelivered) return "scheduled";
   return "draft";
 }
 
 const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string; Icon: React.ComponentType<{ className?: string }> }> = {
-  draft:    { label: "Draft",    color: "#92400e", bg: "#fef3c7", Icon: Clock },
-  sent:     { label: "Sent",     color: "#1d4ed8", bg: "#dbeafe", Icon: Package },
-  opened:   { label: "Opened",   color: "#6d28d9", bg: "#ede9fe", Icon: Eye },
-  redeemed: { label: "Redeemed", color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
+  draft:     { label: "Draft",     color: "#92400e", bg: "#fef3c7", Icon: Clock },
+  scheduled: { label: "Scheduled", color: "#0369a1", bg: "#e0f2fe", Icon: CalendarClock },
+  sent:      { label: "Sent",      color: "#1d4ed8", bg: "#dbeafe", Icon: Package },
+  opened:    { label: "Opened",    color: "#6d28d9", bg: "#ede9fe", Icon: Eye },
+  redeemed:  { label: "Redeemed",  color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
 };
 
 function greeting(firstName: string | null) {
@@ -192,35 +196,48 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             </div>
           )}
 
-          {/* Timeline row */}
+          {/* Timeline row — steps vary based on whether gift is scheduled */}
           <div className="flex items-center gap-0 text-xs">
-            {(["sent", "opened", "redeemed"] as const).map((step, i) => {
-              const steps = ["sent", "opened", "redeemed"] as const;
-              const statusIdx = steps.indexOf(status === "draft" ? "sent" : status);
-              const done = i <= statusIdx && status !== "draft";
-              const StepIcon = STATUS_META[step].Icon;
-              return (
-                <React.Fragment key={step}>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center transition-colors"
-                      style={{ background: done ? STATUS_META[step].bg : "hsl(var(--secondary))", color: done ? STATUS_META[step].color : "hsl(var(--muted-foreground))" }}
-                    >
-                      <StepIcon className="w-3 h-3" />
+            {(() => {
+              const isScheduled = !!gift.scheduledFor;
+              type TimelineStep = "scheduled" | "sent" | "opened" | "redeemed";
+              const steps: TimelineStep[] = isScheduled
+                ? ["scheduled", "sent", "opened", "redeemed"]
+                : ["sent", "opened", "redeemed"];
+              const orderedStatuses: GiftStatus[] = isScheduled
+                ? ["scheduled", "sent", "opened", "redeemed"]
+                : ["sent", "opened", "redeemed"];
+              const effectiveStatus: GiftStatus = (status === "draft" || status === "scheduled")
+                ? (isScheduled ? "scheduled" : "sent")
+                : status;
+              const statusIdx = orderedStatuses.indexOf(effectiveStatus);
+              return steps.map((step, i) => {
+                const done = i <= statusIdx && status !== "draft";
+                const StepIcon = STATUS_META[step].Icon;
+                const label = step === "scheduled" ? "Scheduled" : step === "sent" ? "Sent" : step === "opened" ? "Opened" : "Redeemed";
+                return (
+                  <React.Fragment key={step}>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+                        style={{ background: done ? STATUS_META[step].bg : "hsl(var(--secondary))", color: done ? STATUS_META[step].color : "hsl(var(--muted-foreground))" }}
+                      >
+                        <StepIcon className="w-3 h-3" />
+                      </div>
+                      <span className="text-[10px] leading-tight" style={{ color: done ? STATUS_META[step].color : "hsl(var(--muted-foreground)/0.5)" }}>
+                        {label}
+                      </span>
                     </div>
-                    <span className="text-[10px] leading-tight" style={{ color: done ? STATUS_META[step].color : "hsl(var(--muted-foreground)/0.5)" }}>
-                      {step === "sent" ? "Sent" : step === "opened" ? "Opened" : "Redeemed"}
-                    </span>
-                  </div>
-                  {i < 2 && (
-                    <div
-                      className="flex-1 h-px mx-1 mb-3 transition-colors"
-                      style={{ background: done && i < statusIdx ? STATUS_META[steps[i + 1]].color + "66" : "hsl(var(--border))" }}
-                    />
-                  )}
-                </React.Fragment>
-              );
-            })}
+                    {i < steps.length - 1 && (
+                      <div
+                        className="flex-1 h-px mx-1 mb-3 transition-colors"
+                        style={{ background: done && i < statusIdx ? STATUS_META[steps[i + 1]].color + "66" : "hsl(var(--border))" }}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              });
+            })()}
           </div>
 
           {/* Bottom row */}
@@ -234,6 +251,8 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                     ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
                     : status === "sent"
                       ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                    : status === "scheduled" && gift.scheduledFor
+                      ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
                       : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
               </span>
             </div>
@@ -298,7 +317,8 @@ export default function MyGiftsPage() {
     queryKey: ["my-gifts"],
     queryFn: fetchMyGifts,
     enabled: isAuthenticated,
-    staleTime: 30_000,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
   });
 
   // ── Loading skeleton

@@ -133,6 +133,9 @@ export default function PreviewPage() {
   const [nudgeLastName,    setNudgeLastName]    = useState("");
   const [nudgeSubmitting,  setNudgeSubmitting]  = useState(false);
   const [nudgeError,       setNudgeError]       = useState<string | null>(null);
+  const [notifyPhone,      setNotifyPhone]      = useState("");
+  const [notifySaving,     setNotifySaving]     = useState(false);
+  const [notifySaved,      setNotifySaved]      = useState(false);
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -424,6 +427,23 @@ export default function PreviewPage() {
       setNudgeError("Unable to connect. Please try again.");
     } finally {
       setNudgeSubmitting(false);
+    }
+  };
+
+  const handleNotifyPhoneSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!giftId || !notifyPhone.trim()) return;
+    setNotifySaving(true);
+    try {
+      await fetch(`${base}/api/gifted/gifts/${giftId}/sender-phone`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ senderPhone: notifyPhone.trim() }),
+      });
+      setNotifySaved(true);
+    } catch { /* silent — not critical */ } finally {
+      setNotifySaving(false);
     }
   };
 
@@ -857,15 +877,37 @@ export default function PreviewPage() {
 
                   {/* CTA — authenticated: dashboard link; anonymous free gift: soft nudge */}
                   {isAuthenticated ? (
-                    <Link href="/my-gifts">
-                      <Button
-                        variant="outline"
-                        className="w-full h-10 rounded-xl text-sm font-medium border-green-300 text-green-800 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/40"
-                      >
-                        <Gift className="w-4 h-4 mr-2" />
-                        Track this gift
-                      </Button>
-                    </Link>
+                    <div className="space-y-3">
+                      <Link href="/my-gifts">
+                        <Button
+                          variant="outline"
+                          className="w-full h-10 rounded-xl text-sm font-medium border-green-300 text-green-800 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/40"
+                        >
+                          <Gift className="w-4 h-4 mr-2" />
+                          Track this gift
+                        </Button>
+                      </Link>
+                      {/* Phone notification opt-in */}
+                      {!notifySaved ? (
+                        <form onSubmit={handleNotifyPhoneSave} className="flex gap-2">
+                          <input
+                            type="tel"
+                            value={notifyPhone}
+                            onChange={e => setNotifyPhone(e.target.value)}
+                            placeholder="Your phone — text me when they open it"
+                            className="flex-1 h-9 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 placeholder:text-xs"
+                          />
+                          <Button type="submit" size="sm" disabled={!notifyPhone.trim() || notifySaving}
+                            className="h-9 px-3 rounded-xl bg-green-700 hover:bg-green-800 text-white border-0 text-xs shrink-0">
+                            {notifySaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Notify me"}
+                          </Button>
+                        </form>
+                      ) : (
+                        <p className="text-xs text-green-700/70 dark:text-green-400/70 text-center">
+                          ✓ We'll text you when {recipientName} opens and redeems their gift.
+                        </p>
+                      )}
+                    </div>
                   ) : (linkShared && !hasBalance) ? (
                     /* ── Free gift nudge: offer to create account for tracking ── */
                     <div className="space-y-3 pt-2 border-t border-green-200 dark:border-green-800">

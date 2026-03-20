@@ -4,6 +4,27 @@ import { db, gifts } from "@workspace/db";
 import { eq, desc, isNull, and } from "drizzle-orm";
 import twilio from "twilio";
 
+function normPhone(raw: string): string {
+  const d = raw.replace(/\D/g, "");
+  if (d.length === 10) return `+1${d}`;
+  if (d.length === 11 && d.startsWith("1")) return `+${d}`;
+  return `+${d}`;
+}
+
+async function smsSender(senderPhone: string | null, body: string) {
+  if (!senderPhone) return;
+  const from = process.env.TWILIO_PHONE_NUMBER;
+  const sid  = process.env.TWILIO_ACCOUNT_SID;
+  const tok  = process.env.TWILIO_AUTH_TOKEN;
+  if (!from || !sid || !tok) return;
+  try {
+    const client = twilio(sid, tok);
+    await client.messages.create({ from: normPhone(from), to: normPhone(senderPhone), body });
+  } catch (err) {
+    console.error("[smsSender] failed:", err);
+  }
+}
+
 function getTwilioClient() {
   const sid   = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
@@ -122,15 +143,39 @@ router.get("/gifted/gifts/:id", async (req, res) => {
 router.patch("/gifted/gifts/:id/opened", async (req, res) => {
   try {
     const { id } = req.params;
-    const [gift] = await db.select({ id: gifts.id, openedAt: gifts.openedAt }).from(gifts).where(eq(gifts.id, id)).limit(1);
+    const [gift] = await db
+      .select({ id: gifts.id, openedAt: gifts.openedAt, senderPhone: gifts.senderPhone, recipientName: gifts.recipientName })
+      .from(gifts).where(eq(gifts.id, id)).limit(1);
     if (!gift) return res.status(404).json({ error: "Gift not found" });
     if (!gift.openedAt) {
       await db.update(gifts).set({ openedAt: new Date() }).where(eq(gifts.id, id));
+      smsSender(
+        gift.senderPhone,
+        `gifted. 🎁\n${gift.recipientName} just opened your gift! Head to your dashboard to see their reaction.`
+      );
     }
     return res.json({ ok: true });
   } catch (err) {
     console.error("Error marking opened:", err);
     return res.status(500).json({ error: "Failed to mark opened" });
+  }
+});
+
+router.patch("/gifted/gifts/:id/sender-phone", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { senderPhone } = req.body as { senderPhone: string };
+    if (!senderPhone || typeof senderPhone !== "string") {
+      res.status(400).json({ error: "senderPhone is required" });
+      return;
+    }
+    const [gift] = await db.select({ id: gifts.id }).from(gifts).where(eq(gifts.id, id)).limit(1);
+    if (!gift) { res.status(404).json({ error: "Gift not found" }); return; }
+    await db.update(gifts).set({ senderPhone: senderPhone.trim() }).where(eq(gifts.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error updating senderPhone:", err);
+    res.status(500).json({ error: "Failed to save phone" });
   }
 });
 
@@ -190,6 +235,8 @@ router.get("/gifted/my-gifts", async (req, res) => {
         redeemedAt: g.redeemedAt,
         reaction: g.reaction,
         reactionAt: g.reactionAt,
+        scheduledFor: g.scheduledFor,
+        scheduleDelivered: g.scheduleDelivered,
         createdAt: g.createdAt,
       }))
     );

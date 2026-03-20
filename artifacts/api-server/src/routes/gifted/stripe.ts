@@ -11,17 +11,28 @@ function getTwilioClient() {
   return twilio(sid, token);
 }
 
-async function notifyOperator(message: string) {
-  const operatorPhone = process.env.OPERATOR_PHONE;
-  const fromPhone     = process.env.TWILIO_PHONE_NUMBER;
-  if (!operatorPhone || !fromPhone) return;
+function normPhone(raw: string): string {
+  const d = raw.replace(/\D/g, "");
+  if (d.length === 10) return `+1${d}`;
+  if (d.length === 11 && d.startsWith("1")) return `+${d}`;
+  return `+${d}`;
+}
+
+async function smsTo(to: string | null | undefined, body: string) {
+  if (!to) return;
+  const from = process.env.TWILIO_PHONE_NUMBER;
+  if (!from) return;
   try {
     const client = getTwilioClient();
     if (!client) return;
-    await client.messages.create({ to: operatorPhone, from: fromPhone, body: message });
+    await client.messages.create({ to: normPhone(to), from: normPhone(from), body });
   } catch (err) {
-    console.error("Operator SMS failed:", err);
+    console.error("SMS failed:", err);
   }
+}
+
+async function notifyOperator(message: string) {
+  await smsTo(process.env.OPERATOR_PHONE, message);
 }
 
 const router = Router();
@@ -123,6 +134,8 @@ router.post("/gifted/confirm-payment", async (req, res) => {
       return;
     }
 
+    const [gift] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
+
     await db
       .update(gifts)
       .set({
@@ -133,6 +146,14 @@ router.post("/gifted/confirm-payment", async (req, res) => {
             : (session.payment_intent?.id ?? null),
       })
       .where(eq(gifts.id, giftId));
+
+    if (gift && !gift.paid) {
+      const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";
+      smsTo(
+        gift.senderPhone,
+        `gifted. ✅\nYour ${amount} gift for ${gift.recipientName} is confirmed and on its way! We'll text you when they open it.`
+      );
+    }
 
     res.json({ success: true });
   } catch (err) {
@@ -180,13 +201,20 @@ router.post("/gifted/redeem", async (req, res) => {
       .set({ redeemedAt: new Date() })
       .where(eq(gifts.id, giftId));
 
+    const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";
+
+    // Notify sender via SMS
+    smsTo(
+      gift.senderPhone,
+      `gifted. 🎉\n${gift.recipientName} redeemed their ${amount} gift. Your generosity made their day!`
+    );
+
     // Notify operator via SMS
     if (payoutName && payoutMethod && payoutHandle) {
-      const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "unknown amount";
       const methodLabel = payoutMethod.charAt(0).toUpperCase() + payoutMethod.slice(1);
       const senderLabel = gift.senderName ? ` from ${gift.senderName}` : "";
       await notifyOperator(
-        `gifted. redemption 🎁\n${amount} — ${payoutName}\n${methodLabel}: ${payoutHandle}\nGift${senderLabel} → send now`
+        `gifted. redemption 🎁\n${amount || "unknown amount"} — ${payoutName}\n${methodLabel}: ${payoutHandle}\nGift${senderLabel} → send now`
       );
     }
 
@@ -226,6 +254,9 @@ router.post("/stripe/webhook", async (req, res) => {
     const giftId = session.metadata?.giftId;
 
     if (giftId && session.payment_status === "paid") {
+      const [gift] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
+      const alreadyPaid = gift?.paid ?? false;
+
       await db
         .update(gifts)
         .set({
@@ -236,6 +267,14 @@ router.post("/stripe/webhook", async (req, res) => {
               : (session.payment_intent?.id ?? null),
         })
         .where(eq(gifts.id, giftId));
+
+      if (gift && !alreadyPaid) {
+        const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";
+        smsTo(
+          gift.senderPhone,
+          `gifted. ✅\nYour ${amount} gift for ${gift.recipientName} is confirmed and on its way! We'll text you when they open it.`
+        );
+      }
     }
   }
 
