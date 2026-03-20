@@ -8,7 +8,7 @@ const FAQS = [
   {
     question: "How does the cash balance work?",
     answer:
-      "When you create a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they can transfer the balance to their debit card (instant) or bank account (1–3 business days). No gift cards, no restrictions — just real money, their way.",
+      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they can transfer the balance to their debit card (instant) or bank account (1–3 business days). No gift cards, no restrictions — just real money, their way.",
   },
   {
     question: "Do I need to include a cash balance?",

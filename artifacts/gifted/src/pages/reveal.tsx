@@ -1877,7 +1877,7 @@ export default function RevealPage() {
                   Want to send a moment like this?
                 </h3>
                 <p className={`text-sm mb-6 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
-                  Create a gift experience in minutes — message, video, photos, music, and a cash balance they can actually use.
+                  Send a gift in minutes — message, video, photos, music, and a cash balance they can actually use.
                 </p>
                 <Link href="/create">
                   <button
@@ -1888,7 +1888,7 @@ export default function RevealPage() {
                         : "bg-foreground text-background hover:bg-foreground/90"
                     }`}
                   >
-                    Create a gift <Sparkles className="w-4 h-4" />
+                    Send a gift <Sparkles className="w-4 h-4" />
                   </button>
                 </Link>
               </div>
