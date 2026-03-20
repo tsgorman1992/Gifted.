@@ -1930,8 +1930,8 @@ export default function RevealPage() {
               </div>
             )}
 
-            {/* Viral CTA — shown to every gift recipient */}
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-20 mb-8">
+            {/* Viral CTA — shown on real gift links only, not sender preview */}
+            {!isPreview && <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-20 mb-8">
               <div
                 className="rounded-3xl border p-8 text-center"
                 style={{
@@ -1961,7 +1961,7 @@ export default function RevealPage() {
                   </button>
                 </Link>
               </div>
-            </div>
+            </div>}
 
           </motion.div>
         )}
