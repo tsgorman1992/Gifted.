@@ -1283,9 +1283,9 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* ── Send via email / phone ── */}
+            {/* ── Send via email / phone — desktop only (mobile uses native share sheet above) ── */}
             {(!hasBalance || isPaid) && (
-              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+              <div className="hidden md:block rounded-2xl border border-border bg-card p-5 space-y-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Send directly to someone</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Enter an email or phone number — we'll deliver it for you.</p>
