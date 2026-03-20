@@ -134,8 +134,6 @@ router.post("/gifted/confirm-payment", async (req, res) => {
       return;
     }
 
-    const [gift] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
-
     await db
       .update(gifts)
       .set({
@@ -146,14 +144,6 @@ router.post("/gifted/confirm-payment", async (req, res) => {
             : (session.payment_intent?.id ?? null),
       })
       .where(eq(gifts.id, giftId));
-
-    if (gift && !gift.paid) {
-      const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";
-      smsTo(
-        gift.senderPhone,
-        `gifted. ✅\nPayment confirmed — your ${amount} gift for ${gift.recipientName} is ready. Share the link whenever you're ready. We'll text you when they open it.`
-      );
-    }
 
     res.json({ success: true });
   } catch (err) {
@@ -254,9 +244,6 @@ router.post("/stripe/webhook", async (req, res) => {
     const giftId = session.metadata?.giftId;
 
     if (giftId && session.payment_status === "paid") {
-      const [gift] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
-      const alreadyPaid = gift?.paid ?? false;
-
       await db
         .update(gifts)
         .set({
@@ -267,14 +254,6 @@ router.post("/stripe/webhook", async (req, res) => {
               : (session.payment_intent?.id ?? null),
         })
         .where(eq(gifts.id, giftId));
-
-      if (gift && !alreadyPaid) {
-        const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";
-        smsTo(
-          gift.senderPhone,
-          `gifted. ✅\nPayment confirmed — your ${amount} gift for ${gift.recipientName} is ready. Share the link whenever you're ready. We'll text you when they open it.`
-        );
-      }
     }
   }
 
