@@ -1026,8 +1026,50 @@ export default function CreatePage() {
                     </p>
                   </div>
 
+                  {/* Mobile mood preview — live animated banner */}
+                  <div className="sm:hidden mb-4 relative rounded-2xl overflow-hidden" style={{ height: 120 }}>
+                    {/* Gradient layer fades in on experience change */}
+                    <motion.div
+                      key={selectedExperience}
+                      initial={{ opacity: 0.4 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.35 }}
+                      className="absolute inset-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${currentExperience.palette.from}, ${currentExperience.palette.via}, ${currentExperience.palette.to})`,
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                    {/* Particles restart on experience change via key */}
+                    <AmbientParticles key={`p-${selectedExperience}`} experienceId={selectedExperience} />
+                    {/* Soft pulse overlay */}
+                    <motion.div
+                      className="absolute inset-0 pointer-events-none"
+                      animate={{ opacity: [0.15, 0.4, 0.15] }}
+                      transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
+                      style={{
+                        background: currentExperience.isDark
+                          ? "radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.08) 0%, transparent 70%)"
+                          : "radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.22) 0%, transparent 70%)",
+                      }}
+                    />
+                    {/* Name + icon */}
+                    <div className="relative z-10 h-full flex items-center justify-center gap-4">
+                      <div
+                        className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
+                      >
+                        <CurrentIcon className={`w-6 h-6 ${currentExperience.isDark ? "text-indigo-200" : "text-white"}`} />
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold text-sm leading-tight">{currentExperience.name}</p>
+                        <p className="text-white/70 text-xs mt-0.5">{currentExperience.tagline}</p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Experience grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-10">
+                  <div className="grid grid-cols-3 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-10">
                     {EXPERIENCE_LIST.map((exp) => {
                       const isSelected = selectedExperience === exp.id;
                       const ExpIcon = EXPERIENCE_ICONS[exp.id];
@@ -1038,35 +1080,34 @@ export default function CreatePage() {
                           onClick={() => { setSelectedExperience(exp.id); setHasManuallyChosen(true); }}
                           className={`relative rounded-2xl overflow-hidden text-left transition-all duration-200 focus:outline-none ${
                             isSelected
-                              ? "ring-4 ring-primary ring-offset-4 ring-offset-background scale-[1.03] shadow-xl"
+                              ? "ring-[3px] ring-primary ring-offset-2 ring-offset-background scale-[1.04] shadow-xl"
                               : "hover:scale-[1.02] hover:shadow-lg"
                           }`}
                         >
                           <div
-                            className="w-full relative flex flex-col items-center justify-center py-6 gap-2"
+                            className="w-full relative flex flex-col items-center justify-center py-4 sm:py-6 gap-1.5 sm:gap-2"
                             style={{
                               background: `linear-gradient(135deg, ${exp.palette.from}, ${exp.palette.via}, ${exp.palette.to})`,
                             }}
                           >
-                            {/* Icon */}
                             <ExpIcon
-                              className={`w-6 h-6 ${exp.isDark ? "text-indigo-200" : "text-white/90"}`}
+                              className={`w-5 h-5 sm:w-6 sm:h-6 ${exp.isDark ? "text-indigo-200" : "text-white/90"}`}
                             />
 
-                            {/* Badges */}
                             {suggestedExperience === exp.id && !isSelected && (
-                              <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-white text-[9px] font-bold tracking-wide uppercase">
+                              <div className="absolute top-1.5 right-1.5 px-1 py-0.5 rounded-full bg-white/25 backdrop-blur-sm text-white text-[8px] font-bold tracking-wide uppercase hidden sm:block">
                                 Suggested
                               </div>
                             )}
                             {isSelected && (
-                              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white flex items-center justify-center">
+                              <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-white flex items-center justify-center">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                               </div>
                             )}
                           </div>
 
-                          <div className="px-3 py-2.5 bg-card border-x border-b border-border rounded-b-2xl">
+                          {/* Name + tagline — hidden on mobile (banner handles this) */}
+                          <div className="hidden sm:block px-3 py-2.5 bg-card border-x border-b border-border rounded-b-2xl">
                             <p className="text-sm font-semibold leading-tight">{exp.name}</p>
                             <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{exp.tagline}</p>
                           </div>
