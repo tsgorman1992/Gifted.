@@ -154,7 +154,7 @@ function buildGiftSvg(
     font-size="19"
     font-weight="600"
     text-anchor="middle"
-    fill="${ctaText}">Tap to open your gift</text>
+    fill="${ctaText}">Tap to open your gift  →</text>
 </svg>`;
 }
 
