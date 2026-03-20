@@ -939,6 +939,41 @@ function playExperienceSound(exp: string) {
   } catch { /* silently ignore — audio is enhancement only */ }
 }
 
+// ─── Scroll-to-explore hint (post-reveal only) ────────────────────────────────
+
+function ScrollHint({ isDark }: { isDark: boolean }) {
+  const [visible, setVisible] = React.useState(true);
+  React.useEffect(() => {
+    const t = setTimeout(() => setVisible(false), 3000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center justify-center pt-3 pb-1 pointer-events-none"
+        >
+          <motion.div
+            animate={{ y: [0, 6, 0] }}
+            transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={isDark ? "text-white/30" : "text-muted-foreground/40"}>
+              <path d="M10 3v11M10 14l-4-4M10 14l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </motion.div>
+          <p className={`text-[10px] tracking-widest uppercase mt-1 ${isDark ? "text-white/25" : "text-muted-foreground/40"}`}>
+            scroll to explore
+          </p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function RevealPage() {
@@ -998,16 +1033,19 @@ export default function RevealPage() {
       if (paid === "false") setGiftPaid(false);
     }
 
-    if (giftIdParam) {
-      setGiftId(giftIdParam);
+    const storedGiftId = localStorage.getItem("gifted_gift_id");
+    const resolvedGiftId = giftIdParam || storedGiftId;
+
+    if (resolvedGiftId) {
+      setGiftId(resolvedGiftId);
       // Mark as opened (only for real opens, not preview mode)
       if (!isPreviewMode) {
-        fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftIdParam)}/opened`, {
+        fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}/opened`, {
           method: "PATCH",
           credentials: "include",
         }).catch(() => { /* fire and forget */ });
       }
-      fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftIdParam)}`, { credentials: "include" })
+      fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null)
         .then(async (gift) => {
           if (!gift) return;
@@ -1423,14 +1461,6 @@ export default function RevealPage() {
                 </Button>
               </motion.div>
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.1, duration: 0.8 }}
-                className={`mt-5 text-xs tracking-widest uppercase ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}
-              >
-                scroll to explore
-              </motion.p>
                 </motion.div>
               ) : (
                 /* ── Gift box opening sequence ── */
@@ -1441,7 +1471,11 @@ export default function RevealPage() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <GiftBoxOpening phase={openPhase} experience={experience} isDark={isDark} />
+                  <div className="w-full flex justify-center" style={{ maxWidth: 210 }}>
+                    <div style={{ width: 210, maxWidth: "80vw", overflow: "hidden" }}>
+                      <GiftBoxOpening phase={openPhase} experience={experience} isDark={isDark} />
+                    </div>
+                  </div>
                   <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: openPhase < 4 ? 1 : 0 }}
@@ -1552,6 +1586,9 @@ export default function RevealPage() {
                 </motion.div>
               </div>
             </div>
+
+            {/* Scroll to explore hint — anchored to top of revealed content, fades after 3s */}
+            <ScrollHint isDark={isDark} />
 
             {/* Content sections */}
             <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8 md:space-y-14 -mt-4 md:-mt-6 relative z-20">
@@ -1673,10 +1710,11 @@ export default function RevealPage() {
               {/* Photos — section 2 (hidden when no photos) */}
               {photoUrls.length > 0 && (
                 <Section cfg={cfg} idx={2}>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className={photoUrls.length === 1 ? "flex" : "grid grid-cols-2 md:grid-cols-3 gap-4"}>
                     {photoUrls.map((url, i) => {
                       const failed = !!photoErrors[i];
                       const loaded = !!photoLoaded[i];
+                      const isSingle = photoUrls.length === 1;
                       return (
                         <motion.div
                           key={i}
@@ -1690,7 +1728,7 @@ export default function RevealPage() {
                             damping: 24,
                             duration: cfg.sectionStyle === "fade-drift" || cfg.sectionStyle === "rise-stagger" ? 0.7 : undefined,
                           }}
-                          className={`rounded-3xl overflow-hidden aspect-square relative group ${failed ? "" : "cursor-pointer"} ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}
+                          className={`rounded-3xl overflow-hidden relative group ${failed ? "" : "cursor-pointer"} ${isSingle ? "w-full aspect-video" : `aspect-square ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}`}
                           style={isDark
                             ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow }
                             : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }

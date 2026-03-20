@@ -26,7 +26,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     clearGiftSession();
     setLocation("/");
   }
-  const isReveal = location === "/reveal" || location.startsWith("/open/");
+  const isReveal = location === "/reveal" || location.startsWith("/open/") || location === "/redeem";
 
   if (isReveal) {
     return <main className="min-h-screen w-full bg-background selection:bg-primary/20">{children}</main>;

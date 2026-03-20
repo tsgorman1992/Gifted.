@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw, Lock } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw, Lock, Gift } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 
 type RedeemScreen = "otp-gate" | "otp-sent" | "banking" | "success";
 
 export default function RedeemPage() {
+  const [, setLocation]                     = useLocation();
   const [screen, setScreen]                 = useState<RedeemScreen>("banking"); // OTP bypassed temporarily — restore to "otp-gate" once Twilio toll-free is verified
   const [selectedMethod, setSelectedMethod] = useState<"venmo" | "paypal" | "zelle" | null>(null);
   const [isProcessing, setIsProcessing]     = useState(false);
@@ -20,6 +21,7 @@ export default function RedeemPage() {
   const [amount, setAmount]                 = useState<string>("0");
   const [giftId, setGiftId]                 = useState<string | null>(null);
   const [senderName, setSenderName]         = useState<string | null>(null);
+  const [alreadyRedeemed, setAlreadyRedeemed] = useState(false);
 
   const [otpLoading, setOtpLoading]         = useState(false);
   const [otpError, setOtpError]             = useState<string | null>(null);
@@ -32,7 +34,15 @@ export default function RedeemPage() {
     const stored = localStorage.getItem("gifted_amount");
     if (stored) setAmount(stored);
     const storedId = localStorage.getItem("gifted_gift_id");
-    if (storedId) setGiftId(storedId);
+    if (storedId) {
+      setGiftId(storedId);
+      fetch(`${BASE}/api/gifted/gifts/${encodeURIComponent(storedId)}`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(gift => {
+          if (gift?.redeemedAt) setAlreadyRedeemed(true);
+        })
+        .catch(() => { /* ignore */ });
+    }
     const sn = localStorage.getItem("gifted_sender_name");
     if (sn) setSenderName(sn);
   }, []);
@@ -143,6 +153,24 @@ export default function RedeemPage() {
     }
   };
 
+  if (alreadyRedeemed) {
+    return (
+      <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-6">
+          <Gift className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h1 className="font-serif text-4xl font-medium mb-3">Already redeemed</h1>
+        <p className="text-muted-foreground max-w-sm mb-8">
+          This gift has already been redeemed. If you think this is a mistake, please contact{" "}
+          <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a>.
+        </p>
+        <Link href={giftId ? `/open/${giftId}` : "/"}>
+          <Button variant="outline" className="rounded-full h-12 px-8">Back to gift</Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full bg-background flex flex-col pt-12 pb-24 px-6">
       <div className="max-w-2xl mx-auto w-full">
@@ -221,7 +249,7 @@ export default function RedeemPage() {
               </div>
 
               <div className="bg-card border border-border rounded-[2rem] p-8 space-y-6">
-                <div className="flex gap-3 justify-center">
+                <div className="flex gap-2 sm:gap-3 justify-center">
                   {otpCode.map((digit, i) => (
                     <input
                       key={i}
@@ -232,7 +260,7 @@ export default function RedeemPage() {
                       value={digit}
                       onChange={(e) => handleOtpInput(i, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      className="w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
+                      className="w-10 sm:w-12 h-12 sm:h-14 text-center text-xl sm:text-2xl font-bold rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
                     />
                   ))}
                 </div>
@@ -426,7 +454,7 @@ export default function RedeemPage() {
               <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-10">
                 Questions? Reach us at <a href="mailto:help@gifted.page" className="underline">help@gifted.page</a>
               </p>
-              <Button variant="outline" className="rounded-full h-12 px-8" onClick={() => (window.location.href = "/")}>
+              <Button variant="outline" className="rounded-full h-12 px-8" onClick={() => setLocation("/")}>
                 Return to home
               </Button>
             </motion.div>
