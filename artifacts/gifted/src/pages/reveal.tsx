@@ -1870,33 +1870,29 @@ export default function RevealPage() {
             {!isPreview && giftId && openPhase >= 4 && !reactionSkipped && (
               <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-16 mb-2">
                 <motion.div
-                  initial={{ opacity: 0, y: 24 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut", delay: 0.3 }}
-                  className="rounded-3xl border p-8 text-center"
-                  style={{
-                    background: isDark ? "rgba(255,255,255,0.04)" : "hsl(var(--card))",
-                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))",
-                  }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.5 }}
+                  className="text-center py-2"
                 >
                   {reactionSent ? (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.85 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.35 }}
-                      className="flex flex-col items-center gap-2"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex items-center justify-center gap-2"
                     >
-                      <span className="text-4xl">{reactionEmoji}</span>
-                      <p className={`text-sm font-medium ${isDark ? "text-white/70" : "text-muted-foreground"}`}>
-                        Reaction sent to {senderName} ✨
-                      </p>
+                      <span className="text-xl">{reactionEmoji}</span>
+                      <span className={`text-xs ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>
+                        Sent to {senderName}
+                      </span>
                     </motion.div>
                   ) : (
                     <>
-                      <p className={`text-sm font-medium mb-5 ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
-                        Let {senderName} know how you feel
+                      <p className={`text-xs mb-3 ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>
+                        Send {senderName} a quick reaction
                       </p>
-                      <div className="flex items-center justify-center gap-3 mb-5 flex-wrap">
+                      <div className="flex items-center justify-center gap-4 mb-3 flex-wrap">
                         {(["❤️", "😭", "🤯", "😊", "🙏"] as const).map((emoji) => (
                           <button
                             key={emoji}
@@ -1914,7 +1910,7 @@ export default function RevealPage() {
                               } catch {}
                               setReactionSent(true);
                             }}
-                            className="text-4xl sm:text-5xl transition-all duration-150 hover:scale-125 active:scale-110 rounded-2xl p-2"
+                            className="text-2xl transition-all duration-150 hover:scale-125 active:scale-110"
                             style={{ lineHeight: 1 }}
                           >
                             {emoji}
@@ -1924,7 +1920,7 @@ export default function RevealPage() {
                       <button
                         type="button"
                         onClick={() => setReactionSkipped(true)}
-                        className={`text-xs underline underline-offset-2 ${isDark ? "text-white/30 hover:text-white/50" : "text-muted-foreground/50 hover:text-muted-foreground"} transition-colors`}
+                        className={`text-xs underline underline-offset-2 ${isDark ? "text-white/20 hover:text-white/40" : "text-muted-foreground/30 hover:text-muted-foreground/60"} transition-colors`}
                       >
                         Skip
                       </button>
