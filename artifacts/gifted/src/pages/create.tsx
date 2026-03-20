@@ -217,244 +217,357 @@ function ProgressBar({ step, onStepClick }: { step: number; onStepClick: (s: num
   );
 }
 
-// ─── Live preview card ────────────────────────────────────────────────────────
+// ─── Ambient particle helpers (lightweight version for preview card) ──────────
 
-type PreviewPhase = "sealed" | "opening" | "revealed";
+type AmbientParticleEffect = "petals" | "rose-petals" | "snow" | "confetti" | "stars" | "bokeh";
+
+function getAmbientEffect(experienceId: string): AmbientParticleEffect | null {
+  switch (experienceId) {
+    case "garden-bloom":   return "petals";
+    case "rose-petal":     return "rose-petals";
+    case "snow-flurry":    return "snow";
+    case "confetti-burst": return "confetti";
+    case "midnight-stars": return "stars";
+    case "golden-hour":    return "bokeh";
+    case "sunrise":        return "bokeh";
+    default:               return null;
+  }
+}
+
+function getPreIconMotion(experienceId: string) {
+  switch (experienceId) {
+    case "garden-bloom":
+      return { animate: { y: [0, -8, 0], rotate: [0, 6, -6, 0] }, transition: { repeat: Infinity, duration: 3, ease: "easeInOut" } };
+    case "midnight-stars":
+      return { animate: { opacity: [0.3, 1, 0.3], scale: [0.92, 1.08, 0.92] }, transition: { repeat: Infinity, duration: 1.8, ease: "easeInOut" } };
+    case "rose-petal":
+      return { animate: { scale: [1, 1.22, 1, 1.12, 1] }, transition: { repeat: Infinity, duration: 1.2, ease: "easeInOut" } };
+    case "snow-flurry":
+      return { animate: { rotate: 360 }, transition: { repeat: Infinity, duration: 4, ease: "linear" } };
+    case "golden-hour":
+      return { animate: { scale: [1, 1.12, 1], opacity: [0.8, 1, 0.8] }, transition: { repeat: Infinity, duration: 2.4, ease: "easeInOut" } };
+    case "sunrise":
+      return { animate: { y: [0, -6, 0], scale: [1, 1.06, 1] }, transition: { repeat: Infinity, duration: 2.8, ease: "easeInOut" } };
+    case "confetti-burst":
+    default:
+      return { animate: { y: [0, -12, 0] }, transition: { repeat: Infinity, duration: 0.9, ease: "easeInOut" } };
+  }
+}
+
+function AmbientParticles({ experienceId }: { experienceId: string }) {
+  const effect = getAmbientEffect(experienceId);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let active = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    function spawnParticle() {
+      if (!active || !container) return;
+
+      const el = document.createElement("div");
+      el.style.position = "absolute";
+      el.style.pointerEvents = "none";
+      el.style.zIndex = "10";
+
+      if (effect === "petals" || effect === "rose-petals") {
+        const colors = effect === "rose-petals"
+          ? ["#FFB7C5", "#FF8FAB", "#E8A7B1", "#FFC0CB", "#fda4af"]
+          : ["#FFB7C5", "#C7CEEA", "#B5EAD7", "#FFFFFF", "#E8D5E0"];
+        const size = effect === "rose-petals" ? 10 + Math.random() * 14 : 7 + Math.random() * 10;
+        const dur = 3000 + Math.random() * 3000;
+        const drift = (Math.random() - 0.5) * 60;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        el.style.cssText = `
+          position:absolute; pointer-events:none; z-index:10;
+          left:${Math.random() * 100}%;
+          top:-8%;
+          width:${size}px; height:${size * 0.7}px;
+          background:${color};
+          border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+          opacity:${0.5 + Math.random() * 0.5};
+          animation:none;
+          transition:none;
+        `;
+        container.appendChild(el);
+        const startTime = Date.now();
+        const spin = Math.random() * 360;
+        function frame() {
+          if (!active) return;
+          const t = (Date.now() - startTime) / dur;
+          if (t >= 1) { el.remove(); return; }
+          const y = t * 108;
+          const x = drift * Math.sin(t * Math.PI * 2);
+          const rot = spin * t;
+          el.style.transform = `translateY(${y}%) translateX(${x}px) rotate(${rot}deg)`;
+          el.style.opacity = String(t > 0.8 ? (1 - t) * 5 * (0.5 + Math.random() * 0.5) : (0.5 + Math.random() * 0.5));
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      } else if (effect === "snow") {
+        const colors = ["#FFFFFF", "#E8F4FD", "#BDE0FE"];
+        const size = 3 + Math.random() * 8;
+        const dur = 2500 + Math.random() * 3500;
+        const drift = (Math.random() - 0.5) * 40;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        el.style.cssText = `
+          position:absolute; pointer-events:none; z-index:10;
+          left:${Math.random() * 100}%;
+          top:-5%;
+          width:${size}px; height:${size}px;
+          background:${color};
+          border-radius:50%;
+          opacity:${0.5 + Math.random() * 0.4};
+        `;
+        container.appendChild(el);
+        const startTime = Date.now();
+        function frame() {
+          if (!active) return;
+          const t = (Date.now() - startTime) / dur;
+          if (t >= 1) { el.remove(); return; }
+          const y = t * 108;
+          const x = drift * t;
+          el.style.transform = `translateY(${y}%) translateX(${x}px)`;
+          el.style.opacity = String(t > 0.85 ? (1 - t) * 6.7 * 0.9 : 0.7 + Math.random() * 0.3);
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      } else if (effect === "confetti") {
+        const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#FF9500", "#BF5AF2"];
+        const size = 5 + Math.random() * 7;
+        const dur = 2000 + Math.random() * 2000;
+        const drift = (Math.random() - 0.5) * 50;
+        const spin = Math.random() * 720 - 360;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const isRect = Math.random() > 0.5;
+        el.style.cssText = `
+          position:absolute; pointer-events:none; z-index:10;
+          left:${Math.random() * 100}%;
+          top:-5%;
+          width:${size}px; height:${isRect ? size * 0.4 : size}px;
+          background:${color};
+          border-radius:${isRect ? "2px" : "50%"};
+          opacity:${0.6 + Math.random() * 0.4};
+        `;
+        container.appendChild(el);
+        const startTime = Date.now();
+        function frame() {
+          if (!active) return;
+          const t = (Date.now() - startTime) / dur;
+          if (t >= 1) { el.remove(); return; }
+          const y = t * 108;
+          const x = drift * t;
+          const rot = spin * t;
+          el.style.transform = `translateY(${y}%) translateX(${x}px) rotate(${rot}deg)`;
+          el.style.opacity = String(t > 0.8 ? (1 - t) * 5 * 0.9 : 0.8 + Math.random() * 0.2);
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      } else if (effect === "stars") {
+        const size = 1.5 + Math.random() * 2.5;
+        const posX = Math.random() * 100;
+        const posY = Math.random() * 100;
+        const dur = 1800 + Math.random() * 3000;
+        el.style.cssText = `
+          position:absolute; pointer-events:none; z-index:10;
+          left:${posX}%; top:${posY}%;
+          width:${size}px; height:${size}px;
+          background:white;
+          border-radius:50%;
+        `;
+        container.appendChild(el);
+        const startTime = Date.now();
+        function frame() {
+          if (!active) return;
+          const t = (Date.now() - startTime) / dur;
+          if (t >= 1) { el.remove(); return; }
+          const pulse = 0.2 + 0.8 * Math.abs(Math.sin(t * Math.PI * 2));
+          el.style.opacity = String(pulse);
+          el.style.transform = `scale(${0.7 + 0.6 * pulse})`;
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+        return;
+      } else if (effect === "bokeh") {
+        const isGolden = experienceId === "golden-hour";
+        const size = 20 + Math.random() * 40;
+        const posX = Math.random() * 100;
+        const posY = Math.random() * 100;
+        const dur = 5000 + Math.random() * 8000;
+        const colors = isGolden
+          ? ["rgba(247,197,130,0.25)", "rgba(232,168,80,0.18)", "rgba(255,215,0,0.15)"]
+          : ["rgba(255,200,160,0.22)", "rgba(255,150,130,0.18)", "rgba(255,220,100,0.15)"];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        el.style.cssText = `
+          position:absolute; pointer-events:none; z-index:10;
+          left:${posX}%; top:${posY}%;
+          width:${size}px; height:${size}px;
+          background:radial-gradient(circle, ${color} 0%, transparent 70%);
+          border-radius:50%;
+          filter:blur(2px);
+          transform:translate(-50%,-50%);
+        `;
+        container.appendChild(el);
+        const startTime = Date.now();
+        const startY = posY;
+        function frame() {
+          if (!active) return;
+          const t = (Date.now() - startTime) / dur;
+          if (t >= 1) { el.remove(); return; }
+          const drift = -10 * Math.sin(t * Math.PI);
+          el.style.transform = `translate(-50%, calc(-50% + ${drift}px))`;
+          const opacity = Math.sin(t * Math.PI);
+          el.style.opacity = String(Math.max(0, opacity * 0.9));
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+        return;
+      }
+    }
+
+    if (!effect) return;
+
+    const interval = effect === "stars" || effect === "bokeh" ? 600 :
+                     effect === "snow" ? 200 :
+                     effect === "confetti" ? 250 : 400;
+
+    const batchSize = effect === "snow" ? 3 :
+                      effect === "stars" || effect === "bokeh" ? 1 : 2;
+
+    function spawnBatch() {
+      for (let i = 0; i < batchSize; i++) {
+        timers.push(setTimeout(spawnParticle, Math.random() * interval * 0.5));
+      }
+    }
+
+    spawnBatch();
+    intervalId = setInterval(spawnBatch, interval);
+
+    return () => {
+      active = false;
+      if (intervalId) clearInterval(intervalId);
+      timers.forEach(clearTimeout);
+      setTimeout(() => {
+        if (container) container.innerHTML = "";
+      }, 3000);
+    };
+  }, [effect, experienceId]);
+
+  if (!effect) return null;
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 overflow-hidden pointer-events-none"
+      style={{ borderRadius: "inherit" }}
+    />
+  );
+}
+
+// ─── Live preview card ────────────────────────────────────────────────────────
 
 function PreviewCard({
   experience,
   recipientName,
-  giftTitle,
-  personalNote,
-  amount,
 }: {
   experience: ExperienceMeta;
   recipientName: string;
-  giftTitle?: string;
-  personalNote?: string;
-  amount?: string;
 }) {
   const Icon = EXPERIENCE_ICONS[experience.id];
   const isDark = experience.isDark;
-  const [phase, setPhase] = useState<PreviewPhase>("sealed");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setPhase("sealed");
-  }, [experience.id]);
-
-  function handleOpen() {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setPhase("opening");
-    timerRef.current = setTimeout(() => setPhase("revealed"), 900);
-  }
-
-  function handleReplay() {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setPhase("sealed");
-  }
 
   const textColor = isDark ? "text-white" : "text-white";
   const mutedColor = isDark ? "text-white/50" : "text-white/70";
-  const glassBg = "rgba(255,255,255,0.15)";
+
+  const iconMotion = getPreIconMotion(experience.id);
 
   return (
     <div className="hidden lg:block w-64 flex-shrink-0">
       <div className="sticky top-8">
         <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest mb-3 text-center">
-          Their reveal
+          Choose the mood
         </p>
-        <div
-          className="w-full rounded-[2rem] overflow-hidden shadow-2xl relative"
-          style={{ aspectRatio: "9/16", background: `linear-gradient(155deg, ${experience.palette.from}, ${experience.palette.via}, ${experience.palette.to})` }}
-        >
-          <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={experience.id}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full rounded-[2rem] overflow-hidden shadow-2xl relative"
+            style={{ aspectRatio: "9/16", background: `linear-gradient(155deg, ${experience.palette.from}, ${experience.palette.via}, ${experience.palette.to})` }}
+          >
+            {/* Ambient particles */}
+            <AmbientParticles experienceId={experience.id} />
 
-            {/* ── Sealed ── */}
-            {phase === "sealed" && (
-              <motion.div
-                key="sealed"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, scale: 1.04 }}
-                transition={{ duration: 0.3 }}
-                className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center"
-              >
-                <motion.div
-                  key={experience.id}
-                  initial={{ scale: 0.7, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                  className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
-                  style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
-                >
-                  <Icon className={`w-7 h-7 ${isDark ? "text-indigo-200" : "text-white"}`} />
-                </motion.div>
-                <p className={`text-xs mb-1.5 font-medium ${mutedColor}`}>A gift for</p>
-                <motion.h2
-                  key={recipientName}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4 }}
-                  className={`font-serif text-3xl leading-tight mb-8 ${textColor}`}
-                  style={{ textShadow: "0 2px 20px rgba(0,0,0,0.15)" }}
-                >
-                  {recipientName || "Someone special"}
-                </motion.h2>
-                <button
-                  onClick={handleOpen}
-                  className="w-full rounded-full py-2.5 px-4 text-center text-sm font-medium cursor-pointer transition-transform duration-150 hover:scale-105 active:scale-95"
-                  style={{ background: glassBg, backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.85)" : "white", border: "none", outline: "none" }}
-                  type="button"
-                >
-                  Tap to open
-                </button>
-              </motion.div>
-            )}
+            {/* Soft pulsing gradient overlay */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              animate={{ opacity: [0.3, 0.55, 0.3] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+              style={{
+                background: isDark
+                  ? "radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.08) 0%, transparent 70%)"
+                  : "radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.25) 0%, transparent 70%)",
+              }}
+            />
 
-            {/* ── Opening ── */}
-            {phase === "opening" && (
+            {/* Content */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center">
+              {/* Floating icon */}
               <motion.div
-                key="opening"
-                className="absolute inset-0 flex items-center justify-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                className="w-16 h-16 rounded-full flex items-center justify-center mb-5"
+                style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
               >
-                <motion.div
-                  className="w-16 h-16 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(255,255,255,0.25)", backdropFilter: "blur(8px)" }}
-                  animate={{ scale: [1, 1.18, 0.9, 1.06, 1], opacity: [1, 1, 1, 1, 0] }}
-                  transition={{ duration: 0.85, ease: "easeOut" }}
-                >
+                <motion.div {...iconMotion}>
                   <Icon className={`w-8 h-8 ${isDark ? "text-indigo-200" : "text-white"}`} />
                 </motion.div>
               </motion.div>
-            )}
 
-            {/* ── Revealed ── */}
-            {phase === "revealed" && (
-              <motion.div
-                key="revealed"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.35 }}
-                className="absolute inset-0 flex flex-col"
-              >
-                {/* Header strip */}
-                <div className="px-5 pt-6 pb-4 text-center shrink-0">
-                  <p className={`text-[10px] font-medium mb-0.5 ${mutedColor}`}>Opened by</p>
-                  <p className={`font-serif text-2xl ${textColor}`} style={{ textShadow: "0 2px 12px rgba(0,0,0,0.2)" }}>
-                    {recipientName || "Someone special"}
-                  </p>
-                </div>
+              {/* Experience name */}
+              <p className={`text-xs font-semibold uppercase tracking-widest mb-1.5 ${mutedColor}`}>
+                {experience.name}
+              </p>
+              <p className={`font-serif text-lg leading-tight mb-3 ${textColor}`} style={{ textShadow: "0 2px 16px rgba(0,0,0,0.18)" }}>
+                {experience.tagline}
+              </p>
 
-                {/* Content cards */}
-                {(() => {
-                  const hasContent = !!(giftTitle || personalNote || (amount && parseFloat(amount) > 0));
-                  const iconStyle = { color: isDark ? "rgba(200,190,255,0.9)" : "rgba(255,255,255,0.9)" };
-                  const FEATURES = [
-                    { Icon: Heart,      label: "Personal message",  sub: "Words that land" },
-                    { Icon: Video,      label: "Video moment",      sub: "A clip just for them" },
-                    { Icon: Gift,       label: "Cash to spend",     sub: "Instant to their card" },
-                    { Icon: Link2,      label: "Something extra",   sub: "A link, ticket, playlist" },
-                  ];
-                  return (
-                    <div className="flex-1 px-3 pb-3 flex flex-col gap-2 overflow-hidden">
-                      {hasContent ? (
-                        <>
-                          {/* Filled: title + note */}
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="rounded-2xl p-3 flex-1 min-h-0 overflow-hidden"
-                            style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(12px)" }}
-                          >
-                            {giftTitle && (
-                              <p className={`font-serif text-sm font-semibold leading-snug mb-1.5 ${textColor}`}>
-                                {giftTitle}
-                              </p>
-                            )}
-                            {personalNote && (
-                              <p className="text-[11px] leading-relaxed line-clamp-4" style={{ color: isDark ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.8)" }}>
-                                {personalNote}
-                              </p>
-                            )}
-                          </motion.div>
-
-                          {/* Filled: balance */}
-                          {amount && parseFloat(amount) > 0 && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 8 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.2 }}
-                              className="rounded-2xl px-3 py-2.5 flex items-center justify-between shrink-0"
-                              style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(12px)" }}
-                            >
-                              <div>
-                                <p className={`text-[10px] font-medium ${mutedColor}`}>Gift balance</p>
-                                <p className={`text-sm font-bold ${textColor}`}>${parseFloat(amount).toFixed(2)}</p>
-                              </div>
-                              <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.2)" }}>
-                                <Gift className={`w-3.5 h-3.5`} style={iconStyle} />
-                              </div>
-                            </motion.div>
-                          )}
-                        </>
-                      ) : (
-                        /* Empty: feature showcase */
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.1 }}
-                          className="rounded-2xl p-3 flex-1 min-h-0 flex flex-col justify-center gap-2.5"
-                          style={{ background: "rgba(255,255,255,0.13)", backdropFilter: "blur(12px)" }}
-                        >
-                          <p className={`text-[10px] font-semibold uppercase tracking-widest mb-0.5 ${mutedColor}`}>
-                            What's inside
-                          </p>
-                          {FEATURES.map(({ Icon: FIcon, label, sub }, i) => (
-                            <motion.div
-                              key={label}
-                              initial={{ opacity: 0, x: -6 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.12 + i * 0.07 }}
-                              className="flex items-center gap-2.5"
-                            >
-                              <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.18)" }}>
-                                <FIcon className="w-3 h-3" style={iconStyle} />
-                              </div>
-                              <div className="min-w-0">
-                                <p className={`text-[11px] font-semibold leading-none ${textColor}`}>{label}</p>
-                                <p className="text-[9px] leading-snug mt-0.5" style={{ color: isDark ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.65)" }}>{sub}</p>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </motion.div>
-                      )}
-
-                      {/* Replay */}
-                      <motion.button
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: hasContent ? 0.3 : 0.5 }}
-                        onClick={handleReplay}
-                        className="w-full rounded-full py-2 text-xs font-medium cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-                        style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: isDark ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.85)", border: "none" }}
-                        type="button"
-                      >
-                        <RotateCcw className="w-3 h-3" /> Replay
-                      </motion.button>
-                    </div>
-                  );
-                })()}
-              </motion.div>
-            )}
-
-          </AnimatePresence>
-        </div>
+              {/* Recipient name hint */}
+              <AnimatePresence mode="wait">
+                {recipientName ? (
+                  <motion.div
+                    key={recipientName}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.35 }}
+                    className="mt-2"
+                  >
+                    <p className={`text-[11px] font-medium ${mutedColor} mb-0.5`}>A gift for</p>
+                    <p className={`font-serif text-xl ${textColor}`} style={{ textShadow: "0 2px 12px rgba(0,0,0,0.18)" }}>
+                      {recipientName}
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.p
+                    key="placeholder"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={`text-[11px] mt-2 ${mutedColor}`}
+                    style={{ fontStyle: "italic" }}
+                  >
+                    Enter a name above
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        </AnimatePresence>
 
         <div className="mt-3 text-center">
           <p className="text-xs font-semibold text-foreground">{experience.name}</p>
@@ -1008,9 +1121,6 @@ export default function CreatePage() {
                 <PreviewCard
                   experience={currentExperience}
                   recipientName={recipientName}
-                  giftTitle={giftTitle}
-                  personalNote={personalNote}
-                  amount={amount}
                 />
               </div>
             </motion.div>

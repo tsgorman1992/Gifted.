@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
-  Copy, MessageCircle, Share2, Check, ExternalLink,
+  Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, User, ArrowLeft,
+  CheckCircle2, Send, User, ArrowLeft, Eye, X,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -258,32 +258,43 @@ export default function PreviewPage() {
     window.open(`sms:?body=${encodeURIComponent(body)}`, "_blank");
   };
 
-  const handleRevealPreview = async () => {
-    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-    // Open the tab synchronously within the user gesture to avoid popup blockers.
-    // We'll navigate it to the final URL once the gift is saved.
-    const newTab = window.open("about:blank", "_blank");
+  const [revealUrl, setRevealUrl] = useState<string | null>(null);
+  const [mobileModalOpen, setMobileModalOpen] = useState(false);
 
-    const saved = await saveGift();
-
-    if (!saved) {
-      // Save failed — close the blank tab and do nothing (saveGift sets saveError)
-      newTab?.close();
-      return;
-    }
-
+  const buildRevealUrl = (savedId: string) => {
+    const b = import.meta.env.BASE_URL.replace(/\/$/, "");
     const params = new URLSearchParams();
-    params.set("giftId", saved.id);
+    params.set("giftId", savedId);
     params.set("preview", "true");
-
-    if (newTab) {
-      newTab.location.href = `${base}/reveal?${params.toString()}`;
-    } else {
-      // Fallback if newTab reference was lost
-      window.open(`${base}/reveal?${params.toString()}`, "_blank");
-    }
+    return `${b}/reveal?${params.toString()}`;
   };
 
+  const handleRevealPreview = async () => {
+    let url = revealUrl;
+    if (!url) {
+      const saved = await saveGift();
+      if (!saved) return;
+      url = buildRevealUrl(saved.id);
+      setRevealUrl(url);
+    }
+    setMobileModalOpen(true);
+  };
+
+  const handleDesktopRevealLoad = async () => {
+    if (revealUrl) return;
+    const saved = await saveGift();
+    if (!saved) return;
+    const url = buildRevealUrl(saved.id);
+    setRevealUrl(url);
+  };
+
+  const desktopLoadRef = useRef(false);
+  useEffect(() => {
+    if (desktopLoadRef.current) return;
+    if (window.innerWidth < 768) return;
+    desktopLoadRef.current = true;
+    handleDesktopRevealLoad();
+  }, []);
 
   const handleEdit = () => {
     localStorage.removeItem("gifted_paid_id");
@@ -307,68 +318,111 @@ export default function PreviewPage() {
 
   return (
     <div className="min-h-screen bg-background">
+
+      {/* Mobile reveal modal */}
+      <AnimatePresence>
+        {mobileModalOpen && (
+          <motion.div
+            key="mobile-reveal-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setMobileModalOpen(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 32 }}
+              className="absolute inset-0 flex flex-col"
+              style={{ background: "hsl(var(--background))" }}
+            >
+              {/* Modal header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+                <div>
+                  <p className="text-sm font-semibold">Preview their reveal</p>
+                  <p className="text-xs text-muted-foreground">This is what {recipientName} will experience</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {/* Reveal iframe */}
+              <div className="flex-1 relative overflow-hidden">
+                {revealUrl ? (
+                  <iframe
+                    src={revealUrl}
+                    className="w-full h-full border-0"
+                    title="Gift reveal preview"
+                    allow="autoplay"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-14 flex flex-col md:flex-row gap-8 md:gap-14">
 
-        {/* Desktop: phone mockup */}
-        <div className="hidden md:block flex-1">
+        {/* Desktop: inline reveal experience */}
+        <div className="hidden md:flex flex-col flex-1">
           <div className="sticky top-24">
             <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest mb-4 text-center">
-              Recipient view
+              Their reveal experience
             </p>
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="rounded-[2rem] border border-border shadow-2xl overflow-hidden"
+              className="rounded-[2rem] overflow-hidden shadow-2xl"
+              style={{ aspectRatio: "9/19.5" }}
             >
-              <div className="h-6 w-full bg-secondary/50 border-b border-border flex justify-center items-center">
-                <div className="w-16 h-1 rounded-full bg-border" />
-              </div>
-              <div className="h-[580px] overflow-y-auto overflow-x-hidden bg-background">
-                <div className="h-56 relative" style={gStyle}>
-                  <div className="absolute inset-0 bg-black/25" />
-                  <div className="absolute bottom-5 left-5 right-5 text-white">
-                    <p className="text-xs font-medium opacity-75 mb-0.5">A gift for</p>
-                    <h3 className="font-serif text-3xl mb-3">{recipientName}</h3>
-                    <div className="w-full h-px bg-white/20 mb-3" />
-                    <p className="text-xs opacity-75">From {senderName}</p>
+              {revealUrl ? (
+                <iframe
+                  src={revealUrl}
+                  className="w-full h-full border-0 block"
+                  title="Gift reveal preview"
+                  allow="autoplay"
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex flex-col items-center justify-center gap-4 relative cursor-pointer group"
+                  style={{ background: `linear-gradient(155deg, ${expMeta.palette.from}, ${expMeta.palette.via}, ${expMeta.palette.to})` }}
+                  onClick={handleDesktopRevealLoad}
+                >
+                  <div className="absolute inset-0 bg-black/15" />
+                  <motion.div
+                    animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
+                    transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+                    className="relative z-10 w-16 h-16 rounded-full flex items-center justify-center"
+                    style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)" }}
+                  >
+                    <Eye className="w-7 h-7 text-white" />
+                  </motion.div>
+                  <div className="relative z-10 text-center px-6">
+                    <p className="text-white font-semibold text-sm mb-1">Preview the reveal</p>
+                    <p className="text-white/70 text-xs">
+                      {saving ? "Saving gift…" : "See the animated experience"}
+                    </p>
                   </div>
-                </div>
-                <div className="p-5 space-y-7">
-                  <div>
-                    <h4 className="font-serif text-xl mb-2">{giftTitle}</h4>
-                    {personalNote && <p className="text-sm text-muted-foreground leading-relaxed">{personalNote}</p>}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {hasVideo && (
-                      <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
-                        <Video className="w-3 h-3 text-primary" /> Video
-                      </span>
-                    )}
-                    {photoCount > 0 && (
-                      <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
-                        <ImageIcon className="w-3 h-3 text-primary" /> {photoCount} Photo{photoCount !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                    {hasPlaylist && (
-                      <span className="px-3 py-1 rounded-full bg-secondary text-xs font-medium flex items-center gap-1.5">
-                        <Music className="w-3 h-3 text-primary" /> Link
-                      </span>
-                    )}
-                  </div>
-                  {hasBalance && (
-                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
-                      <div>
-                        {giftIntent && <p className="text-xs text-muted-foreground mb-0.5">{giftIntent}</p>}
-                        <p className="text-2xl font-bold font-serif text-primary">${displayAmt}</p>
-                      </div>
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-primary" />
-                      </div>
+                  {saving && (
+                    <div className="relative z-10">
+                      <Loader2 className="w-5 h-5 text-white animate-spin" />
                     </div>
                   )}
                 </div>
-              </div>
+              )}
             </motion.div>
           </div>
         </div>
@@ -603,8 +657,8 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* Reveal preview nudge */}
-            <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3.5 flex items-center justify-between gap-4">
+            {/* Reveal preview nudge — mobile only (desktop shows inline in left panel) */}
+            <div className="md:hidden rounded-2xl border border-border bg-secondary/20 px-4 py-3.5 flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold">Preview their reveal</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -618,9 +672,17 @@ export default function PreviewPage() {
                 disabled={saving}
                 className="rounded-xl shrink-0"
               >
-                {saving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5 mr-1.5" />}
-                {saving ? "Saving..." : "Open"}
+                {saving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1.5" />}
+                {saving ? "Saving..." : "Preview"}
               </Button>
+            </div>
+
+            {/* Desktop hint pointing to the left panel */}
+            <div className="hidden md:flex items-center gap-3 rounded-2xl border border-border bg-secondary/20 px-4 py-3.5">
+              <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Reveal preview</span> — click the panel on the left to see {recipientName}&apos;s experience
+              </p>
             </div>
 
 
