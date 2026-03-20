@@ -41,7 +41,7 @@ function truncate(s: string, max: number): string {
 
 function buildGiftSvg(
   recipientName: string,
-  senderName: string,
+  _senderName: string,
   experience: string,
   _amount?: number | null,
 ): string {
@@ -59,13 +59,11 @@ function buildGiftSvg(
   const ctaText        = dark ? "rgba(255,255,255,0.88)" : "#3d2010";
   const sp             = dark ? 0.44 : 0.54;
 
-  const name   = esc(truncate(recipientName || "you", 18));
-  const sender = esc(truncate(senderName    || "someone special", 28));
+  const name = esc(truncate(recipientName || "you", 18));
 
   const nameLen      = name.length;
   const nameFontSize = nameLen <= 6 ? 108 : nameLen <= 10 ? 88 : nameLen <= 14 ? 72 : 60;
-  const nameY        = 368;
-  const fromY        = nameY + 58;
+  const nameY        = 390;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
@@ -126,7 +124,7 @@ function buildGiftSvg(
     fill="${logoColor}">gifted.</text>
 
   <!-- "A GIFT FOR" label -->
-  <text x="72" y="250"
+  <text x="72" y="268"
     font-family="Arial, Helvetica, sans-serif"
     font-size="20"
     font-weight="400"
@@ -140,21 +138,14 @@ function buildGiftSvg(
     font-weight="700"
     fill="${textPrimary}">${name}</text>
 
-  <!-- "from [sender]" -->
-  <text x="72" y="${fromY}"
-    font-family="Arial, Helvetica, sans-serif"
-    font-size="26"
-    font-weight="300"
-    fill="${textSecondary}">from ${sender}</text>
-
   <!-- ── CTA PILL (bottom left) ── -->
-  <rect x="72" y="548" width="302" height="50" rx="25" fill="${ctaFill}" stroke="${ctaStroke}" stroke-width="1.5" />
-  <text x="223" y="579"
+  <rect x="72" y="548" width="270" height="50" rx="25" fill="${ctaFill}" stroke="${ctaStroke}" stroke-width="1.5" />
+  <text x="207" y="579"
     font-family="Arial, Helvetica, sans-serif"
     font-size="19"
     font-weight="600"
     text-anchor="middle"
-    fill="${ctaText}">Tap to open your gift  →</text>
+    fill="${ctaText}">Tap to open your gift</text>
 </svg>`;
 }
 
