@@ -960,6 +960,10 @@ export default function RevealPage() {
   const [isOpening, setIsOpening]         = useState(false);
   const [openPhase, setOpenPhase]         = useState(0);
   const [lightboxUrl, setLightboxUrl]     = useState<string | null>(null);
+  const [giftId, setGiftId]               = useState<string | null>(null);
+  const [reactionEmoji, setReactionEmoji] = useState<string | null>(null);
+  const [reactionSent, setReactionSent]   = useState(false);
+  const [reactionSkipped, setReactionSkipped] = useState(false);
 
   const amountRef  = useRef<HTMLDivElement>(null);
   const amountInView = useInView(amountRef, { once: true });
@@ -989,6 +993,7 @@ export default function RevealPage() {
     }
 
     if (giftIdParam) {
+      setGiftId(giftIdParam);
       fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftIdParam)}`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null)
         .then(async (gift) => {
@@ -1860,6 +1865,74 @@ export default function RevealPage() {
               )}
 
             </div>
+
+            {/* Reaction panel — shown after full reveal, real gifts only */}
+            {!isPreview && giftId && openPhase >= 4 && !reactionSkipped && (
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-16 mb-2">
+                <motion.div
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: "easeOut", delay: 0.3 }}
+                  className="rounded-3xl border p-8 text-center"
+                  style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "hsl(var(--card))",
+                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))",
+                  }}
+                >
+                  {reactionSent ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.35 }}
+                      className="flex flex-col items-center gap-2"
+                    >
+                      <span className="text-4xl">{reactionEmoji}</span>
+                      <p className={`text-sm font-medium ${isDark ? "text-white/70" : "text-muted-foreground"}`}>
+                        Reaction sent to {senderName} ✨
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <>
+                      <p className={`text-sm font-medium mb-5 ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
+                        Let {senderName} know how you feel
+                      </p>
+                      <div className="flex items-center justify-center gap-3 mb-5 flex-wrap">
+                        {(["❤️", "😭", "🤯", "😊", "🙏"] as const).map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={async () => {
+                              setReactionEmoji(emoji);
+                              const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+                              try {
+                                await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/reaction`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  credentials: "include",
+                                  body: JSON.stringify({ reaction: emoji }),
+                                });
+                              } catch {}
+                              setReactionSent(true);
+                            }}
+                            className="text-4xl sm:text-5xl transition-all duration-150 hover:scale-125 active:scale-110 rounded-2xl p-2"
+                            style={{ lineHeight: 1 }}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setReactionSkipped(true)}
+                        className={`text-xs underline underline-offset-2 ${isDark ? "text-white/30 hover:text-white/50" : "text-muted-foreground/50 hover:text-muted-foreground"} transition-colors`}
+                      >
+                        Skip
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+              </div>
+            )}
 
             {/* Viral CTA — shown to every gift recipient */}
             <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-20 mb-8">

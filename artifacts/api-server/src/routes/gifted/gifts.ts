@@ -108,11 +108,41 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       intent: gift.intent,
       paid: gift.paid,
       redeemedAt: gift.redeemedAt,
+      reaction: gift.reaction,
+      reactionAt: gift.reactionAt,
       createdAt: gift.createdAt,
     });
   } catch (err) {
     console.error("Error fetching gift:", err);
     res.status(500).json({ error: "Failed to fetch gift" });
+  }
+});
+
+router.patch("/gifted/gifts/:id/reaction", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reaction } = req.body as { reaction: string };
+
+    if (!reaction || typeof reaction !== "string" || reaction.trim().length === 0) {
+      res.status(400).json({ error: "reaction is required" });
+      return;
+    }
+
+    const [gift] = await db.select({ id: gifts.id }).from(gifts).where(eq(gifts.id, id)).limit(1);
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    await db
+      .update(gifts)
+      .set({ reaction: reaction.trim(), reactionAt: new Date() })
+      .where(eq(gifts.id, id));
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error saving reaction:", err);
+    res.status(500).json({ error: "Failed to save reaction" });
   }
 });
 
@@ -141,6 +171,8 @@ router.get("/gifted/my-gifts", async (req, res) => {
         amount: g.amount,
         paid: g.paid,
         redeemedAt: g.redeemedAt,
+        reaction: g.reaction,
+        reactionAt: g.reactionAt,
         createdAt: g.createdAt,
       }))
     );

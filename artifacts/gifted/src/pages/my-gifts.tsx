@@ -24,6 +24,8 @@ interface GiftSummary {
   amount: string | null;
   paid: boolean;
   redeemedAt: string | null;
+  reaction: string | null;
+  reactionAt: string | null;
   createdAt: string;
 }
 
@@ -175,6 +177,17 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
               </div>
             )}
           </div>
+
+          {/* Reaction row */}
+          {gift.reaction && (
+            <div className="flex items-center gap-2">
+              <span className="text-lg leading-none">{gift.reaction}</span>
+              <span className="text-xs text-muted-foreground">
+                {gift.recipientName} reacted
+                {gift.reactionAt ? ` ${formatDistanceToNow(new Date(gift.reactionAt), { addSuffix: true })}` : ""}
+              </span>
+            </div>
+          )}
 
           {/* Bottom row */}
           <div className="flex items-center justify-between gap-2">
