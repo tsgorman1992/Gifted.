@@ -5,11 +5,76 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, User, ArrowLeft, Eye, X, ExternalLink, Gift, Bell,
+  CheckCircle2, Send, User, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { useAuth } from "@/lib/auth-context";
+import QRCodeLib from "qrcode";
+
+// ─── QR Code component ────────────────────────────────────────────────────────
+
+function QRCodeDisplay({ url, label }: { url: string; label?: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!url || !canvasRef.current) return;
+    setReady(false);
+    setError(false);
+    QRCodeLib.toCanvas(canvasRef.current, url, {
+      width: 200,
+      margin: 2,
+      color: { dark: "#000000", light: "#ffffff" },
+    }).then(() => setReady(true)).catch(() => setError(true));
+  }, [url]);
+
+  const handleDownload = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = "gift-qr.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-4">
+        <p className="text-xs text-muted-foreground">Couldn&apos;t generate QR code</p>
+        <p className="text-xs text-muted-foreground/60">Use the copy link option instead</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div
+        className="relative rounded-2xl overflow-hidden border border-border p-3 bg-white"
+        style={{ opacity: ready ? 1 : 0, transition: "opacity 0.3s ease" }}
+      >
+        <canvas ref={canvasRef} style={{ display: "block", borderRadius: 8 }} />
+      </div>
+      {!ready && (
+        <div className="w-[224px] h-[224px] rounded-2xl border border-border bg-secondary animate-pulse" />
+      )}
+      {label && (
+        <p className="text-xs text-muted-foreground text-center max-w-[180px]">{label}</p>
+      )}
+      {ready && (
+        <button
+          type="button"
+          onClick={handleDownload}
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Download QR code
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function PreviewPage() {
   const [, setLocation] = useLocation();
@@ -41,6 +106,7 @@ export default function PreviewPage() {
   const [desktopSendStatus, setDesktopSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [desktopSendError,  setDesktopSendError]  = useState<string | null>(null);
   const [linkShared,        setLinkShared]        = useState(false);
+  const [showQr,            setShowQr]            = useState(false);
 
   // Stripe payment state
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "redirecting" | "confirming" | "confirmed" | "failed">("idle");
@@ -1213,6 +1279,28 @@ export default function PreviewPage() {
                 >
                   {copied ? <><Check className="w-4 h-4 mr-2" /> Link copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
                 </Button>
+                {shareUrl && (
+                  <>
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="flex-1 h-px bg-border" />
+                      <span className="text-xs text-muted-foreground">or</span>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowQr(v => !v)}
+                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      {showQr ? "Hide QR code" : "Show QR code"}
+                    </button>
+                    {showQr && (
+                      <div className="flex justify-center pt-2">
+                        <QRCodeDisplay url={shareUrl} label="Scan to open the gift" />
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 

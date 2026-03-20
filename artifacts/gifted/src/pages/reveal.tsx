@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn } from "lucide-react";
+import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 
@@ -945,8 +945,14 @@ export default function RevealPage() {
   const [isOpen, setIsOpen]               = useState(false);
   const [videoUrl, setVideoUrl]           = useState<string | null>(null);
   const [videoError, setVideoError]       = useState(false);
+  const [videoRefreshing, setVideoRefreshing] = useState(false);
   const videoRef                          = useRef<HTMLVideoElement>(null);
+  const videoPathRef                      = useRef<string | null>(null);
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
+  const [photoErrors, setPhotoErrors]     = useState<Record<number, boolean>>({});
+  const [photoLoaded, setPhotoLoaded]     = useState<Record<number, boolean>>({});
+  const [linkFailures, setLinkFailures]   = useState<Record<number, boolean>>({});
+  const [linkCopied, setLinkCopied]       = useState<Record<number, boolean>>({});
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
   const [extraLinks, setExtraLinks]       = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
   const [recipientName, setRecipientName] = useState(mockGiftData.recipientName);
@@ -1023,6 +1029,7 @@ export default function RevealPage() {
           else if (gift.playlistUrl) setExtraLinks([{ url: gift.playlistUrl, label: "" }]);
 
           if (gift.videoPath) {
+            videoPathRef.current = gift.videoPath;
             fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(gift.videoPath)}`)
               .then(r => r.ok ? r.json() : null)
               .then(d => setVideoUrl(d?.url ?? `${base}/api/storage${gift.videoPath}`))
@@ -1055,6 +1062,7 @@ export default function RevealPage() {
 
     const vp = localStorage.getItem("gifted_video_path");
     if (vp) {
+      videoPathRef.current = vp;
       fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(vp)}`)
         .then(r => r.ok ? r.json() : null)
         .then(d => setVideoUrl(d?.url ?? `${base}/api/storage${vp}`))
@@ -1208,6 +1216,31 @@ export default function RevealPage() {
   const PreIcon = PRE_ICONS[experience] ?? Gift;
   const iconProps = preIconMotionProps(cfg.preIconAnim);
   const isDark = cfg.isDark;
+
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const handleVideoError = useCallback(async () => {
+    const path = videoPathRef.current;
+    if (!path || videoRefreshing) {
+      setVideoError(true);
+      return;
+    }
+    setVideoRefreshing(true);
+    try {
+      const res = await fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(path)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.url) {
+          setVideoUrl(data.url);
+          setVideoError(false);
+          setVideoRefreshing(false);
+          return;
+        }
+      }
+    } catch { /* fall through */ }
+    setVideoError(true);
+    setVideoRefreshing(false);
+  }, [base, videoRefreshing]);
 
 
   // ── Page-level style override for dark themes
@@ -1597,19 +1630,27 @@ export default function RevealPage() {
                     }}
                   >
                     <div className="w-full aspect-video relative group">
-                      <video
-                        ref={videoRef}
-                        src={videoUrl ?? undefined}
-                        playsInline
-                        controls
-                        preload="auto"
-                        className="w-full h-full object-cover"
-                        onError={() => setVideoError(true)}
-                      />
+                      {videoRefreshing ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-black/10">
+                          <div className="w-8 h-8 border-2 border-white/40 border-t-white/90 rounded-full animate-spin" />
+                          <p className="text-xs text-white/70">Loading video…</p>
+                        </div>
+                      ) : (
+                        <video
+                          key={videoUrl}
+                          ref={videoRef}
+                          src={videoUrl}
+                          playsInline
+                          controls
+                          preload="auto"
+                          className="w-full h-full object-cover"
+                          onError={handleVideoError}
+                        />
+                      )}
                       {videoError && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/20 backdrop-blur-sm rounded-inherit">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/20 backdrop-blur-sm">
                           <p className={`text-sm font-medium ${isDark ? "text-white/80" : "text-white"}`}>
-                            Video couldn't play in this browser
+                            Video couldn't play
                           </p>
                           {videoUrl && (
                             <a
@@ -1633,34 +1674,60 @@ export default function RevealPage() {
               {photoUrls.length > 0 && (
                 <Section cfg={cfg} idx={2}>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {photoUrls.map((url, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, scale: 0.94 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        transition={{
-                          delay: i * 0.08,
-                          type: cfg.sectionStyle === "spring-pop" || cfg.sectionStyle === "bloom-scale" || cfg.sectionStyle === "fall-in" ? "spring" : undefined,
-                          stiffness: 260,
-                          damping: 24,
-                          duration: cfg.sectionStyle === "fade-drift" || cfg.sectionStyle === "rise-stagger" ? 0.7 : undefined,
-                        }}
-                        className={`rounded-3xl overflow-hidden aspect-square relative group cursor-pointer ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}
-                        style={isDark
-                          ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow }
-                          : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }
-                        }
-                        onClick={() => setLightboxUrl(url)}
-                      >
-                        <img src={url} alt="Memory" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
-                          <div className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                            <ZoomIn className="w-5 h-5 text-gray-800" />
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                    {photoUrls.map((url, i) => {
+                      const failed = !!photoErrors[i];
+                      const loaded = !!photoLoaded[i];
+                      return (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, scale: 0.94 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          viewport={{ once: true }}
+                          transition={{
+                            delay: i * 0.08,
+                            type: cfg.sectionStyle === "spring-pop" || cfg.sectionStyle === "bloom-scale" || cfg.sectionStyle === "fall-in" ? "spring" : undefined,
+                            stiffness: 260,
+                            damping: 24,
+                            duration: cfg.sectionStyle === "fade-drift" || cfg.sectionStyle === "rise-stagger" ? 0.7 : undefined,
+                          }}
+                          className={`rounded-3xl overflow-hidden aspect-square relative group ${failed ? "" : "cursor-pointer"} ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}
+                          style={isDark
+                            ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow }
+                            : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }
+                          }
+                          onClick={() => !failed && setLightboxUrl(url)}
+                        >
+                          {!failed && (
+                            <>
+                              {!loaded && (
+                                <div className="absolute inset-0 animate-pulse" style={isDark ? { background: "rgba(255,255,255,0.08)" } : { background: "hsl(var(--secondary))" }} />
+                              )}
+                              <img
+                                src={url}
+                                alt="Memory"
+                                className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+                                style={{ transition: "opacity 0.3s ease" }}
+                                onLoad={() => setPhotoLoaded(prev => ({ ...prev, [i]: true }))}
+                                onError={() => setPhotoErrors(prev => ({ ...prev, [i]: true }))}
+                              />
+                              {loaded && (
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
+                                  <div className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                    <ZoomIn className="w-5 h-5 text-gray-800" />
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {failed && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                              <ImageOff className={`w-8 h-8 ${isDark ? "text-white/20" : "text-muted-foreground/30"}`} />
+                              <p className={`text-xs ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>Photo unavailable</p>
+                            </div>
+                          )}
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 </Section>
               )}
@@ -1699,37 +1766,87 @@ export default function RevealPage() {
 
                 const label = link.label || fallbackLabel;
                 const subtitle = link.subtitle || fallbackSubtitle;
+                const hasFailed = !!linkFailures[linkIdx];
+                const hasCopied = !!linkCopied[linkIdx];
+
+                const handleLinkClick = (e: React.MouseEvent) => {
+                  e.preventDefault();
+                  try {
+                    const win = window.open(link.url, "_blank", "noopener,noreferrer");
+                    if (!win) {
+                      setLinkFailures(prev => ({ ...prev, [linkIdx]: true }));
+                    }
+                  } catch {
+                    setLinkFailures(prev => ({ ...prev, [linkIdx]: true }));
+                  }
+                };
+
+                const handleCopyLink = async () => {
+                  try {
+                    await navigator.clipboard.writeText(link.url);
+                    setLinkCopied(prev => ({ ...prev, [linkIdx]: true }));
+                    setTimeout(() => setLinkCopied(prev => ({ ...prev, [linkIdx]: false })), 2500);
+                  } catch { /* ignore */ }
+                };
 
                 return (
                   <Section key={linkIdx} cfg={cfg} idx={2 + linkIdx}>
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden"
+                    <div
+                      className="rounded-[2rem] p-5 border relative overflow-hidden"
                       style={isDark
                         ? { background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.06)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
                         : { background: cfg.cardStyle.bg ?? "hsl(var(--card)/0.8)", backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
                       }
                     >
                       {experience === "garden-bloom" && <GardenBloomWatermark />}
-                      <div className="flex items-center gap-4">
-                        <div
-                          className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center"
-                          style={isDark ? { background: "rgba(255,255,255,0.1)" } : { background: "hsl(var(--primary)/0.1)" }}
+                      {hasFailed ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center gap-4">
+                            <div
+                              className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center"
+                              style={isDark ? { background: "rgba(255,255,255,0.08)" } : { background: "hsl(var(--muted))" }}
+                            >
+                              <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/40" : "text-muted-foreground/50"}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-semibold text-base leading-tight line-clamp-1 ${isDark ? "text-white/70" : "text-foreground/70"}`}>{label}</p>
+                              <p className={`text-sm ${isDark ? "text-white/40" : "text-muted-foreground"}`}>Couldn&apos;t open this link</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleCopyLink}
+                            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full self-start transition-colors ${isDark ? "bg-white/10 text-white/70 hover:bg-white/15" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                          >
+                            {hasCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                            {hasCopied ? "Copied!" : "Copy link instead"}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleLinkClick}
+                          className="w-full text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
                         >
-                          {isMusic
-                            ? <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
-                            : <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
-                          }
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-semibold text-base leading-tight line-clamp-1 ${isDark ? "text-white" : "text-foreground"}`}>{label}</p>
-                          <p className={`text-sm truncate ${isDark ? "text-white/50" : "text-muted-foreground"}`}>{subtitle}</p>
-                        </div>
-                        <ExternalLink className={`w-5 h-5 flex-shrink-0 ${isDark ? "text-white/40" : "text-muted-foreground"}`} />
-                      </div>
-                    </a>
+                          <div className="flex items-center gap-4">
+                            <div
+                              className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center"
+                              style={isDark ? { background: "rgba(255,255,255,0.1)" } : { background: "hsl(var(--primary)/0.1)" }}
+                            >
+                              {isMusic
+                                ? <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                                : <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                              }
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-semibold text-base leading-tight line-clamp-1 ${isDark ? "text-white" : "text-foreground"}`}>{label}</p>
+                              <p className={`text-sm truncate ${isDark ? "text-white/50" : "text-muted-foreground"}`}>{subtitle}</p>
+                            </div>
+                            <ExternalLink className={`w-5 h-5 flex-shrink-0 ${isDark ? "text-white/40" : "text-muted-foreground"}`} />
+                          </div>
+                        </button>
+                      )}
+                    </div>
                   </Section>
                 );
               })}

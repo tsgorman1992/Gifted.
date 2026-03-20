@@ -84,6 +84,25 @@ const LINK_IDEAS = [
   "Anything with a URL...",
 ];
 
+// ─── URL helpers ──────────────────────────────────────────────────────────────
+
+function autoCorrectUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function isValidUrl(url: string): boolean {
+  const corrected = autoCorrectUrl(url);
+  try {
+    const u = new URL(corrected);
+    return (u.protocol === "http:" || u.protocol === "https:") && u.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
+
 // ─── Phone formatting ─────────────────────────────────────────────────────────
 
 function formatPhoneNumber(value: string): string {
@@ -605,6 +624,7 @@ export default function CreatePage() {
   const [giftTitle, setGiftTitle] = useState("");
   const [personalNote, setPersonalNote] = useState("");
   const [extraLinks, setExtraLinks] = useState<Array<{url: string; label: string}>>([{url: "", label: ""}]);
+  const [linkErrors, setLinkErrors] = useState<Record<number, string>>({});
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
@@ -812,7 +832,7 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_photo_paths");
     if (personalNote.trim()) localStorage.setItem("gifted_personal_note", personalNote.trim());
     else localStorage.removeItem("gifted_personal_note");
-    const nonEmptyLinks = extraLinks.filter(l => l.url.trim()).map(l => ({ url: l.url.trim(), label: l.label.trim() }));
+    const nonEmptyLinks = extraLinks.filter(l => l.url.trim()).map(l => ({ url: autoCorrectUrl(l.url.trim()), label: l.label.trim() }));
     if (nonEmptyLinks.length > 0) localStorage.setItem("gifted_extra_links", JSON.stringify(nonEmptyLinks));
     else localStorage.removeItem("gifted_extra_links");
     localStorage.removeItem("gifted_playlist_url");
@@ -839,6 +859,19 @@ export default function CreatePage() {
 
   const handlePreview = () => {
     const filledLinks = extraLinks.filter(l => l.url.trim());
+    const newErrors: Record<number, string> = {};
+    extraLinks.forEach((link, idx) => {
+      const raw = link.url.trim();
+      if (!raw) return;
+      if (!isValidUrl(raw)) {
+        newErrors[idx] = "This doesn't look like a valid URL — please check it.";
+      }
+    });
+    if (Object.keys(newErrors).length > 0) {
+      setLinkErrors(newErrors);
+      setStepError("Some links look invalid — please fix them before continuing.");
+      return;
+    }
     if (filledLinks.some(l => !l.label.trim())) {
       setStepError("Please add a label for each link you've added — e.g. \"Your Spotify playlist\" or \"Dinner reservation\".");
       return;
@@ -1457,46 +1490,80 @@ export default function CreatePage() {
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Add links <span className="text-muted-foreground font-normal">— tickets, playlists, reservations, anything</span></Label>
                     <div className="space-y-3">
-                      {extraLinks.map((link, idx) => (
-                        <div key={idx} className="flex flex-col gap-1.5">
-                          <div className="flex items-center gap-2">
-                            <div className="relative flex-1">
-                              <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      {extraLinks.map((link, idx) => {
+                        const hasError = !!linkErrors[idx];
+                        return (
+                          <div key={idx} className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <Link2 className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${hasError ? "text-destructive" : "text-muted-foreground"}`} />
+                                <Input
+                                  placeholder={LINK_IDEAS[idx % LINK_IDEAS.length]}
+                                  className={`h-11 rounded-xl text-sm pl-10 transition-all ${hasError ? "border-destructive focus-visible:ring-destructive/30" : ""}`}
+                                  value={link.url}
+                                  onChange={(e) => {
+                                    const updated = [...extraLinks];
+                                    updated[idx] = { ...updated[idx], url: e.target.value };
+                                    setExtraLinks(updated);
+                                    if (linkErrors[idx]) {
+                                      const errs = { ...linkErrors };
+                                      delete errs[idx];
+                                      setLinkErrors(errs);
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    const raw = e.target.value.trim();
+                                    if (!raw) return;
+                                    const corrected = autoCorrectUrl(raw);
+                                    const updated = [...extraLinks];
+                                    updated[idx] = { ...updated[idx], url: corrected };
+                                    setExtraLinks(updated);
+                                    if (!isValidUrl(raw)) {
+                                      setLinkErrors(prev => ({ ...prev, [idx]: "This doesn't look like a valid URL — please check it." }));
+                                    } else {
+                                      const errs = { ...linkErrors };
+                                      delete errs[idx];
+                                      setLinkErrors(errs);
+                                    }
+                                  }}
+                                />
+                              </div>
+                              {extraLinks.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setExtraLinks(extraLinks.filter((_, i) => i !== idx));
+                                    const errs = { ...linkErrors };
+                                    delete errs[idx];
+                                    setLinkErrors(errs);
+                                  }}
+                                  className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                            {hasError && (
+                              <p className="text-xs text-destructive flex items-center gap-1.5 pl-1">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                {linkErrors[idx]}
+                              </p>
+                            )}
+                            {link.url.trim() && !hasError && (
                               <Input
-                                placeholder={LINK_IDEAS[idx % LINK_IDEAS.length]}
-                                className="h-11 rounded-xl text-sm pl-10 transition-all"
-                                value={link.url}
+                                placeholder='Label — e.g. "Your birthday dinner at Nobu"'
+                                className="h-9 rounded-xl text-sm transition-all"
+                                value={link.label}
                                 onChange={(e) => {
                                   const updated = [...extraLinks];
-                                  updated[idx] = { ...updated[idx], url: e.target.value };
+                                  updated[idx] = { ...updated[idx], label: e.target.value };
                                   setExtraLinks(updated);
                                 }}
                               />
-                            </div>
-                            {extraLinks.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => setExtraLinks(extraLinks.filter((_, i) => i !== idx))}
-                                className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
                             )}
                           </div>
-                          {link.url.trim() && (
-                            <Input
-                              placeholder='Label — e.g. "Your birthday dinner at Nobu"'
-                              className="h-9 rounded-xl text-sm transition-all"
-                              value={link.label}
-                              onChange={(e) => {
-                                const updated = [...extraLinks];
-                                updated[idx] = { ...updated[idx], label: e.target.value };
-                                setExtraLinks(updated);
-                              }}
-                            />
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     {extraLinks.length < 5 && (
                       <button
