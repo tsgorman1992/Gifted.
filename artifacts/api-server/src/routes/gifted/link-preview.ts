@@ -93,6 +93,7 @@ router.get("/gifted/link-preview", async (req, res) => {
     res.json(preview);
   } catch {
     const fallback: PreviewResult = { title: null, description: null, image: null, siteName: null };
+    cache.set(url, fallback);
     res.json(fallback);
   }
 });
