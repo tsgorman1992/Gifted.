@@ -510,7 +510,7 @@ export default function PreviewPage() {
                   <CheckCircle2 className="w-7 h-7 text-green-600" />
                 </motion.div>
                 <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">
-                  {paymentStatus === "confirming" ? "Sending…" : "On its way."}
+                  {paymentStatus === "confirming" ? "Confirming…" : "Your gift is ready."}
                 </h1>
                 <p className="text-muted-foreground mb-7 text-base">
                   {paymentStatus === "confirming"
