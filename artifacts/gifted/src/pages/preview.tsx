@@ -440,9 +440,9 @@ export default function PreviewPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="md:hidden mb-6 relative"
+                className="md:hidden mb-6 flex flex-col shadow-2xl rounded-[2rem] overflow-hidden"
               >
-                <div className="rounded-[2rem] overflow-hidden shadow-2xl" style={{ aspectRatio: "9/19.5" }}>
+                <div style={{ height: "70dvh" }}>
                   {revealUrl ? (
                     <iframe
                       src={revealUrl}
@@ -459,9 +459,9 @@ export default function PreviewPage() {
                 <button
                   type="button"
                   onClick={() => setMobilePreviewOpen(false)}
-                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-foreground text-background text-sm font-semibold shrink-0"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" /> Close preview
                 </button>
               </motion.div>
             ) : (
