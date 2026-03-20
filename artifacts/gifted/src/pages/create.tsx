@@ -48,7 +48,19 @@ const EXPERIENCE_ICONS: Record<ExperienceId, React.ComponentType<{ className?: s
   "sunrise":        Sun,
 };
 
-const INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Birthday money", "Baby fund", "Take a break"];
+const INTENT_MAP: Record<string, string[]> = {
+  "Birthday":     ["Treat yourself", "Night out", "That thing you've been eyeing", "Weekend away", "Birthday dinner"],
+  "Anniversary":  ["Date night", "Weekend getaway", "Something special", "Just for you", "Our tradition"],
+  "Graduation":   ["First apartment fund", "Travel before life gets busy", "New chapter, your choice", "Celebrate yourself", "Next adventure"],
+  "New Baby":     ["Baby essentials", "Coffee & survival", "Self-care, seriously", "Family day out", "Nesting fund"],
+  "Holiday":      ["Holiday treat", "Something you need", "Festive dinner", "Your wishlist", "Cozy night in"],
+  "Just Because": ["Coffee on me", "Treat yourself", "No reason needed", "Just a little something", "Because I could"],
+  "Wedding":      ["Honeymoon fund", "First home together", "Date nights ahead", "Something special", "New adventure"],
+  "Thank You":    ["Coffee on me", "Lunch on me", "A small thank you", "Treat yourself", "You deserve it"],
+  "Other":        ["Treat yourself", "Coffee on me", "Something special", "Your choice", "Take a break"],
+};
+const DEFAULT_INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Something special", "Take a break"];
+const ALL_PRESET_INTENTS = new Set(Object.values(INTENT_MAP).flat());
 const AMOUNTS = ["10", "25", "50", "100", "250"];
 const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Thank You", "Other"];
 
@@ -521,7 +533,7 @@ export default function CreatePage() {
     const int = localStorage.getItem("gifted_intent");
     if (int) {
       setIntent(int);
-      if (!INTENTS.includes(int)) setCustomIntentMode(true);
+      if (!ALL_PRESET_INTENTS.has(int)) setCustomIntentMode(true);
     }
     const sf = localStorage.getItem("gifted_scheduled_for");
     if (sf) { setScheduledFor(sf); setScheduleEnabled(true); }
@@ -937,6 +949,8 @@ export default function CreatePage() {
                       value={occasion}
                       onValueChange={(val) => {
                         setOccasion(val);
+                        // Clear preset intent so new occasion's suggestions start fresh
+                        if (!customIntentMode && ALL_PRESET_INTENTS.has(intent)) setIntent("");
                         const suggested = getSuggestedExperience(val);
                         setSuggestedExperience(suggested);
                         if (!hasManuallyChosen) {
@@ -1371,7 +1385,7 @@ export default function CreatePage() {
                   <div className="space-y-3">
                     <Label className="text-sm font-semibold">What's it for?</Label>
                     <div className="flex flex-wrap gap-2">
-                      {INTENTS.map((lbl) => (
+                      {(INTENT_MAP[occasion] ?? DEFAULT_INTENTS).map((lbl) => (
                         <button
                           key={lbl}
                           type="button"
@@ -1392,7 +1406,7 @@ export default function CreatePage() {
                         type="button"
                         onClick={() => {
                           setCustomIntentMode(true);
-                          if (INTENTS.includes(intent)) setIntent("");
+                          if (ALL_PRESET_INTENTS.has(intent)) setIntent("");
                         }}
                         className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                           customIntentMode
@@ -1416,7 +1430,7 @@ export default function CreatePage() {
                             autoFocus
                             placeholder="e.g. Dinner on me, Spa day, Whatever you need…"
                             maxLength={60}
-                            value={customIntentMode && !INTENTS.includes(intent) ? intent : ""}
+                            value={customIntentMode && !ALL_PRESET_INTENTS.has(intent) ? intent : ""}
                             onChange={(e) => setIntent(e.target.value)}
                             className="h-11 rounded-2xl mt-1"
                           />
