@@ -216,6 +216,11 @@ export default function PreviewPage() {
       setPaymentStatus("confirmed");
     }
 
+    // Restore linkShared for free gifts (paid gifts use paymentStatus)
+    if (localStorage.getItem("gifted_link_shared") && !savedPaidId) {
+      setLinkShared(true);
+    }
+
     if (paidParam === "true" && giftParam && sessionId) {
       setGiftId(giftParam);
       const url = `${window.location.origin}${base}/api/share/${giftParam}`;
@@ -455,6 +460,7 @@ export default function PreviewPage() {
       await navigator.clipboard.writeText(saved.url);
       setCopied(true);
       setLinkShared(true);
+      localStorage.setItem("gifted_link_shared", "1");
       setTimeout(() => setCopied(false), 2500);
     } catch { /* ignore */ }
   };
@@ -470,6 +476,7 @@ export default function PreviewPage() {
         url: saved.url,
       });
       setLinkShared(true);
+      localStorage.setItem("gifted_link_shared", "1");
     } catch { /* user cancelled */ }
   };
 
@@ -479,6 +486,7 @@ export default function PreviewPage() {
     const body = `Hey ${recipientName}, I made something for you 🎁\n${saved.url}`;
     window.open(`sms:?body=${encodeURIComponent(body)}`, "_blank");
     setLinkShared(true);
+    localStorage.setItem("gifted_link_shared", "1");
   };
 
   const handleDesktopSend = async () => {
@@ -498,6 +506,7 @@ export default function PreviewPage() {
       window.open(`mailto:${contact}?subject=${subject}&body=${body}`, "_blank");
       setDesktopSendStatus("sent");
       setLinkShared(true);
+      localStorage.setItem("gifted_link_shared", "1");
     } else {
       setDesktopSendStatus("sending");
       try {
@@ -517,6 +526,7 @@ export default function PreviewPage() {
         }
         setDesktopSendStatus("sent");
         setLinkShared(true);
+        localStorage.setItem("gifted_link_shared", "1");
       } catch (err) {
         setDesktopSendStatus("error");
         setDesktopSendError(err instanceof Error ? err.message : "Failed to send");
@@ -562,8 +572,10 @@ export default function PreviewPage() {
 
   const handleEdit = () => {
     localStorage.removeItem("gifted_paid_id");
+    localStorage.removeItem("gifted_link_shared");
     setGiftId(null);
     setShareUrl(null);
+    setLinkShared(false);
     setPaymentStatus("idle");
     setLocation("/create");
   };
@@ -889,19 +901,24 @@ export default function PreviewPage() {
                       </Link>
                       {/* Phone notification opt-in */}
                       {!notifySaved ? (
-                        <form onSubmit={handleNotifyPhoneSave} className="flex gap-2">
-                          <input
-                            type="tel"
-                            value={notifyPhone}
-                            onChange={e => setNotifyPhone(e.target.value)}
-                            placeholder="Your phone — text me when they open it"
-                            className="flex-1 h-9 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 placeholder:text-xs"
-                          />
-                          <Button type="submit" size="sm" disabled={!notifyPhone.trim() || notifySaving}
-                            className="h-9 px-3 rounded-xl bg-green-700 hover:bg-green-800 text-white border-0 text-xs shrink-0">
-                            {notifySaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Notify me"}
-                          </Button>
-                        </form>
+                        <div className="space-y-1.5">
+                          <p className="text-xs text-green-700/80 dark:text-green-400/80 font-medium">
+                            Get a text when {recipientName} opens it
+                          </p>
+                          <form onSubmit={handleNotifyPhoneSave} className="flex flex-col sm:flex-row gap-2">
+                            <input
+                              type="tel"
+                              value={notifyPhone}
+                              onChange={e => setNotifyPhone(e.target.value)}
+                              placeholder="Your mobile number"
+                              className="flex-1 h-9 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                            />
+                            <Button type="submit" size="sm" disabled={!notifyPhone.trim() || notifySaving}
+                              className="h-9 px-4 rounded-xl bg-green-700 hover:bg-green-800 text-white border-0 text-xs shrink-0 w-full sm:w-auto">
+                              {notifySaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Bell className="w-3 h-3 mr-1.5" /> Notify me</>}
+                            </Button>
+                          </form>
+                        </div>
                       ) : (
                         <p className="text-xs text-green-700/70 dark:text-green-400/70 text-center">
                           ✓ We'll text you when {recipientName} opens and redeems their gift.
@@ -1266,14 +1283,14 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* ── Desktop send — email or phone input ── */}
+            {/* ── Send via email / phone ── */}
             {(!hasBalance || isPaid) && (
-              <div className="hidden md:block rounded-2xl border border-border bg-card p-5 space-y-3">
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Send the gift link</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Enter an email or phone number — we'll deliver it directly.</p>
+                  <p className="text-sm font-semibold text-foreground">Send directly to someone</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Enter an email or phone number — we'll deliver it for you.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={desktopContact}
@@ -1282,7 +1299,7 @@ export default function PreviewPage() {
                       setDesktopSendStatus("idle");
                       setDesktopSendError(null);
                     }}
-                    placeholder="email@example.com or +1 555 000 0000"
+                    placeholder="email or +1 555 000 0000"
                     className="flex-1 h-11 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                     onKeyDown={(e) => { if (e.key === "Enter") handleDesktopSend(); }}
                     disabled={desktopSendStatus === "sending" || desktopSendStatus === "sent"}
@@ -1290,7 +1307,7 @@ export default function PreviewPage() {
                   <Button
                     onClick={handleDesktopSend}
                     disabled={!desktopContact.trim() || desktopSendStatus === "sending" || desktopSendStatus === "sent" || saving}
-                    className="h-11 px-5 rounded-xl text-sm font-semibold shrink-0 shadow-md shadow-primary/20"
+                    className="h-11 px-5 rounded-xl text-sm font-semibold shrink-0 w-full sm:w-auto shadow-md shadow-primary/20"
                   >
                     {desktopSendStatus === "sending"
                       ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -1308,21 +1325,24 @@ export default function PreviewPage() {
                     {desktopContact.includes("@") ? "Your email client is opening…" : "Text message sent!"}
                   </p>
                 )}
-                <div className="flex items-center gap-2 pt-1">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-muted-foreground">or</span>
-                  <div className="flex-1 h-px bg-border" />
+                {/* Copy link — desktop only (mobile has native share buttons above) */}
+                <div className="hidden md:block space-y-3">
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleCopy}
+                    disabled={saving || isRedirecting}
+                    className="w-full h-10 rounded-xl text-sm font-medium"
+                  >
+                    {copied ? <><Check className="w-4 h-4 mr-2" /> Link copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={handleCopy}
-                  disabled={saving || isRedirecting}
-                  className="w-full h-10 rounded-xl text-sm font-medium"
-                >
-                  {copied ? <><Check className="w-4 h-4 mr-2" /> Link copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
-                </Button>
                 {shareUrl && (
-                  <>
+                  <div className="hidden md:block space-y-3">
                     <div className="flex items-center gap-2 pt-1">
                       <div className="flex-1 h-px bg-border" />
                       <span className="text-xs text-muted-foreground">or</span>
@@ -1341,7 +1361,7 @@ export default function PreviewPage() {
                         <QRCodeDisplay url={shareUrl} label="Scan to open the gift" />
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             )}
