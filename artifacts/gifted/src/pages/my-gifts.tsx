@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
-  DollarSign, Package, Flower2, Snowflake, Sun,
+  DollarSign, Package, Flower2, Snowflake, Sun, Eye,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { clearGiftSession } from "@/lib/session";
@@ -23,6 +23,7 @@ interface GiftSummary {
   experience: string;
   amount: string | null;
   paid: boolean;
+  openedAt: string | null;
   redeemedAt: string | null;
   reaction: string | null;
   reactionAt: string | null;
@@ -53,18 +54,20 @@ async function fetchMyGifts(): Promise<GiftSummary[]> {
   return res.json();
 }
 
-type GiftStatus = "draft" | "sent" | "redeemed";
+type GiftStatus = "draft" | "sent" | "opened" | "redeemed";
 
 function getStatus(gift: GiftSummary): GiftStatus {
   if (gift.redeemedAt) return "redeemed";
-  if (gift.paid) return "sent";
+  if (gift.openedAt)   return "opened";
+  if (gift.paid)       return "sent";
   return "draft";
 }
 
-const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string }> = {
-  draft:    { label: "Draft",    color: "#92400e", bg: "#fef3c7" },
-  sent:     { label: "Sent",     color: "#1d4ed8", bg: "#dbeafe" },
-  redeemed: { label: "Redeemed", color: "#15803d", bg: "#dcfce7" },
+const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string; Icon: React.ComponentType<{ className?: string }> }> = {
+  draft:    { label: "Draft",    color: "#92400e", bg: "#fef3c7", Icon: Clock },
+  sent:     { label: "Sent",     color: "#1d4ed8", bg: "#dbeafe", Icon: Package },
+  opened:   { label: "Opened",   color: "#6d28d9", bg: "#ede9fe", Icon: Eye },
+  redeemed: { label: "Redeemed", color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
 };
 
 function greeting(firstName: string | null) {
@@ -189,24 +192,49 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             </div>
           )}
 
+          {/* Timeline row */}
+          <div className="flex items-center gap-0 text-xs">
+            {(["sent", "opened", "redeemed"] as const).map((step, i) => {
+              const steps = ["sent", "opened", "redeemed"] as const;
+              const statusIdx = steps.indexOf(status === "draft" ? "sent" : status);
+              const done = i <= statusIdx && status !== "draft";
+              const StepIcon = STATUS_META[step].Icon;
+              return (
+                <React.Fragment key={step}>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+                      style={{ background: done ? STATUS_META[step].bg : "hsl(var(--secondary))", color: done ? STATUS_META[step].color : "hsl(var(--muted-foreground))" }}
+                    >
+                      <StepIcon className="w-3 h-3" />
+                    </div>
+                    <span className="text-[10px] leading-tight" style={{ color: done ? STATUS_META[step].color : "hsl(var(--muted-foreground)/0.5)" }}>
+                      {step === "sent" ? "Sent" : step === "opened" ? "Opened" : "Redeemed"}
+                    </span>
+                  </div>
+                  {i < 2 && (
+                    <div
+                      className="flex-1 h-px mx-1 mb-3 transition-colors"
+                      style={{ background: done && i < statusIdx ? STATUS_META[steps[i + 1]].color + "66" : "hsl(var(--border))" }}
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+
           {/* Bottom row */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Status pill */}
-              <span
-                className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{ color: statusMeta.color, background: statusMeta.bg }}
-              >
-                {status === "redeemed" && "✓ "}
-                {statusMeta.label}
-              </span>
-              {/* Experience label */}
-              <span className="text-xs text-muted-foreground hidden sm:block">{exp.label}</span>
-              {/* Date */}
+              {/* Status detail */}
               <span className="text-xs text-muted-foreground">
                 {status === "redeemed" && gift.redeemedAt
                   ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
-                  : format(new Date(gift.createdAt), "MMM d, yyyy")}
+                  : status === "opened" && gift.openedAt
+                    ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                    : status === "sent"
+                      ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                      : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
               </span>
             </div>
 
@@ -298,10 +326,10 @@ export default function MyGiftsPage() {
   }
 
   // ── Stats
-  const totalSent = myGifts?.length ?? 0;
-  const totalValue = myGifts?.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0) ?? 0;
-  const awaitingOpen = myGifts?.filter(g => g.paid && !g.redeemedAt).length ?? 0;
-  const redeemed = myGifts?.filter(g => !!g.redeemedAt).length ?? 0;
+  const totalSent    = myGifts?.length ?? 0;
+  const totalValue   = myGifts?.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0) ?? 0;
+  const openedCount  = myGifts?.filter(g => !!g.openedAt && !g.redeemedAt).length ?? 0;
+  const redeemed     = myGifts?.filter(g => !!g.redeemedAt).length ?? 0;
 
   const initials = [user?.firstName, user?.lastName]
     .filter(Boolean)
@@ -348,7 +376,7 @@ export default function MyGiftsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
             <StatCard label="Sent" value={totalSent} Icon={Package} delay={0.05} />
             <StatCard label="Total gifted" value={totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"} Icon={DollarSign} delay={0.1} />
-            <StatCard label="Awaiting open" value={awaitingOpen} sub={awaitingOpen === 1 ? "not yet opened" : "not yet opened"} Icon={Clock} delay={0.15} />
+            <StatCard label="Opened" value={openedCount} sub={openedCount === 1 ? "awaiting redemption" : "awaiting redemption"} Icon={Eye} delay={0.15} />
             <StatCard label="Redeemed" value={redeemed} Icon={CheckCircle2} delay={0.2} />
           </div>
         )}

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, User, ArrowLeft, Eye, X, ExternalLink,
+  CheckCircle2, Send, User, ArrowLeft, Eye, X, ExternalLink, Gift, Bell,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -40,6 +40,7 @@ export default function PreviewPage() {
   const [desktopContact,    setDesktopContact]    = useState("");
   const [desktopSendStatus, setDesktopSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [desktopSendError,  setDesktopSendError]  = useState<string | null>(null);
+  const [linkShared,        setLinkShared]        = useState(false);
 
   // Stripe payment state
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "redirecting" | "confirming" | "confirmed" | "failed">("idle");
@@ -252,6 +253,7 @@ export default function PreviewPage() {
     try {
       await navigator.clipboard.writeText(saved.url);
       setCopied(true);
+      setLinkShared(true);
       setTimeout(() => setCopied(false), 2500);
     } catch { /* ignore */ }
   };
@@ -266,6 +268,7 @@ export default function PreviewPage() {
         text: `${senderName} sent you something on gifted.`,
         url: saved.url,
       });
+      setLinkShared(true);
     } catch { /* user cancelled */ }
   };
 
@@ -274,6 +277,7 @@ export default function PreviewPage() {
     if (!saved) return;
     const body = `Hey ${recipientName}, I made something for you 🎁\n${saved.url}`;
     window.open(`sms:?body=${encodeURIComponent(body)}`, "_blank");
+    setLinkShared(true);
   };
 
   const handleDesktopSend = async () => {
@@ -292,6 +296,7 @@ export default function PreviewPage() {
       );
       window.open(`mailto:${contact}?subject=${subject}&body=${body}`, "_blank");
       setDesktopSendStatus("sent");
+      setLinkShared(true);
     } else {
       setDesktopSendStatus("sending");
       try {
@@ -310,6 +315,7 @@ export default function PreviewPage() {
           throw new Error((err as { error?: string }).error || "Failed to send");
         }
         setDesktopSendStatus("sent");
+        setLinkShared(true);
       } catch (err) {
         setDesktopSendStatus("error");
         setDesktopSendError(err instanceof Error ? err.message : "Failed to send");
@@ -592,6 +598,95 @@ export default function PreviewPage() {
           </motion.div>
 
           <motion.div {...fade(0.15)} className="space-y-3">
+
+            {/* ── Post-send confirmation ── */}
+            <AnimatePresence>
+              {(isPaid || linkShared) && (
+                <motion.div
+                  key="confirmation"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="rounded-2xl border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30 p-5 space-y-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-green-800 dark:text-green-300">
+                        {isPaid ? "Payment confirmed — gift sent!" : "Gift link sent!"}
+                      </p>
+                      <p className="text-xs text-green-700/70 dark:text-green-400/70 mt-0.5">
+                        {recipientName} will see a beautiful reveal when they open it.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Timeline */}
+                  <div className="flex items-start gap-0">
+                    {[
+                      {
+                        icon: CheckCircle2,
+                        label: isPaid ? "Payment received" : "Link sent",
+                        sub: "Done",
+                        done: true,
+                        color: "#15803d",
+                        bg: "#dcfce7",
+                      },
+                      {
+                        icon: Eye,
+                        label: `${recipientName} opens it`,
+                        sub: "Awaiting",
+                        done: false,
+                        color: "#6d28d9",
+                        bg: "#ede9fe",
+                      },
+                      ...(isPaid ? [{
+                        icon: Sparkles,
+                        label: "Balance redeemed",
+                        sub: "Awaiting",
+                        done: false,
+                        color: "hsl(28,62%,36%)",
+                        bg: "hsl(28,62%,90%)",
+                      }] : []),
+                    ].map((step, i, arr) => {
+                      const StepIcon = step.icon;
+                      return (
+                        <React.Fragment key={i}>
+                          <div className="flex flex-col items-center gap-1 min-w-0">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                              style={{ background: step.done ? step.bg : "hsl(var(--secondary))", color: step.done ? step.color : "hsl(var(--muted-foreground))" }}
+                            >
+                              <StepIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="text-center px-1">
+                              <p className="text-[10px] font-medium leading-tight" style={{ color: step.done ? step.color : "hsl(var(--muted-foreground))" }}>{step.label}</p>
+                              <p className="text-[10px] leading-tight text-muted-foreground/60">{step.sub}</p>
+                            </div>
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div className="flex-1 h-px mt-4 mx-1 bg-border" />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+
+                  {/* CTA */}
+                  <Link href="/my-gifts">
+                    <Button
+                      variant="outline"
+                      className="w-full h-10 rounded-xl text-sm font-medium border-green-300 text-green-800 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/40"
+                    >
+                      <Gift className="w-4 h-4 mr-2" />
+                      Track this gift
+                    </Button>
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Scheduled delivery badge */}
             {scheduledFor && !isPaid && (

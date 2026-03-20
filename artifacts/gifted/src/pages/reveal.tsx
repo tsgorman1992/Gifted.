@@ -994,6 +994,13 @@ export default function RevealPage() {
 
     if (giftIdParam) {
       setGiftId(giftIdParam);
+      // Mark as opened (only for real opens, not preview mode)
+      if (!isPreviewMode) {
+        fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftIdParam)}/opened`, {
+          method: "PATCH",
+          credentials: "include",
+        }).catch(() => { /* fire and forget */ });
+      }
       fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftIdParam)}`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null)
         .then(async (gift) => {

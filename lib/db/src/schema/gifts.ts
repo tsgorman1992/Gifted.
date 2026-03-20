@@ -26,6 +26,7 @@ export const gifts = pgTable("gifts", {
   redeemedAt: timestamp("redeemed_at", { withTimezone: true }),
   scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
   scheduleDelivered: boolean("schedule_delivered").default(false),
+  openedAt: timestamp("opened_at", { withTimezone: true }),
   reaction: text("reaction"),
   reactionAt: timestamp("reaction_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
