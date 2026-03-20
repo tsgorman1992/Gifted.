@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, User, ArrowLeft, Eye,
+  CheckCircle2, Send, User, ArrowLeft, Eye, X,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -259,12 +259,23 @@ export default function PreviewPage() {
   };
 
   const [revealUrl, setRevealUrl] = useState<string | null>(null);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+
   const buildRevealUrl = (savedId: string) => {
     const b = import.meta.env.BASE_URL.replace(/\/$/, "");
     const params = new URLSearchParams();
     params.set("giftId", savedId);
     params.set("preview", "true");
     return `${b}/reveal?${params.toString()}`;
+  };
+
+  const handleMobileRevealPreview = async () => {
+    if (!revealUrl) {
+      const saved = await saveGift();
+      if (!saved) return;
+      setRevealUrl(buildRevealUrl(saved.id));
+    }
+    setMobilePreviewOpen(true);
   };
 
   const handleDesktopRevealLoad = async () => {
@@ -374,8 +385,8 @@ export default function PreviewPage() {
             </button>
           )}
 
-          {/* Experience summary card */}
-          <motion.div {...fade(0)} className="rounded-[2rem] overflow-hidden mb-7 shadow-xl relative" style={{ minHeight: 160 }}>
+          {/* Experience summary card — desktop only */}
+          <motion.div {...fade(0)} className="hidden md:block rounded-[2rem] overflow-hidden mb-7 shadow-xl relative" style={{ minHeight: 160 }}>
             <div className="absolute inset-0" style={gStyle} />
             <div className="absolute inset-0 bg-black/20" />
             <div className="relative z-10 p-6 flex flex-col justify-between" style={{ minHeight: 160 }}>
@@ -394,9 +405,9 @@ export default function PreviewPage() {
             </div>
           </motion.div>
 
-          {/* Video confirmation */}
+          {/* Video confirmation — desktop only */}
           {hasVideo && videoUrl && (
-            <motion.div {...fade(0.04)} className="mb-5 rounded-2xl overflow-hidden border border-border bg-card">
+            <motion.div {...fade(0.04)} className="hidden md:block mb-5 rounded-2xl overflow-hidden border border-border bg-card">
               <div className="aspect-video w-full relative">
                 {!videoLoadError ? (
                   <video
@@ -419,6 +430,72 @@ export default function PreviewPage() {
               </div>
             </motion.div>
           )}
+
+          {/* Mobile: inline reveal preview — tap to expand */}
+          <AnimatePresence mode="wait">
+            {mobilePreviewOpen ? (
+              <motion.div
+                key="reveal-open"
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.97 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className="md:hidden mb-6 relative"
+              >
+                <div className="rounded-[2rem] overflow-hidden shadow-2xl" style={{ aspectRatio: "9/19.5" }}>
+                  {revealUrl ? (
+                    <iframe
+                      src={revealUrl}
+                      className="w-full h-full border-0 block"
+                      title="Gift reveal preview"
+                      allow="autoplay"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={gStyle}>
+                      <Loader2 className="w-6 h-6 animate-spin text-white/70" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobilePreviewOpen(false)}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="reveal-teaser"
+                type="button"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={handleMobileRevealPreview}
+                disabled={saving}
+                className="md:hidden w-full mb-6 rounded-2xl overflow-hidden relative text-left"
+                style={{ minHeight: 100 }}
+              >
+                <div className="absolute inset-0" style={gStyle} />
+                <div className="absolute inset-0 bg-black/25" />
+                <div className="relative z-10 p-5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-white/70 text-xs font-medium mb-0.5">A gift for</p>
+                    <p className="font-serif text-2xl text-white leading-none">{recipientName}</p>
+                    <p className="text-white/60 text-xs mt-1">from {senderName}</p>
+                  </div>
+                  <div
+                    className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold"
+                    style={{ background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)", color: "white" }}
+                  >
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                    {saving ? "Saving…" : "Preview"}
+                  </div>
+                </div>
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           <motion.div {...fade(0.08)}>
             {isPaid ? (
