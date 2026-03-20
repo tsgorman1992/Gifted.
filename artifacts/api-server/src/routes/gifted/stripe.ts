@@ -151,7 +151,7 @@ router.post("/gifted/confirm-payment", async (req, res) => {
       const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";
       smsTo(
         gift.senderPhone,
-        `gifted. ✅\nYour ${amount} gift for ${gift.recipientName} is confirmed and on its way! We'll text you when they open it.`
+        `gifted. ✅\nPayment confirmed — your ${amount} gift for ${gift.recipientName} is ready. Share the link whenever you're ready. We'll text you when they open it.`
       );
     }
 
@@ -272,7 +272,7 @@ router.post("/stripe/webhook", async (req, res) => {
         const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";
         smsTo(
           gift.senderPhone,
-          `gifted. ✅\nYour ${amount} gift for ${gift.recipientName} is confirmed and on its way! We'll text you when they open it.`
+          `gifted. ✅\nPayment confirmed — your ${amount} gift for ${gift.recipientName} is ready. Share the link whenever you're ready. We'll text you when they open it.`
         );
       }
     }
