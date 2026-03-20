@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, User, ArrowLeft, Eye, X,
+  CheckCircle2, Send, User, ArrowLeft, Eye,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -259,25 +259,12 @@ export default function PreviewPage() {
   };
 
   const [revealUrl, setRevealUrl] = useState<string | null>(null);
-  const [mobileModalOpen, setMobileModalOpen] = useState(false);
-
   const buildRevealUrl = (savedId: string) => {
     const b = import.meta.env.BASE_URL.replace(/\/$/, "");
     const params = new URLSearchParams();
     params.set("giftId", savedId);
     params.set("preview", "true");
     return `${b}/reveal?${params.toString()}`;
-  };
-
-  const handleRevealPreview = async () => {
-    let url = revealUrl;
-    if (!url) {
-      const saved = await saveGift();
-      if (!saved) return;
-      url = buildRevealUrl(saved.id);
-      setRevealUrl(url);
-    }
-    setMobileModalOpen(true);
   };
 
   const handleDesktopRevealLoad = async () => {
@@ -318,60 +305,6 @@ export default function PreviewPage() {
 
   return (
     <div className="min-h-screen bg-background">
-
-      {/* Mobile reveal modal */}
-      <AnimatePresence>
-        {mobileModalOpen && (
-          <motion.div
-            key="mobile-reveal-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm"
-            onClick={(e) => { if (e.target === e.currentTarget) setMobileModalOpen(false); }}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 300, damping: 32 }}
-              className="absolute inset-0 flex flex-col"
-              style={{ background: "hsl(var(--background))" }}
-            >
-              {/* Modal header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-                <div>
-                  <p className="text-sm font-semibold">Preview their reveal</p>
-                  <p className="text-xs text-muted-foreground">This is what {recipientName} will experience</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMobileModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              {/* Reveal iframe */}
-              <div className="flex-1 relative overflow-hidden">
-                {revealUrl ? (
-                  <iframe
-                    src={revealUrl}
-                    className="w-full h-full border-0"
-                    title="Gift reveal preview"
-                    allow="autoplay"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-14 flex flex-col md:flex-row gap-8 md:gap-14">
 
@@ -656,26 +589,6 @@ export default function PreviewPage() {
                 </Button>
               </div>
             )}
-
-            {/* Reveal preview nudge — mobile only (desktop shows inline in left panel) */}
-            <div className="md:hidden rounded-2xl border border-border bg-secondary/20 px-4 py-3.5 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold">Preview their reveal</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  See the full animated experience as {recipientName} will see it
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleRevealPreview}
-                disabled={saving}
-                className="rounded-xl shrink-0"
-              >
-                {saving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Eye className="w-3.5 h-3.5 mr-1.5" />}
-                {saving ? "Saving..." : "Preview"}
-              </Button>
-            </div>
 
             {/* Desktop hint pointing to the left panel */}
             <div className="hidden md:flex items-center gap-3 rounded-2xl border border-border bg-secondary/20 px-4 py-3.5">
