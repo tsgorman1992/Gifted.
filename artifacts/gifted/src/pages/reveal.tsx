@@ -950,6 +950,7 @@ export default function RevealPage() {
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
   const [extraLinks, setExtraLinks]       = useState<string[]>([]);
   const [linkPreviews, setLinkPreviews]   = useState<Record<string, { title: string | null; description: string | null; image: string | null; siteName: string | null }>>({});
+  const [imgErrors, setImgErrors]         = useState<Set<string>>(new Set());
   const [recipientName, setRecipientName] = useState(mockGiftData.recipientName);
   const [senderName, setSenderName]       = useState(mockGiftData.senderName);
   const [giftTitle, setGiftTitle]         = useState(mockGiftData.title);
@@ -1693,8 +1694,9 @@ export default function RevealPage() {
 
                 const preview = linkPreviews[href] ?? null;
                 const label = preview?.title || fallbackLabel;
-                const subtitle = preview?.siteName || fallbackSubtitle;
+                const subtitle = preview?.description || fallbackSubtitle;
                 const thumbUrl = preview?.image || null;
+                const showThumb = !!thumbUrl && !imgErrors.has(thumbUrl);
 
                 return (
                   <Section key={linkIdx} cfg={cfg} idx={2 + linkIdx}>
@@ -1714,12 +1716,12 @@ export default function RevealPage() {
                           className="w-14 h-14 rounded-2xl flex-shrink-0 overflow-hidden"
                           style={isDark ? { background: "rgba(255,255,255,0.1)" } : { background: "hsl(var(--primary)/0.1)" }}
                         >
-                          {thumbUrl ? (
+                          {showThumb ? (
                             <img
-                              src={thumbUrl}
+                              src={thumbUrl!}
                               alt={label}
                               className="w-full h-full object-cover"
-                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                              onError={() => setImgErrors(prev => new Set([...prev, thumbUrl!]))}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
