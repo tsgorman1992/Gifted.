@@ -1920,7 +1920,7 @@ export default function RevealPage() {
                       <button
                         type="button"
                         onClick={() => setReactionSkipped(true)}
-                        className={`text-xs underline underline-offset-2 ${isDark ? "text-white/20 hover:text-white/40" : "text-muted-foreground/30 hover:text-muted-foreground/60"} transition-colors`}
+                        className={`text-xs underline underline-offset-2 ${isDark ? "text-white/30 hover:text-white/50" : "text-muted-foreground/50 hover:text-muted-foreground"} transition-colors`}
                       >
                         Skip
                       </button>
