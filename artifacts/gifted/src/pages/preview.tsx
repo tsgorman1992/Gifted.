@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -779,17 +779,19 @@ export default function PreviewPage() {
           <motion.div {...fade(0.08)}>
             {isPaid ? (
               <>
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                  className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-4"
-                >
-                  <CheckCircle2 className="w-7 h-7 text-green-600" />
-                </motion.div>
-                <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">
-                  {paymentStatus === "confirming" ? "Confirming…" : "Your gift is ready."}
-                </h1>
+                <div className="flex items-center gap-3 mb-2">
+                  <motion.div
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                    className="shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center"
+                  >
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  </motion.div>
+                  <h1 className="font-serif text-3xl md:text-4xl font-medium">
+                    {paymentStatus === "confirming" ? "Confirming…" : "Your gift is ready."}
+                  </h1>
+                </div>
                 <p className="text-muted-foreground mb-7 text-base">
                   {paymentStatus === "confirming"
                     ? "Just a moment while we confirm everything…"
@@ -887,19 +889,9 @@ export default function PreviewPage() {
                     })}
                   </div>
 
-                  {/* CTA — authenticated: dashboard link; anonymous free gift: soft nudge */}
+                  {/* CTA — authenticated: phone notification only; anonymous free gift: soft nudge */}
                   {isAuthenticated ? (
-                    <div className="space-y-3">
-                      <Link href="/my-gifts">
-                        <Button
-                          variant="outline"
-                          className="w-full h-10 rounded-xl text-sm font-medium border-green-300 text-green-800 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/40"
-                        >
-                          <Gift className="w-4 h-4 mr-2" />
-                          Track this gift
-                        </Button>
-                      </Link>
-                      {/* Phone notification opt-in */}
+                    <div>
                       {!notifySaved ? (
                         <div className="space-y-1.5">
                           <p className="text-xs text-green-700/80 dark:text-green-400/80 font-medium">
