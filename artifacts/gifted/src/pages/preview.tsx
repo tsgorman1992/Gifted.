@@ -258,26 +258,30 @@ export default function PreviewPage() {
     window.open(`sms:?body=${encodeURIComponent(body)}`, "_blank");
   };
 
-  const handleRevealPreview = () => {
+  const handleRevealPreview = async () => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-    const params = new URLSearchParams();
-    params.set("experience", experience);
-    params.set("recipientName", recipientName);
-    params.set("senderName", senderName);
-    if (giftTitle) params.set("giftTitle", giftTitle);
-    if (giftAmount && parseFloat(giftAmount) > 0) params.set("amount", giftAmount);
-    if (giftIntent) params.set("intent", giftIntent);
-    const pn = localStorage.getItem("gifted_personal_note");
-    if (pn) params.set("personalNote", pn);
-    const el = localStorage.getItem("gifted_extra_links");
-    if (el) {
-      try {
-        const links: string[] = JSON.parse(el);
-        links.filter(Boolean).forEach((l) => params.append("link", l));
-      } catch { /* ignore */ }
+    // Open the tab synchronously within the user gesture to avoid popup blockers.
+    // We'll navigate it to the final URL once the gift is saved.
+    const newTab = window.open("about:blank", "_blank");
+
+    const saved = await saveGift();
+
+    if (!saved) {
+      // Save failed — close the blank tab and do nothing (saveGift sets saveError)
+      newTab?.close();
+      return;
     }
+
+    const params = new URLSearchParams();
+    params.set("giftId", saved.id);
     params.set("preview", "true");
-    window.open(`${base}/reveal?${params.toString()}`, "_blank");
+
+    if (newTab) {
+      newTab.location.href = `${base}/reveal?${params.toString()}`;
+    } else {
+      // Fallback if newTab reference was lost
+      window.open(`${base}/reveal?${params.toString()}`, "_blank");
+    }
   };
 
 
@@ -611,10 +615,11 @@ export default function PreviewPage() {
                 variant="secondary"
                 size="sm"
                 onClick={handleRevealPreview}
+                disabled={saving}
                 className="rounded-xl shrink-0"
               >
-                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                Open
+                {saving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5 mr-1.5" />}
+                {saving ? "Saving..." : "Open"}
               </Button>
             </div>
 

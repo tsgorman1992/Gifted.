@@ -976,8 +976,63 @@ export default function RevealPage() {
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-    // URL params (set by preview flow) take priority over localStorage
     const urlParams = new URLSearchParams(window.location.search);
+    const isPreviewMode = urlParams.get("preview") === "true";
+    const giftIdParam = urlParams.get("giftId");
+
+    if (isPreviewMode) {
+      setIsPreview(true);
+      setGiftPaid(true);
+    } else {
+      const paid = localStorage.getItem("gifted_gift_paid");
+      if (paid === "false") setGiftPaid(false);
+    }
+
+    if (giftIdParam) {
+      fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftIdParam)}`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(async (gift) => {
+          if (!gift) return;
+
+          if (gift.recipientName) setRecipientName(gift.recipientName);
+          if (gift.senderName) setSenderName(gift.senderName);
+          if (gift.experience && CONFIGS[gift.experience]) setExperience(gift.experience);
+          if (gift.giftTitle) setGiftTitle(gift.giftTitle);
+          if (gift.personalNote) setPersonalNote(gift.personalNote);
+          if (gift.amount && parseFloat(gift.amount) > 0) setGiftAmount(gift.amount);
+          if (gift.intent) setGiftIntent(gift.intent);
+
+          const links: string[] = [];
+          if (Array.isArray(gift.extraLinks) && gift.extraLinks.length > 0) {
+            links.push(...gift.extraLinks.filter(Boolean));
+          } else if (gift.playlistUrl) {
+            links.push(gift.playlistUrl);
+          }
+          if (links.length > 0) setExtraLinks(links);
+
+          if (gift.videoPath) {
+            fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(gift.videoPath)}`)
+              .then(r => r.ok ? r.json() : null)
+              .then(d => setVideoUrl(d?.url ?? `${base}/api/storage${gift.videoPath}`))
+              .catch(() => setVideoUrl(`${base}/api/storage${gift.videoPath}`));
+          }
+
+          if (Array.isArray(gift.photoPaths) && gift.photoPaths.length > 0) {
+            Promise.all(
+              gift.photoPaths.map((p: string) =>
+                fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(p)}`)
+                  .then(r => r.ok ? r.json() : null)
+                  .then(d => d?.url ?? `${base}/api/storage${p}`)
+                  .catch(() => `${base}/api/storage${p}`)
+              )
+            ).then(urls => setPhotoUrls(urls));
+          }
+        })
+        .catch(() => { /* ignore fetch error — gift fields remain at defaults */ });
+      return;
+    }
+
+    // URL params (set by preview flow without giftId) take priority over localStorage
     const urlExperience    = urlParams.get("experience");
     const urlAmount        = urlParams.get("amount");
     const urlIntent        = urlParams.get("intent");
@@ -1038,14 +1093,6 @@ export default function RevealPage() {
 
     const intn = urlIntent || localStorage.getItem("gifted_intent");
     if (intn) setGiftIntent(intn);
-
-    if (urlParams.get("preview") === "true") {
-      setIsPreview(true);
-      setGiftPaid(true);
-    } else {
-      const paid = localStorage.getItem("gifted_gift_paid");
-      if (paid === "false") setGiftPaid(false);
-    }
   }, []);
 
   useEffect(() => {
