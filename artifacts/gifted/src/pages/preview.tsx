@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, User, ArrowLeft, Eye, X,
+  CheckCircle2, Send, User, ArrowLeft, Eye, X, ExternalLink,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -25,7 +25,7 @@ export default function PreviewPage() {
   const [videoUrl,       setVideoUrl]       = useState<string | null>(null);
   const [videoLoadError, setVideoLoadError] = useState(false);
   const [photoCount,     setPhotoCount]     = useState(0);
-  const [hasPlaylist,    setHasPlaylist]    = useState(false);
+  const [previewLinks, setPreviewLinks] = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
   const [giftAmount,     setGiftAmount]     = useState<string | null>(null);
   const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
   const [personalNote,   setPersonalNote]   = useState<string | null>(null);
@@ -65,8 +65,22 @@ export default function PreviewPage() {
     }
 
     const el2 = localStorage.getItem("gifted_extra_links");
-    if (el2) { try { const p = JSON.parse(el2); if (Array.isArray(p) && p.length > 0) setHasPlaylist(true); } catch { /* ignore */ } }
-    else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) setHasPlaylist(true); }
+    if (el2) {
+      try {
+        const p = JSON.parse(el2);
+        if (Array.isArray(p) && p.length > 0) {
+          const normalized = p
+            .map((item: string | {url: string; label: string; subtitle?: string}) =>
+              typeof item === "string" ? { url: item, label: "" } : item
+            )
+            .filter((l: {url: string}) => l.url);
+          if (normalized.length > 0) setPreviewLinks(normalized);
+        }
+      } catch { /* ignore */ }
+    } else {
+      const pl = localStorage.getItem("gifted_playlist_url");
+      if (pl) setPreviewLinks([{ url: pl, label: "" }]);
+    }
 
     const amt = localStorage.getItem("gifted_amount");
     if (amt && parseFloat(amt) > 0) setGiftAmount(amt);
@@ -591,6 +605,46 @@ export default function PreviewPage() {
               </div>
             </div>
 
+            {/* Link cards — sender sees their labels before sending */}
+            {previewLinks.length > 0 && (
+              <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Links you added</p>
+                <div className="space-y-2">
+                  {previewLinks.map((link, i) => {
+                    const u = link.url.toLowerCase();
+                    const isMusic = u.includes("spotify.com") || u.includes("music.apple.com") || u.includes("soundcloud.com") || u.includes("tidal.com") || u.includes("deezer.com");
+                    const fallbackLabel =
+                      u.includes("spotify.com") ? "Spotify" :
+                      u.includes("music.apple.com") ? "Apple Music" :
+                      u.includes("youtube.com") || u.includes("youtu.be") ? "YouTube" :
+                      isMusic ? "Music link" :
+                      u.includes("ticketmaster.com") || u.includes("eventbrite.com") ? "Event Tickets" :
+                      u.includes("opentable.com") || u.includes("resy.com") ? "Reservation" :
+                      u.includes("airbnb.com") || u.includes("vrbo.com") ? "Stay link" :
+                      "Open link";
+                    const fallbackSubtitle = isMusic ? "Tap to listen" : "Tap to open";
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <div
+                          className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center"
+                          style={{ background: "hsl(var(--primary)/0.1)" }}
+                        >
+                          {isMusic
+                            ? <Music className="w-4 h-4 text-primary" />
+                            : <ExternalLink className="w-4 h-4 text-primary" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold leading-tight truncate">{link.label || fallbackLabel}</p>
+                          <p className="text-xs text-muted-foreground truncate">{link.subtitle || fallbackSubtitle}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Bridge moment — what's inside, before the payment ask */}
             {hasBalance && !isPaid && (
               <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
@@ -612,12 +666,25 @@ export default function PreviewPage() {
                       <span>{photoCount} {photoCount === 1 ? "photo" : "photos"} from you</span>
                     </li>
                   )}
-                  {hasPlaylist && (
-                    <li className="flex items-center gap-2 text-sm text-foreground">
-                      <Music className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span>A link to explore</span>
-                    </li>
-                  )}
+                  {previewLinks.map((link, i) => {
+                    const u = link.url.toLowerCase();
+                    const isMusic = u.includes("spotify.com") || u.includes("music.apple.com") || u.includes("soundcloud.com") || u.includes("tidal.com") || u.includes("deezer.com");
+                    const fallbackLabel =
+                      u.includes("spotify.com") ? "Spotify" :
+                      u.includes("music.apple.com") ? "Apple Music" :
+                      u.includes("youtube.com") || u.includes("youtu.be") ? "YouTube" :
+                      isMusic ? "Music link" :
+                      "A link";
+                    return (
+                      <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                        {isMusic
+                          ? <Music className="w-3.5 h-3.5 text-primary shrink-0" />
+                          : <ExternalLink className="w-3.5 h-3.5 text-primary shrink-0" />
+                        }
+                        <span>{link.label || fallbackLabel}</span>
+                      </li>
+                    );
+                  })}
                   <li className="flex items-center gap-2 text-sm text-foreground">
                     <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>${displayAmt}{giftIntent ? ` — ${giftIntent}` : " to spend however they like"}</span>
