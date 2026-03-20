@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
@@ -264,6 +264,28 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
 export default function MyGiftsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+
+  // Handle return from Google OAuth — read gifted_auth_return from localStorage
+  // Format A: "/preview"                    → navigate there (paid gate return)
+  // Format B: "/my-gifts&claim={giftId}"   → claim the gift, then stay or navigate
+  useEffect(() => {
+    const authReturn = localStorage.getItem("gifted_auth_return");
+    if (!authReturn) return;
+    localStorage.removeItem("gifted_auth_return");
+
+    const claimMatch = authReturn.match(/^(.+?)&claim=(.+)$/);
+    if (claimMatch) {
+      const [, returnPath, claimId] = claimMatch;
+      fetch(`${BASE}/api/gifted/gifts/${claimId}/claim`, {
+        method: "PATCH",
+        credentials: "include",
+      }).finally(() => {
+        if (returnPath !== "/my-gifts") setLocation(returnPath);
+      });
+    } else if (authReturn !== "/my-gifts") {
+      setLocation(authReturn);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleNewGift() {
     clearGiftSession();

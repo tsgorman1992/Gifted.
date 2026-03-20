@@ -199,6 +199,36 @@ router.get("/gifted/my-gifts", async (req, res) => {
   }
 });
 
+// PATCH /api/gifted/gifts/:id/claim — link an anonymous gift to the authenticated user
+router.patch("/gifted/gifts/:id/claim", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  try {
+    const { id } = req.params;
+    const [gift] = await db
+      .select({ id: gifts.id, senderUserId: gifts.senderUserId })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+    if (gift.senderUserId) {
+      res.status(409).json({ error: "Gift already owned" });
+      return;
+    }
+    await db.update(gifts).set({ senderUserId: userId }).where(eq(gifts.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error claiming gift:", err);
+    res.status(500).json({ error: "Failed to claim gift" });
+  }
+});
+
 // POST /api/gifted/send-gift — send a gift link via SMS (phone) or mailto (email)
 router.post("/gifted/send-gift", async (req, res) => {
   const { giftId, contact, recipientName, senderName, giftUrl } = req.body;
