@@ -9,7 +9,7 @@ export const mockGiftData = {
   hasVideo: true,
   playlistUrl: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
   photosCount: 4,
-  amount: 150,
+  amount: 50,
   intent: "Treat yourself",
   theme: "Warm glow",
   themeImage: "images/theme-warm-glow.png"

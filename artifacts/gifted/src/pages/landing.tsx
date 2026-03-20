@@ -290,7 +290,7 @@ export default function LandingPage() {
                       <Gift className="w-4 h-4 text-primary" />
                     </motion.div>
                     <div>
-                      <p className="text-sm font-bold">$150.00</p>
+                      <p className="text-sm font-bold">$50.00</p>
                       <p className="text-xs text-muted-foreground">Treat yourself</p>
                     </div>
                   </div>
