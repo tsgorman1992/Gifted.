@@ -948,9 +948,7 @@ export default function RevealPage() {
   const videoRef                          = useRef<HTMLVideoElement>(null);
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
-  const [extraLinks, setExtraLinks]       = useState<string[]>([]);
-  const [linkPreviews, setLinkPreviews]   = useState<Record<string, { title: string | null; description: string | null; image: string | null; siteName: string | null }>>({});
-  const [imgErrors, setImgErrors]         = useState<Set<string>>(new Set());
+  const [extraLinks, setExtraLinks]       = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
   const [recipientName, setRecipientName] = useState(mockGiftData.recipientName);
   const [senderName, setSenderName]       = useState(mockGiftData.senderName);
   const [giftTitle, setGiftTitle]         = useState(mockGiftData.title);
@@ -1009,13 +1007,13 @@ export default function RevealPage() {
           if (gift.amount && parseFloat(gift.amount) > 0) setGiftAmount(gift.amount);
           if (gift.intent) setGiftIntent(gift.intent);
 
-          const links: string[] = [];
-          if (Array.isArray(gift.extraLinks) && gift.extraLinks.length > 0) {
-            links.push(...gift.extraLinks.filter(Boolean));
-          } else if (gift.playlistUrl) {
-            links.push(gift.playlistUrl);
-          }
+          const rawLinks: Array<string | {url: string; label: string; subtitle?: string}> =
+            Array.isArray(gift.extraLinks) ? gift.extraLinks : [];
+          const links = rawLinks
+            .map(item => typeof item === "string" ? { url: item, label: "" } : item)
+            .filter(l => l.url);
           if (links.length > 0) setExtraLinks(links);
+          else if (gift.playlistUrl) setExtraLinks([{ url: gift.playlistUrl, label: "" }]);
 
           if (gift.videoPath) {
             fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(gift.videoPath)}`)
@@ -1076,11 +1074,25 @@ export default function RevealPage() {
 
     const urlLinks = urlParams.getAll("link").filter(Boolean);
     if (urlLinks.length > 0) {
-      setExtraLinks(urlLinks);
+      setExtraLinks(urlLinks.map(u => ({ url: u, label: "" })));
     } else {
       const elRaw = localStorage.getItem("gifted_extra_links");
-      if (elRaw) { try { const parsed = JSON.parse(elRaw); if (Array.isArray(parsed)) setExtraLinks(parsed.filter(Boolean)); } catch { /* ignore */ } }
-      else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) setExtraLinks([pl]); }
+      if (elRaw) {
+        try {
+          const parsed = JSON.parse(elRaw);
+          if (Array.isArray(parsed)) {
+            const normalized = parsed
+              .map((item: string | {url: string; label: string; subtitle?: string}) =>
+                typeof item === "string" ? { url: item, label: "" } : item
+              )
+              .filter(l => l.url);
+            if (normalized.length > 0) setExtraLinks(normalized);
+          }
+        } catch { /* ignore */ }
+      } else {
+        const pl = localStorage.getItem("gifted_playlist_url");
+        if (pl) setExtraLinks([{ url: pl, label: "" }]);
+      }
     }
 
     const rn = urlRecipient || localStorage.getItem("gifted_recipient_name");
@@ -1160,20 +1172,6 @@ export default function RevealPage() {
     };
   }, []);
 
-  useEffect(() => {
-    const urls = extraLinks.filter(Boolean);
-    if (urls.length === 0) return;
-    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-    urls.forEach(async (url) => {
-      if (linkPreviews[url] !== undefined) return;
-      try {
-        const res = await fetch(`${base}/api/gifted/link-preview?url=${encodeURIComponent(url)}`, { credentials: "include" });
-        if (!res.ok) return;
-        const data = await res.json();
-        setLinkPreviews(prev => ({ ...prev, [url]: data }));
-      } catch {}
-    });
-  }, [extraLinks]);
 
   useEffect(() => {
     const sid = "gifted-epic-anim-styles";
@@ -1661,9 +1659,9 @@ export default function RevealPage() {
               )}
 
               {/* Link cards — one per extra link */}
-              {extraLinks.length > 0 && extraLinks.map((href, linkIdx) => {
-                if (!href) return null;
-                const u = href.toLowerCase();
+              {extraLinks.length > 0 && extraLinks.map((link, linkIdx) => {
+                if (!link.url) return null;
+                const u = link.url.toLowerCase();
                 const isMusic = u.includes("spotify.com") || u.includes("music.apple.com") || u.includes("soundcloud.com") || u.includes("tidal.com") || u.includes("deezer.com");
                 const isTickets = u.includes("ticketmaster.com") || u.includes("axs.com") || u.includes("stubhub.com") || u.includes("seatgeek.com") || u.includes("livenation.com");
                 const isFood = u.includes("opentable.com") || u.includes("resy.com") || u.includes("yelp.com/biz") || u.includes("tock.com");
@@ -1692,16 +1690,13 @@ export default function RevealPage() {
                   isTravel ? "Tap to view" :
                   "Tap to open";
 
-                const preview = linkPreviews[href] ?? null;
-                const label = preview?.title || fallbackLabel;
-                const subtitle = preview?.description || fallbackSubtitle;
-                const thumbUrl = preview?.image || null;
-                const showThumb = !!thumbUrl && !imgErrors.has(thumbUrl);
+                const label = link.label || fallbackLabel;
+                const subtitle = link.subtitle || fallbackSubtitle;
 
                 return (
                   <Section key={linkIdx} cfg={cfg} idx={2 + linkIdx}>
                     <a
-                      href={href}
+                      href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block rounded-[2rem] p-5 border transition-all hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden"
@@ -1713,24 +1708,13 @@ export default function RevealPage() {
                       {experience === "garden-bloom" && <GardenBloomWatermark />}
                       <div className="flex items-center gap-4">
                         <div
-                          className="w-14 h-14 rounded-2xl flex-shrink-0 overflow-hidden"
+                          className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center"
                           style={isDark ? { background: "rgba(255,255,255,0.1)" } : { background: "hsl(var(--primary)/0.1)" }}
                         >
-                          {showThumb ? (
-                            <img
-                              src={thumbUrl!}
-                              alt={label}
-                              className="w-full h-full object-cover"
-                              onError={() => setImgErrors(prev => new Set([...prev, thumbUrl!]))}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              {isMusic
-                                ? <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
-                                : <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
-                              }
-                            </div>
-                          )}
+                          {isMusic
+                            ? <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                            : <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                          }
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className={`font-semibold text-base leading-tight line-clamp-1 ${isDark ? "text-white" : "text-foreground"}`}>{label}</p>

@@ -15,7 +15,7 @@ export const gifts = pgTable("gifts", {
   videoPath: text("video_path"),
   photoPaths: jsonb("photo_paths").$type<string[]>(),
   playlistUrl: text("playlist_url"),
-  extraLinks: jsonb("extra_links").$type<string[]>(),
+  extraLinks: jsonb("extra_links").$type<Array<{ url: string; label: string; subtitle?: string }>>(),
   amount: text("amount"),
   intent: text("intent"),
   paid: boolean("paid").default(false),

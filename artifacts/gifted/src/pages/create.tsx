@@ -604,7 +604,7 @@ export default function CreatePage() {
   const [senderName, setSenderName] = useState("");
   const [giftTitle, setGiftTitle] = useState("");
   const [personalNote, setPersonalNote] = useState("");
-  const [extraLinks, setExtraLinks] = useState<string[]>([""]);
+  const [extraLinks, setExtraLinks] = useState<Array<{url: string; label: string}>>([{url: "", label: ""}]);
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
@@ -641,10 +641,18 @@ export default function CreatePage() {
     if (pn) setPersonalNote(pn);
     const el = localStorage.getItem("gifted_extra_links");
     if (el) {
-      try { const parsed = JSON.parse(el); if (Array.isArray(parsed) && parsed.length > 0) setExtraLinks([...parsed, ""]); } catch { /* ignore */ }
+      try {
+        const parsed = JSON.parse(el);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const normalized = parsed.map((item: string | {url: string; label: string}) =>
+            typeof item === "string" ? { url: item, label: "" } : item
+          );
+          setExtraLinks([...normalized, {url: "", label: ""}]);
+        }
+      } catch { /* ignore */ }
     } else {
       const pl = localStorage.getItem("gifted_playlist_url");
-      if (pl) setExtraLinks([pl, ""]);
+      if (pl) setExtraLinks([{url: pl, label: ""}, {url: "", label: ""}]);
     }
     const amt = localStorage.getItem("gifted_amount");
     if (amt && parseFloat(amt) > 0) setAmount(amt);
@@ -804,7 +812,7 @@ export default function CreatePage() {
     else localStorage.removeItem("gifted_photo_paths");
     if (personalNote.trim()) localStorage.setItem("gifted_personal_note", personalNote.trim());
     else localStorage.removeItem("gifted_personal_note");
-    const nonEmptyLinks = extraLinks.map(l => l.trim()).filter(Boolean);
+    const nonEmptyLinks = extraLinks.filter(l => l.url.trim()).map(l => ({ url: l.url.trim(), label: l.label.trim() }));
     if (nonEmptyLinks.length > 0) localStorage.setItem("gifted_extra_links", JSON.stringify(nonEmptyLinks));
     else localStorage.removeItem("gifted_extra_links");
     localStorage.removeItem("gifted_playlist_url");
@@ -830,6 +838,11 @@ export default function CreatePage() {
   };
 
   const handlePreview = () => {
+    const filledLinks = extraLinks.filter(l => l.url.trim());
+    if (filledLinks.some(l => !l.label.trim())) {
+      setStepError("Please add a label for each link you've added — e.g. \"Your Spotify playlist\" or \"Dinner reservation\".");
+      return;
+    }
     if (amount && parseFloat(amount) > 0 && parseFloat(amount) < 10) {
       setStepError("The minimum gift balance is $10. Choose $10 or more, or leave it blank.");
       return;
@@ -1443,30 +1456,44 @@ export default function CreatePage() {
                   {/* Links — anything with a URL, multiple allowed */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Add links <span className="text-muted-foreground font-normal">— tickets, playlists, reservations, anything</span></Label>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {extraLinks.map((link, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <div className="relative flex-1">
-                            <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <div key={idx} className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                              <Input
+                                placeholder={LINK_IDEAS[idx % LINK_IDEAS.length]}
+                                className="h-11 rounded-xl text-sm pl-10 transition-all"
+                                value={link.url}
+                                onChange={(e) => {
+                                  const updated = [...extraLinks];
+                                  updated[idx] = { ...updated[idx], url: e.target.value };
+                                  setExtraLinks(updated);
+                                }}
+                              />
+                            </div>
+                            {extraLinks.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setExtraLinks(extraLinks.filter((_, i) => i !== idx))}
+                                className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          {link.url.trim() && (
                             <Input
-                              placeholder={LINK_IDEAS[idx % LINK_IDEAS.length]}
-                              className="h-11 rounded-xl text-sm pl-10 transition-all"
-                              value={link}
+                              placeholder='Label — e.g. "Your birthday dinner at Nobu"'
+                              className="h-9 rounded-xl text-sm transition-all"
+                              value={link.label}
                               onChange={(e) => {
                                 const updated = [...extraLinks];
-                                updated[idx] = e.target.value;
+                                updated[idx] = { ...updated[idx], label: e.target.value };
                                 setExtraLinks(updated);
                               }}
                             />
-                          </div>
-                          {extraLinks.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => setExtraLinks(extraLinks.filter((_, i) => i !== idx))}
-                              className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
                           )}
                         </div>
                       ))}
@@ -1474,7 +1501,7 @@ export default function CreatePage() {
                     {extraLinks.length < 5 && (
                       <button
                         type="button"
-                        onClick={() => setExtraLinks([...extraLinks, ""])}
+                        onClick={() => setExtraLinks([...extraLinks, {url: "", label: ""}])}
                         className="flex items-center gap-1.5 text-xs text-primary font-medium hover:underline mt-1"
                       >
                         <Plus className="w-3.5 h-3.5" /> Add another link
