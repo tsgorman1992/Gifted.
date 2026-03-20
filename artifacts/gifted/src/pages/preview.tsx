@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check, ExternalLink,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CreditCard, CheckCircle2, Send, Mail, Phone, User, ArrowLeft,
+  CheckCircle2, Send, User, ArrowLeft,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -40,13 +40,6 @@ export default function PreviewPage() {
   // Stripe payment state
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "redirecting" | "confirming" | "confirmed" | "failed">("idle");
   const [payingError,   setPayingError]   = useState<string | null>(null);
-
-  // Desktop send form state
-  const [isDesktop,   setIsDesktop]   = useState(false);
-  const [sendContact, setSendContact] = useState("");
-  const [sendStatus,  setSendStatus]  = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [sendError,   setSendError]   = useState<string | null>(null);
-  const sendInputRef = useRef<HTMLInputElement>(null);
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -91,11 +84,6 @@ export default function PreviewPage() {
     if (st) setScheduledTime(st);
 
     setCanShare(typeof navigator?.share === "function");
-    setIsDesktop(window.innerWidth >= 768);
-
-    // Pre-fill desktop send form with recipient phone if available
-    const rp2 = localStorage.getItem("gifted_recipient_phone");
-    if (rp2 && !rp2.includes("@")) setSendContact(rp2);
 
     // Handle return from Stripe Checkout
     const params = new URLSearchParams(window.location.search);
@@ -292,50 +280,6 @@ export default function PreviewPage() {
     window.open(`${base}/reveal?${params.toString()}`, "_blank");
   };
 
-  const handleDesktopSend = async () => {
-    const contact = sendContact.trim();
-    if (!contact) return;
-
-    const saved = await saveGift();
-    if (!saved) return;
-
-    setSendStatus("sending");
-    setSendError(null);
-
-    try {
-      const res = await fetch(`${base}/api/gifted/send-gift`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          giftId: saved.id,
-          contact,
-          recipientName,
-          senderName,
-          giftUrl: saved.url,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setSendStatus("error");
-        setSendError(data.error || "Could not send. Please copy the link instead.");
-        return;
-      }
-
-      if (data.method === "email" && data.mailtoUrl) {
-        window.open(data.mailtoUrl, "_blank");
-        setSendStatus("sent");
-        return;
-      }
-
-      setSendStatus("sent");
-    } catch {
-      setSendStatus("error");
-      setSendError("Network error. Please copy the link and send it manually.");
-    }
-  };
 
   const handleEdit = () => {
     localStorage.removeItem("gifted_paid_id");
@@ -629,69 +573,8 @@ export default function PreviewPage() {
               </Button>
             )}
 
-            {/* ── Desktop: clean send form ── */}
-            {isDesktop && (!hasBalance || isPaid) && (
-              <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-                <p className="text-sm font-semibold">Send to {recipientName}</p>
-                <p className="text-xs text-muted-foreground">Enter their phone number or email — we'll deliver the link directly.</p>
-                {sendStatus === "sent" ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.97 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center gap-3 py-3 px-4 rounded-xl bg-green-50 border border-green-200"
-                  >
-                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-green-800">Link sent!</p>
-                      <p className="text-xs text-green-700">{recipientName} will receive the link shortly.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setSendStatus("idle"); setSendContact(""); }}
-                      className="ml-auto text-xs text-green-700 underline"
-                    >
-                      Send again
-                    </button>
-                  </motion.div>
-                ) : (
-                  <>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        {sendContact.includes("@")
-                          ? <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          : <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        }
-                        <input
-                          ref={sendInputRef}
-                          type="text"
-                          value={sendContact}
-                          onChange={e => { setSendContact(e.target.value); setSendStatus("idle"); setSendError(null); }}
-                          onKeyDown={e => e.key === "Enter" && handleDesktopSend()}
-                          placeholder="Phone number or email"
-                          className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
-                        />
-                      </div>
-                      <Button
-                        onClick={handleDesktopSend}
-                        disabled={!sendContact.trim() || sendStatus === "sending" || saving}
-                        className="h-11 px-5 rounded-xl shrink-0"
-                      >
-                        {sendStatus === "sending"
-                          ? <Loader2 className="w-4 h-4 animate-spin" />
-                          : <><Send className="w-4 h-4 mr-1.5" /> Send</>
-                        }
-                      </Button>
-                    </div>
-                    {sendError && (
-                      <p className="text-xs text-destructive">{sendError}</p>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* ── Mobile: native share buttons ── */}
-            {!isDesktop && (!hasBalance || isPaid) && (
+            {/* ── Share / copy — sender shares the link themselves ── */}
+            {(!hasBalance || isPaid) && (
               <div className="flex gap-3">
                 <Button
                   onClick={canShare ? handleShare : handleSMS}
@@ -708,29 +591,12 @@ export default function PreviewPage() {
                 <Button
                   variant="outline"
                   onClick={handleCopy}
-                  disabled={saving}
+                  disabled={saving || isRedirecting}
                   className="flex-1 h-12 rounded-xl text-sm font-medium"
                 >
                   {copied ? <><Check className="w-4 h-4 mr-2" /> Copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
                 </Button>
               </div>
-            )}
-
-            {/* Desktop: copy link — only available once paid (or no balance) */}
-            {isDesktop && (!hasBalance || isPaid) && (
-              <Button
-                variant="outline"
-                onClick={handleCopy}
-                disabled={saving || isRedirecting}
-                className="w-full h-11 rounded-xl text-sm font-medium"
-              >
-                {saving
-                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
-                  : copied
-                    ? <><Check className="w-4 h-4 mr-2" /> Copied!</>
-                    : <><Copy className="w-4 h-4 mr-2" /> Copy link instead</>
-                }
-              </Button>
             )}
 
             {/* Reveal preview nudge */}

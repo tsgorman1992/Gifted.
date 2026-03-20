@@ -1500,7 +1500,7 @@ export default function CreatePage() {
                       <Label htmlFor="recipientPhone">
                         Their phone number{" "}
                         {amount && parseFloat(amount) >= 10
-                          ? <span className="text-destructive text-xs font-normal">— so they can unlock it</span>
+                          ? <span className="text-destructive text-xs font-normal">— required to receive the balance</span>
                           : <span className="text-muted-foreground text-xs font-normal">(optional)</span>
                         }
                       </Label>
@@ -1515,7 +1515,7 @@ export default function CreatePage() {
                       />
                       <p className="text-xs text-muted-foreground">
                         {amount && parseFloat(amount) >= 10
-                          ? "So they can unlock the balance when they're ready. Never used for marketing."
+                          ? "Required to verify who they are when they redeem. Never used for marketing."
                           : "Add their number and we'll deliver the link — or skip it and share it yourself."}
                       </p>
                     </div>
