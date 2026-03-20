@@ -43,29 +43,29 @@ function buildGiftSvg(
   recipientName: string,
   senderName: string,
   experience: string,
-  amount?: number | null,
+  _amount?: number | null,
 ): string {
   const p = EXPERIENCES[experience] ?? FALLBACK;
   const dark = p.isDark;
 
-  const textPrimary   = dark ? "#FFFFFF" : "#1a0e06";
-  const textSecondary = dark ? "rgba(255,255,255,0.75)" : "rgba(30,15,5,0.65)";
-  const cardBg        = dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.55)";
-  const cardStroke    = dark ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.9)";
-  const logoColor     = dark ? "rgba(255,255,255,0.9)" : "#7a4a1e";
-  const dotColor      = dark ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.45)";
-  const tagBg         = dark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.6)";
-  const tagText       = dark ? "rgba(255,255,255,0.85)" : "#7a4a1e";
+  const textPrimary    = dark ? "#FFFFFF" : "#1a0e06";
+  const textSecondary  = dark ? "rgba(255,255,255,0.68)" : "rgba(30,15,5,0.58)";
+  const logoColor      = dark ? "rgba(255,255,255,0.82)" : "#7a4a1e";
+  const bowFill        = dark ? "rgba(255,255,255,0.26)" : "rgba(255,255,255,0.40)";
+  const knotFill       = dark ? "rgba(255,255,255,0.38)" : "rgba(255,255,255,0.60)";
+  const glowFill       = dark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.16)";
+  const ctaFill        = dark ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.40)";
+  const ctaStroke      = dark ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.70)";
+  const ctaText        = dark ? "rgba(255,255,255,0.88)" : "#3d2010";
+  const sp             = dark ? 0.44 : 0.54;
 
-  const name   = esc(truncate(recipientName || "you", 22));
+  const name   = esc(truncate(recipientName || "you", 18));
   const sender = esc(truncate(senderName    || "someone special", 28));
 
-  const amountBadge = amount
-    ? `
-      <rect x="88" y="436" width="148" height="44" rx="22" fill="${dark ? "rgba(255,255,255,0.18)" : "rgba(122,74,30,0.15)"}" />
-      <text x="162" y="464" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="700" text-anchor="middle" fill="${dark ? "#fff" : "#7a4a1e"}">Something inside</text>
-    `
-    : "";
+  const nameLen      = name.length;
+  const nameFontSize = nameLen <= 6 ? 108 : nameLen <= 10 ? 88 : nameLen <= 14 ? 72 : 60;
+  const nameY        = 368;
+  const fromY        = nameY + 58;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
@@ -75,78 +75,86 @@ function buildGiftSvg(
       <stop offset="50%"  stop-color="${p.via}"  />
       <stop offset="100%" stop-color="${p.to}"   />
     </linearGradient>
-    <linearGradient id="card-shimmer" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="${cardBg}" />
-      <stop offset="100%" stop-color="${dark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.35)"}" />
-    </linearGradient>
   </defs>
 
-  <!-- Background gradient -->
+  <!-- Full-bleed background -->
   <rect width="1200" height="630" fill="url(#bg)" />
 
-  <!-- Decorative dots -->
-  <circle cx="980" cy="80"  r="180" fill="${dotColor}" />
-  <circle cx="1120" cy="400" r="120" fill="${dotColor}" />
-  <circle cx="60"  cy="520" r="90"  fill="${dotColor}" />
+  <!-- Atmospheric depth glows -->
+  <circle cx="960"  cy="90"  r="300" fill="${glowFill}" />
+  <circle cx="1110" cy="530" r="210" fill="${glowFill}" />
 
-  <!-- Gift ribbon decoration (top-right corner) -->
-  <g opacity="0.22">
-    <line x1="980" y1="0" x2="980" y2="220" stroke="${dark ? "#fff" : "#fff"}" stroke-width="6" />
-    <line x1="840" y1="80" x2="1140" y2="80" stroke="${dark ? "#fff" : "#fff"}" stroke-width="6" />
-    <circle cx="980" cy="80" r="18" fill="${dark ? "#fff" : "#fff"}" />
+  <!-- ── GIFT BOW (right side, knot at ~980,185) ── -->
+  <!-- Left loop -->
+  <ellipse cx="905" cy="146" rx="84" ry="33" fill="${bowFill}" transform="rotate(28,905,146)" />
+  <!-- Right loop -->
+  <ellipse cx="1055" cy="146" rx="84" ry="33" fill="${bowFill}" transform="rotate(-28,1055,146)" />
+  <!-- Ribbon tails -->
+  <path d="M980,188 C954,230 923,274 904,326"
+    stroke="${bowFill}" stroke-width="12" fill="none" stroke-linecap="round" />
+  <path d="M980,188 C1006,230 1037,274 1056,326"
+    stroke="${bowFill}" stroke-width="12" fill="none" stroke-linecap="round" />
+  <!-- Knot -->
+  <circle cx="980" cy="182" r="23" fill="${knotFill}" />
+
+  <!-- ── SPARKLE STARS ── -->
+  <g transform="translate(856,76)" opacity="${sp.toFixed(2)}">
+    <polygon points="0,-21 3,0 0,21 -3,0" fill="white" />
+    <polygon points="-21,0 0,-3 21,0 0,3" fill="white" />
+  </g>
+  <g transform="translate(1148,238)" opacity="${(sp * 0.68).toFixed(2)}">
+    <polygon points="0,-15 2,0 0,15 -2,0" fill="white" />
+    <polygon points="-15,0 0,-2 15,0 0,2" fill="white" />
+  </g>
+  <g transform="translate(1088,44)" opacity="${(sp * 0.58).toFixed(2)}">
+    <polygon points="0,-10 1.5,0 0,10 -1.5,0" fill="white" />
+    <polygon points="-10,0 0,-1.5 10,0 0,1.5" fill="white" />
+  </g>
+  <g transform="translate(1160,390)" opacity="${(sp * 0.48).toFixed(2)}">
+    <polygon points="0,-8 1.2,0 0,8 -1.2,0" fill="white" />
+    <polygon points="-8,0 0,-1.2 8,0 0,1.2" fill="white" />
   </g>
 
-  <!-- Glass card -->
-  <rect x="72" y="120" width="680" height="410" rx="28" fill="url(#card-shimmer)" stroke="${cardStroke}" stroke-width="1.5" />
+  <!-- ── TEXT (left side) ── -->
 
-  <!-- gifted. wordmark -->
-  <text x="108" y="186"
+  <!-- gifted. wordmark — top left, small -->
+  <text x="72" y="72"
     font-family="Georgia, 'Times New Roman', serif"
-    font-size="28"
+    font-size="26"
     font-weight="700"
-    letter-spacing="1"
+    letter-spacing="0.5"
     fill="${logoColor}">gifted.</text>
 
-  <!-- Experience tag -->
-  <rect x="108" y="202" width="${esc(String(p.tagline.length * 10 + 24))}" height="30" rx="15" fill="${tagBg}" />
-  <text x="${esc(String(108 + (p.tagline.length * 10 + 24) / 2))}" y="222"
-    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    font-size="14"
-    font-weight="600"
-    text-anchor="middle"
-    fill="${tagText}">${esc(p.tagline)}</text>
+  <!-- "A GIFT FOR" label -->
+  <text x="72" y="250"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="20"
+    font-weight="400"
+    letter-spacing="4"
+    fill="${textSecondary}">A GIFT FOR</text>
 
-  <!-- "A gift for" label -->
-  <text x="108" y="310"
-    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    font-size="22"
-    font-weight="500"
-    fill="${textSecondary}">A gift for</text>
-
-  <!-- Recipient name — big headline -->
-  <text x="108" y="378"
+  <!-- Recipient name — big, adaptive font size -->
+  <text x="72" y="${nameY}"
     font-family="Georgia, 'Times New Roman', serif"
-    font-size="72"
+    font-size="${nameFontSize}"
     font-weight="700"
     fill="${textPrimary}">${name}</text>
 
-  <!-- "from sender" line -->
-  <text x="108" y="424"
-    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    font-size="24"
-    font-weight="400"
+  <!-- "from [sender]" -->
+  <text x="72" y="${fromY}"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="26"
+    font-weight="300"
     fill="${textSecondary}">from ${sender}</text>
 
-  ${amountBadge}
-
-  <!-- Right-side tagline -->
-  <text x="880" y="558"
-    font-family="Georgia, 'Times New Roman', serif"
-    font-size="20"
-    font-weight="400"
+  <!-- ── CTA PILL (bottom left) ── -->
+  <rect x="72" y="548" width="302" height="50" rx="25" fill="${ctaFill}" stroke="${ctaStroke}" stroke-width="1.5" />
+  <text x="223" y="579"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="19"
+    font-weight="600"
     text-anchor="middle"
-    fill="${dark ? "rgba(255,255,255,0.5)" : "rgba(30,15,5,0.4)"}"
-    font-style="italic">send more than just a gift.</text>
+    fill="${ctaText}">Tap to open your gift</text>
 </svg>`;
 }
 

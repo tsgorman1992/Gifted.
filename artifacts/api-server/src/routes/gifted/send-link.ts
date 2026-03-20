@@ -37,8 +37,8 @@ router.post("/api/gifted/send-link", async (req, res) => {
 
     const to = normalizePhone(phone);
     const fromName = senderName || "Someone";
-    const toName = recipientName ? ` ${recipientName}` : "";
-    const body = `Hey${toName}, ${fromName} made you something 🎁\n${giftUrl}`;
+    const toName = recipientName || "there";
+    const body = `Hey ${toName} 🎁\n\n${fromName} made something just for you.\n\nTap to open:\n${giftUrl}`;
 
     const client = getTwilioClient();
     const fromNumber = process.env.TWILIO_PHONE_NUMBER;

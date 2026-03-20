@@ -300,7 +300,7 @@ router.post("/gifted/send-gift", async (req, res) => {
     // Return mailto link — client opens it
     const subject = encodeURIComponent(`You've got a gift 🎁`);
     const body = encodeURIComponent(
-      `Hey ${recipientName || "there"},\n\n${senderName || "Someone"} sent you a gift on gifted.\n\nOpen it here: ${giftUrl}\n\nEnjoy! 🎁`
+      `Hey ${recipientName || "there"} 🎁\n\n${senderName || "Someone"} made something just for you.\n\nTap to open:\n${giftUrl}`
     );
     res.json({ method: "email", mailtoUrl: `mailto:${contact.trim()}?subject=${subject}&body=${body}` });
     return;
@@ -312,7 +312,7 @@ router.post("/gifted/send-gift", async (req, res) => {
       if (!from) throw new Error("No Twilio number");
       const client = getTwilioClient();
       const to = normalizePhone(contact);
-      const body = `Hey ${recipientName || "there"} 🎁\n\n${senderName || "Someone"} sent you a gift on gifted.\n\nOpen it here: ${giftUrl}`;
+      const body = `Hey ${recipientName || "there"} 🎁\n\n${senderName || "Someone"} made something just for you.\n\nTap to open:\n${giftUrl}`;
       await client.messages.create({ from, to, body });
       res.json({ method: "sms", success: true });
     } catch (err) {

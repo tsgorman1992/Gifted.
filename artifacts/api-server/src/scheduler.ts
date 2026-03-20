@@ -39,7 +39,7 @@ async function sendScheduledGifts() {
           await client.messages.create({
             to:   gift.recipientPhone,
             from: fromPhone,
-            body: `${senderLabel} sent you a gift on gifted. ✨\n\nOpen it here: ${giftUrl}`,
+            body: `${senderLabel} made something just for you ✨\n\nTap to open:\n${giftUrl}`,
           });
         }
 
