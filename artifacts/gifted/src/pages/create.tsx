@@ -1702,14 +1702,14 @@ export default function CreatePage() {
                   <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">Optional</span>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex items-center rounded-2xl p-1 gap-1" style={{ background: "hsl(var(--secondary))" }}>
                   <button
                     type="button"
                     onClick={() => setScheduleEnabled(false)}
-                    className={`flex-1 py-3 rounded-2xl text-sm font-medium border transition-all ${
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                       !scheduleEnabled
-                        ? "bg-foreground text-background border-foreground"
-                        : "border-border hover:border-foreground/40 text-muted-foreground"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground/70"
                     }`}
                   >
                     Send now
@@ -1722,10 +1722,10 @@ export default function CreatePage() {
                         setScheduledFor(new Date(Date.now() + 86400000).toISOString().split("T")[0]);
                       }
                     }}
-                    className={`flex-1 py-3 rounded-2xl text-sm font-medium border transition-all ${
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                       scheduleEnabled
-                        ? "bg-foreground text-background border-foreground"
-                        : "border-border hover:border-foreground/40 text-muted-foreground"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground/70"
                     }`}
                   >
                     Schedule for later

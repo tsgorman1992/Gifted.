@@ -37,6 +37,10 @@ export default function PreviewPage() {
   const [giftId,    setGiftId]    = useState<string | null>(null);
   const [shareUrl,  setShareUrl]  = useState<string | null>(null);
 
+  const [desktopContact,    setDesktopContact]    = useState("");
+  const [desktopSendStatus, setDesktopSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [desktopSendError,  setDesktopSendError]  = useState<string | null>(null);
+
   // Stripe payment state
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "redirecting" | "confirming" | "confirmed" | "failed">("idle");
   const [payingError,   setPayingError]   = useState<string | null>(null);
@@ -270,6 +274,47 @@ export default function PreviewPage() {
     if (!saved) return;
     const body = `Hey ${recipientName}, I made something for you 🎁\n${saved.url}`;
     window.open(`sms:?body=${encodeURIComponent(body)}`, "_blank");
+  };
+
+  const handleDesktopSend = async () => {
+    const contact = desktopContact.trim();
+    if (!contact) return;
+    setDesktopSendError(null);
+
+    const isEmail = contact.includes("@");
+    const saved = await saveGift();
+    if (!saved) return;
+
+    if (isEmail) {
+      const subject = encodeURIComponent(`A gift for you 🎁`);
+      const body = encodeURIComponent(
+        `Hey ${recipientName},\n\n${senderName} made something for you on gifted.\n\nOpen it here: ${saved.url}\n\nEnjoy 🎁`
+      );
+      window.open(`mailto:${contact}?subject=${subject}&body=${body}`, "_blank");
+      setDesktopSendStatus("sent");
+    } else {
+      setDesktopSendStatus("sending");
+      try {
+        const res = await fetch(`${base}/api/gifted/send-link`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: contact,
+            giftUrl: saved.url,
+            recipientName,
+            senderName,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as { error?: string }).error || "Failed to send");
+        }
+        setDesktopSendStatus("sent");
+      } catch (err) {
+        setDesktopSendStatus("error");
+        setDesktopSendError(err instanceof Error ? err.message : "Failed to send");
+      }
+    }
   };
 
   const [revealUrl, setRevealUrl] = useState<string | null>(null);
@@ -709,9 +754,9 @@ export default function PreviewPage() {
               </Button>
             )}
 
-            {/* ── Share / copy — sender shares the link themselves ── */}
+            {/* ── Share / copy — mobile: native share + copy ── */}
             {(!hasBalance || isPaid) && (
-              <div className="flex gap-3">
+              <div className="flex gap-3 md:hidden">
                 <Button
                   onClick={canShare ? handleShare : handleSMS}
                   disabled={saving}
@@ -731,6 +776,64 @@ export default function PreviewPage() {
                   className="flex-1 h-12 rounded-xl text-sm font-medium"
                 >
                   {copied ? <><Check className="w-4 h-4 mr-2" /> Copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
+                </Button>
+              </div>
+            )}
+
+            {/* ── Desktop send — email or phone input ── */}
+            {(!hasBalance || isPaid) && (
+              <div className="hidden md:block rounded-2xl border border-border bg-card p-5 space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Send the gift link</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Enter an email or phone number — we'll deliver it directly.</p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={desktopContact}
+                    onChange={(e) => {
+                      setDesktopContact(e.target.value);
+                      setDesktopSendStatus("idle");
+                      setDesktopSendError(null);
+                    }}
+                    placeholder="email@example.com or +1 555 000 0000"
+                    className="flex-1 h-11 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    onKeyDown={(e) => { if (e.key === "Enter") handleDesktopSend(); }}
+                    disabled={desktopSendStatus === "sending" || desktopSendStatus === "sent"}
+                  />
+                  <Button
+                    onClick={handleDesktopSend}
+                    disabled={!desktopContact.trim() || desktopSendStatus === "sending" || desktopSendStatus === "sent" || saving}
+                    className="h-11 px-5 rounded-xl text-sm font-semibold shrink-0 shadow-md shadow-primary/20"
+                  >
+                    {desktopSendStatus === "sending"
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : desktopSendStatus === "sent"
+                        ? <><Check className="w-4 h-4 mr-1.5" /> Sent!</>
+                        : <><Send className="w-4 h-4 mr-1.5" /> Send</>
+                    }
+                  </Button>
+                </div>
+                {desktopSendError && (
+                  <p className="text-xs text-destructive">{desktopSendError}</p>
+                )}
+                {desktopSendStatus === "sent" && !desktopSendError && (
+                  <p className="text-xs text-green-600">
+                    {desktopContact.includes("@") ? "Your email client is opening…" : "Text message sent!"}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 pt-1">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleCopy}
+                  disabled={saving || isRedirecting}
+                  className="w-full h-10 rounded-xl text-sm font-medium"
+                >
+                  {copied ? <><Check className="w-4 h-4 mr-2" /> Link copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
                 </Button>
               </div>
             )}
