@@ -810,7 +810,7 @@ export default function PreviewPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (giftId) localStorage.setItem("gifted_auth_return", `/my-gifts&claim=${giftId}`);
+                            if (giftId) localStorage.setItem("gifted_auth_return", `/my-gifts?claim=${giftId}`);
                             window.location.href = `${base}/api/auth/google`;
                           }}
                           className="w-full h-10 flex items-center justify-center gap-2.5 rounded-xl border border-green-300 bg-white hover:bg-green-50 dark:border-green-700 dark:bg-green-950/30 dark:hover:bg-green-900/40 transition-colors text-sm font-medium text-green-900 dark:text-green-300"

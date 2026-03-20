@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import { db, gifts } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, isNull, and } from "drizzle-orm";
 import twilio from "twilio";
 
 function getTwilioClient() {
@@ -208,20 +208,28 @@ router.patch("/gifted/gifts/:id/claim", async (req, res) => {
   }
   try {
     const { id } = req.params;
-    const [gift] = await db
-      .select({ id: gifts.id, senderUserId: gifts.senderUserId })
+
+    const [exists] = await db
+      .select({ id: gifts.id })
       .from(gifts)
       .where(eq(gifts.id, id))
       .limit(1);
-    if (!gift) {
+    if (!exists) {
       res.status(404).json({ error: "Gift not found" });
       return;
     }
-    if (gift.senderUserId) {
+
+    const updated = await db
+      .update(gifts)
+      .set({ senderUserId: userId })
+      .where(and(eq(gifts.id, id), isNull(gifts.senderUserId)))
+      .returning({ id: gifts.id });
+
+    if (updated.length === 0) {
       res.status(409).json({ error: "Gift already owned" });
       return;
     }
-    await db.update(gifts).set({ senderUserId: userId }).where(eq(gifts.id, id));
+
     res.json({ ok: true });
   } catch (err) {
     console.error("Error claiming gift:", err);

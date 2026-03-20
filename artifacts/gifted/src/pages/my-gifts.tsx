@@ -266,24 +266,26 @@ export default function MyGiftsPage() {
   const [, setLocation] = useLocation();
 
   // Handle return from Google OAuth — read gifted_auth_return from localStorage
-  // Format A: "/preview"                    → navigate there (paid gate return)
-  // Format B: "/my-gifts&claim={giftId}"   → claim the gift, then stay or navigate
+  // Format A: "/preview"                     → navigate there (paid gate return)
+  // Format B: "/my-gifts?claim={giftId}"    → claim the gift, then stay
   useEffect(() => {
     const authReturn = localStorage.getItem("gifted_auth_return");
     if (!authReturn) return;
     localStorage.removeItem("gifted_auth_return");
 
-    const claimMatch = authReturn.match(/^(.+?)&claim=(.+)$/);
-    if (claimMatch) {
-      const [, returnPath, claimId] = claimMatch;
+    const [returnPath, qs] = authReturn.split("?", 2);
+    const params = new URLSearchParams(qs ?? "");
+    const claimId = params.get("claim");
+
+    if (claimId) {
       fetch(`${BASE}/api/gifted/gifts/${claimId}/claim`, {
         method: "PATCH",
         credentials: "include",
       }).finally(() => {
         if (returnPath !== "/my-gifts") setLocation(returnPath);
       });
-    } else if (authReturn !== "/my-gifts") {
-      setLocation(authReturn);
+    } else if (returnPath !== "/my-gifts") {
+      setLocation(returnPath);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
