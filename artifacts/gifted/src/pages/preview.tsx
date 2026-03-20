@@ -460,6 +460,7 @@ export default function PreviewPage() {
                   type="button"
                   onClick={() => setMobilePreviewOpen(false)}
                   className="w-full flex items-center justify-center gap-2 py-3.5 bg-foreground text-background text-sm font-semibold shrink-0"
+                  style={{ paddingBottom: "max(14px, env(safe-area-inset-bottom))" }}
                 >
                   <X className="w-4 h-4" /> Close preview
                 </button>
