@@ -949,6 +949,7 @@ export default function RevealPage() {
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
   const [extraLinks, setExtraLinks]       = useState<string[]>([]);
+  const [linkPreviews, setLinkPreviews]   = useState<Record<string, { title: string | null; description: string | null; image: string | null; siteName: string | null }>>({});
   const [recipientName, setRecipientName] = useState(mockGiftData.recipientName);
   const [senderName, setSenderName]       = useState(mockGiftData.senderName);
   const [giftTitle, setGiftTitle]         = useState(mockGiftData.title);
@@ -1157,6 +1158,21 @@ export default function RevealPage() {
       confettiTrickleActive.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const urls = extraLinks.filter(Boolean);
+    if (urls.length === 0) return;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    urls.forEach(async (url) => {
+      if (linkPreviews[url] !== undefined) return;
+      try {
+        const res = await fetch(`${base}/api/gifted/link-preview?url=${encodeURIComponent(url)}`, { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setLinkPreviews(prev => ({ ...prev, [url]: data }));
+      } catch {}
+    });
+  }, [extraLinks]);
 
   useEffect(() => {
     const sid = "gifted-epic-anim-styles";
@@ -1651,7 +1667,7 @@ export default function RevealPage() {
                 const isTickets = u.includes("ticketmaster.com") || u.includes("axs.com") || u.includes("stubhub.com") || u.includes("seatgeek.com") || u.includes("livenation.com");
                 const isFood = u.includes("opentable.com") || u.includes("resy.com") || u.includes("yelp.com/biz") || u.includes("tock.com");
                 const isTravel = u.includes("airbnb.com") || u.includes("vrbo.com") || u.includes("hotels.com") || u.includes("booking.com");
-                const label =
+                const fallbackLabel =
                   u.includes("spotify.com") ? "Spotify" :
                   u.includes("music.apple.com") ? "Apple Music" :
                   u.includes("soundcloud.com") ? "SoundCloud" :
@@ -1667,13 +1683,19 @@ export default function RevealPage() {
                   u.includes("amazon.com") ? "Amazon" :
                   u.includes("netflix.com") ? "Netflix" :
                   "Open link";
-                const subtitle =
+                const fallbackSubtitle =
                   isMusic ? "Tap to listen" :
                   u.includes("youtube.com") || u.includes("youtu.be") ? "Tap to watch" :
                   isTickets ? "Tap to view tickets" :
                   isFood ? "Tap to view reservation" :
                   isTravel ? "Tap to view" :
                   "Tap to open";
+
+                const preview = linkPreviews[href] ?? null;
+                const label = preview?.title || fallbackLabel;
+                const subtitle = preview?.siteName || fallbackSubtitle;
+                const thumbUrl = preview?.image || null;
+
                 return (
                   <Section key={linkIdx} cfg={cfg} idx={2 + linkIdx}>
                     <a
@@ -1689,16 +1711,27 @@ export default function RevealPage() {
                       {experience === "garden-bloom" && <GardenBloomWatermark />}
                       <div className="flex items-center gap-4">
                         <div
-                          className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                          className="w-14 h-14 rounded-2xl flex-shrink-0 overflow-hidden"
                           style={isDark ? { background: "rgba(255,255,255,0.1)" } : { background: "hsl(var(--primary)/0.1)" }}
                         >
-                          {isMusic
-                            ? <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
-                            : <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
-                          }
+                          {thumbUrl ? (
+                            <img
+                              src={thumbUrl}
+                              alt={label}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              {isMusic
+                                ? <Music className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                                : <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/80" : "text-primary"}`} />
+                              }
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`font-semibold text-base ${isDark ? "text-white" : "text-foreground"}`}>{label}</p>
+                          <p className={`font-semibold text-base leading-tight line-clamp-1 ${isDark ? "text-white" : "text-foreground"}`}>{label}</p>
                           <p className={`text-sm truncate ${isDark ? "text-white/50" : "text-muted-foreground"}`}>{subtitle}</p>
                         </div>
                         <ExternalLink className={`w-5 h-5 flex-shrink-0 ${isDark ? "text-white/40" : "text-muted-foreground"}`} />
