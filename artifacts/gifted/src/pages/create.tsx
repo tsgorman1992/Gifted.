@@ -1355,13 +1355,13 @@ export default function CreatePage() {
                   </div>
                 </div>
 
-                {/* Give them something to spend */}
+                {/* Give it weight */}
                 <div className="rounded-3xl p-6 border space-y-5" style={{ background: "hsl(var(--card))" }}>
                   <div className="flex items-center justify-between border-b border-border pb-4">
                     <div>
-                      <h2 className="text-base font-semibold">Give them something to spend</h2>
+                      <h2 className="text-base font-semibold">Give it weight</h2>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Setting an intention turns a transfer into a gesture.
+                        Name what it's for — a number becomes a gesture.
                       </p>
                     </div>
                     <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">Optional</span>
@@ -1369,10 +1369,7 @@ export default function CreatePage() {
 
                   {/* Intention first */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-semibold">What's the intention?</Label>
-                    <p className="text-xs text-muted-foreground -mt-1">
-                      Name the purpose behind the balance — it changes how it lands.
-                    </p>
+                    <Label className="text-sm font-semibold">What's it for?</Label>
                     <div className="flex flex-wrap gap-2">
                       {INTENTS.map((lbl) => (
                         <button
@@ -1433,7 +1430,7 @@ export default function CreatePage() {
 
                   {/* Amount second */}
                   <div className="space-y-3 pt-2">
-                    <Label className="text-sm font-semibold">How much?</Label>
+                    <Label className="text-sm font-semibold">How much to add?</Label>
                     <div className="flex flex-wrap gap-2.5">
                       {AMOUNTS.map((amt) => (
                         <button
@@ -1493,7 +1490,7 @@ export default function CreatePage() {
                         <div>
                           {amount && <p className="text-sm font-bold text-foreground">${amount}</p>}
                           {intent && <p className="text-xs text-muted-foreground">{intent}</p>}
-                          {!intent && amount && <p className="text-xs text-muted-foreground">Add an intention above to complete the gesture</p>}
+                          {!intent && amount && <p className="text-xs text-muted-foreground">Add an intention above to give it meaning</p>}
                         </div>
                       </motion.div>
                     )}
@@ -1503,7 +1500,7 @@ export default function CreatePage() {
                       <Label htmlFor="recipientPhone">
                         Their phone number{" "}
                         {amount && parseFloat(amount) >= 10
-                          ? <span className="text-destructive text-xs font-normal">— required to secure the balance</span>
+                          ? <span className="text-destructive text-xs font-normal">— so they can unlock it</span>
                           : <span className="text-muted-foreground text-xs font-normal">(optional)</span>
                         }
                       </Label>
@@ -1518,8 +1515,8 @@ export default function CreatePage() {
                       />
                       <p className="text-xs text-muted-foreground">
                         {amount && parseFloat(amount) >= 10
-                          ? "Required to verify their identity when they withdraw cash. Never shared or used for marketing."
-                          : "Add their number and we'll deliver the link via SMS — or skip it and share the link yourself."}
+                          ? "So they can unlock the balance when they're ready. Never used for marketing."
+                          : "Add their number and we'll deliver the link — or skip it and share it yourself."}
                       </p>
                     </div>
                   </div>

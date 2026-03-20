@@ -497,22 +497,22 @@ export default function PreviewPage() {
                   <CheckCircle2 className="w-7 h-7 text-green-600" />
                 </motion.div>
                 <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">
-                  {paymentStatus === "confirming" ? "Confirming payment…" : "Payment confirmed."}
+                  {paymentStatus === "confirming" ? "Sending…" : "On its way."}
                 </h1>
                 <p className="text-muted-foreground mb-7 text-base">
                   {paymentStatus === "confirming"
-                    ? "Just a moment while we confirm your payment…"
-                    : `$${displayAmt} loaded. Now share the link with ${recipientName} below — their experience is ready.`}
+                    ? "Just a moment while we confirm everything…"
+                    : `${recipientName}'s gift is ready. Share the link below and the experience begins the moment they tap it.`}
                 </p>
               </>
             ) : (
               <>
                 <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">
-                  {hasBalance ? "One last step." : "Your gift is ready."}
+                  {hasBalance ? "Ready to send." : "Your gift is ready."}
                 </h1>
                 <p className="text-muted-foreground mb-7 text-base">
                   {hasBalance
-                    ? `Pay the $${displayAmt} balance, then share the link with ${recipientName}.`
+                    ? `Load $${displayAmt} onto the gift, then send the link — ${recipientName}'s reveal is waiting.`
                     : `Send ${recipientName} the link below — they'll see a beautiful animated reveal.`}
                 </p>
               </>
@@ -578,7 +578,42 @@ export default function PreviewPage() {
               </div>
             </div>
 
-            {/* Primary CTA — Pay & Send when balance unpaid */}
+            {/* Bridge moment — what's inside, before the payment ask */}
+            {hasBalance && !isPaid && (
+              <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">What {recipientName} will experience</p>
+                <ul className="space-y-1.5">
+                  <li className="flex items-center gap-2 text-sm text-foreground">
+                    <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>A cinematic reveal, just for them</span>
+                  </li>
+                  {hasVideo && (
+                    <li className="flex items-center gap-2 text-sm text-foreground">
+                      <Video className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>Your video message</span>
+                    </li>
+                  )}
+                  {photoCount > 0 && (
+                    <li className="flex items-center gap-2 text-sm text-foreground">
+                      <ImageIcon className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>{photoCount} {photoCount === 1 ? "photo" : "photos"} from you</span>
+                    </li>
+                  )}
+                  {hasPlaylist && (
+                    <li className="flex items-center gap-2 text-sm text-foreground">
+                      <Music className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>A link to explore</span>
+                    </li>
+                  )}
+                  <li className="flex items-center gap-2 text-sm text-foreground">
+                    <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>${displayAmt}{giftIntent ? ` — ${giftIntent}` : " to spend however they like"}</span>
+                  </li>
+                </ul>
+              </div>
+            )}
+
+            {/* Primary CTA — load balance and send */}
             {hasBalance && !isPaid && (
               <Button
                 onClick={handlePayAndSend}
@@ -589,7 +624,7 @@ export default function PreviewPage() {
                   ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
                   : saving
                     ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
-                    : <><CreditCard className="w-5 h-5" /> Pay ${displayAmt} &amp; Send</>
+                    : <><Send className="w-5 h-5" /> Load ${displayAmt} &amp; send the gift</>
                 }
               </Button>
             )}
