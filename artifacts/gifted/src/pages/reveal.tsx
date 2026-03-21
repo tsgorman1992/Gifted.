@@ -193,55 +193,6 @@ const CONFIGS: Record<string, RevealCfg> = {
   },
 };
 
-// ─── Section variant factory ─────────────────────────────────────────────────
-
-function sectionVariant(style: SectionStyle, idx: number) {
-  switch (style) {
-    case "spring-pop":
-      return {
-        initial: { opacity: 0, scale: 0.92, y: 20 },
-        animate: { opacity: 1, scale: 1, y: 0 },
-        transition: { type: "spring" as const, stiffness: 320, damping: 26 },
-      };
-    case "fade-drift":
-      return {
-        initial: { opacity: 0, y: 32 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.95, ease: [0.16, 1, 0.3, 1] as number[] },
-      };
-    case "bloom-scale":
-      return {
-        initial: { opacity: 0, scale: 0.87 },
-        animate: { opacity: 1, scale: 1 },
-        transition: { type: "spring" as const, stiffness: 200, damping: 22 },
-      };
-    case "materialize":
-      return {
-        initial: { opacity: 0, filter: "blur(14px)" },
-        animate: { opacity: 1, filter: "blur(0px)" },
-        transition: { duration: 0.85 },
-      };
-    case "slide-alternate":
-      return {
-        initial: { opacity: 0, x: idx % 2 === 0 ? -44 : 44 },
-        animate: { opacity: 1, x: 0 },
-        transition: { duration: 0.72, ease: [0.22, 1, 0.36, 1] as number[] },
-      };
-    case "fall-in":
-      return {
-        initial: { opacity: 0, y: -32 },
-        animate: { opacity: 1, y: 0 },
-        transition: { type: "spring" as const, stiffness: 300, damping: 30 },
-      };
-    case "rise-stagger":
-      return {
-        initial: { opacity: 0, y: 60 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 1.05, ease: [0.16, 1, 0.3, 1] as number[] },
-      };
-  }
-}
-
 // ─── Small helpers ───────────────────────────────────────────────────────────
 
 function useCountUp(target: number, duration = 1500, delay = 0, enabled = false) {
@@ -762,15 +713,22 @@ function PhotoCarousel({
 
   const scrollTo = useCallback((idx: number) => {
     if (!scrollRef.current) return;
-    const w = scrollRef.current.clientWidth;
-    scrollRef.current.scrollTo({ left: idx * w, behavior: "smooth" });
+    const child = scrollRef.current.children[idx] as HTMLElement | undefined;
+    if (child) scrollRef.current.scrollTo({ left: child.offsetLeft, behavior: "smooth" });
     setActiveIdx(idx);
   }, []);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
-    const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.clientWidth);
-    setActiveIdx(idx);
+    const scrollLeft = scrollRef.current.scrollLeft;
+    const children = Array.from(scrollRef.current.children) as HTMLElement[];
+    let closest = 0;
+    let minDist = Infinity;
+    children.forEach((child, i) => {
+      const dist = Math.abs(child.offsetLeft - scrollLeft);
+      if (dist < minDist) { minDist = dist; closest = i; }
+    });
+    setActiveIdx(closest);
   }, []);
 
   if (photoUrls.length === 1) {
