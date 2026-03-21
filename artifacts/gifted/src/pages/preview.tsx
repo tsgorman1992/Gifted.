@@ -775,7 +775,7 @@ export default function PreviewPage() {
 
             {/* ── Post-send confirmation ── */}
             <AnimatePresence>
-              {(isPaid || linkShared) && (
+              {(isPaid || (linkShared && !hasBalance)) && (
                 <motion.div
                   key="confirmation"
                   initial={{ opacity: 0, y: 12 }}
@@ -1057,6 +1057,22 @@ export default function PreviewPage() {
               </div>
             )}
 
+            {/* Primary CTA — load balance and send (no login required) */}
+            {hasBalance && !isPaid && (
+              <Button
+                onClick={handlePayAndSend}
+                disabled={saving || isRedirecting || authLoading}
+                className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
+              >
+                {isRedirecting
+                  ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
+                  : saving
+                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
+                    : <><Send className="w-5 h-5" /> Load ${displayAmt} &amp; send the gift</>
+                }
+              </Button>
+            )}
+
             {/* Link preview card */}
             <div className="rounded-2xl border border-border overflow-hidden bg-card">
               <div className="p-4 flex items-start gap-3">
@@ -1167,22 +1183,6 @@ export default function PreviewPage() {
                   </li>
                 </ul>
               </div>
-            )}
-
-            {/* Primary CTA — load balance and send (no login required) */}
-            {hasBalance && !isPaid && (
-              <Button
-                onClick={handlePayAndSend}
-                disabled={saving || isRedirecting || authLoading}
-                className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
-              >
-                {isRedirecting
-                  ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
-                  : saving
-                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
-                    : <><Send className="w-5 h-5" /> Load ${displayAmt} &amp; send the gift</>
-                }
-              </Button>
             )}
 
             {/* ── Share / copy — mobile: native share + copy ── */}
