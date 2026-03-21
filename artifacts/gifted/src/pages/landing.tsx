@@ -17,7 +17,7 @@ const PHOTOS = [
 const HOW_STEPS = [
   { icon: Heart,      label: "Add Meaning",    desc: "Write a note, record a video, add photos, or link anything with a URL — a song, concert tickets, a reservation." },
   { icon: Gift,       label: "Add a Balance",  desc: "Optionally add funds with an intention like 'Coffee on me' or 'Treat yourself'." },
-  { icon: CreditCard, label: "They Redeem",    desc: "They experience the reveal, then instantly transfer their balance to a debit card or bank account." },
+  { icon: CreditCard, label: "They open it. It's theirs.", desc: "They experience the moment, then move their balance wherever they want — instantly." },
 ];
 
 const FEATURES = [
@@ -91,16 +91,6 @@ export default function LandingPage() {
 
         <div className="relative z-10 max-w-6xl mx-auto w-full grid lg:grid-cols-[1fr_400px] gap-10 lg:gap-16 items-center">
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/80 backdrop-blur-sm border border-border mb-6 md:mb-8 text-sm font-medium text-secondary-foreground"
-          >
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span>A new way to send money & meaning</span>
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -399,8 +389,8 @@ export default function LandingPage() {
       {/* ── CTA ── */}
       <section className="w-full py-16 md:py-32 px-6 text-center">
         <div className="max-w-2xl mx-auto space-y-5 md:space-y-8">
-          <h2 className="font-serif text-3xl md:text-6xl font-medium">Ready to send <br />something meaningful?</h2>
-          <p className="text-base md:text-xl text-muted-foreground">Create your first gift in minutes. No sign up required to build a preview.</p>
+          <h2 className="font-serif text-3xl md:text-6xl font-medium">Someone out there<br />deserves this.</h2>
+          <p className="text-base md:text-xl text-muted-foreground">Takes 3 minutes. No account needed to start.</p>
           <div className="pt-2 md:pt-4">
             <Button onClick={handleNewGift} size="lg" className="w-full sm:w-auto rounded-full text-base md:text-lg px-10 h-13 md:h-14 shadow-xl hover:-translate-y-1 transition-all duration-300">
               Get Started <ArrowRight className="ml-2 w-5 h-5" />
