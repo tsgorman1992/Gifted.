@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check } from "lucide-react";
+import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 
@@ -268,6 +268,39 @@ function formatAmt(raw: string | null): string {
   const n = parseFloat(raw);
   if (isNaN(n)) return raw;
   return n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2);
+}
+
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return reduced;
+}
+
+function playChime() {
+  try {
+    const ACtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new ACtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.6);
+    gain.gain.setValueAtTime(0.22, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 1.2);
+  } catch { /* AudioContext may not be available or blocked */ }
 }
 
 function TypewriterText({ text, delayS = 0, speed = 55 }: { text: string; delayS?: number; speed?: number }) {
@@ -703,6 +736,170 @@ function fireEntryBurst(experience: string) {
   }
 }
 
+// ─── Photo carousel ──────────────────────────────────────────────────────────
+
+function PhotoCarousel({
+  photoUrls,
+  photoErrors,
+  photoLoaded,
+  setPhotoLoaded,
+  setPhotoErrors,
+  setLightboxUrl,
+  cfg,
+  isDark,
+}: {
+  photoUrls: string[];
+  photoErrors: Record<number, boolean>;
+  photoLoaded: Record<number, boolean>;
+  setPhotoLoaded: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
+  setPhotoErrors: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
+  setLightboxUrl: (url: string | null) => void;
+  cfg: RevealCfg;
+  isDark: boolean;
+}) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollTo = useCallback((idx: number) => {
+    if (!scrollRef.current) return;
+    const w = scrollRef.current.clientWidth;
+    scrollRef.current.scrollTo({ left: idx * w, behavior: "smooth" });
+    setActiveIdx(idx);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const idx = Math.round(scrollRef.current.scrollLeft / scrollRef.current.clientWidth);
+    setActiveIdx(idx);
+  }, []);
+
+  if (photoUrls.length === 1) {
+    const failed = !!photoErrors[0];
+    const loaded = !!photoLoaded[0];
+    return (
+      <div
+        className={`w-full rounded-3xl overflow-hidden relative group aspect-video ${!failed ? "cursor-pointer" : ""}`}
+        style={isDark ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow } : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }}
+        onClick={() => !failed && setLightboxUrl(photoUrls[0])}
+      >
+        {!failed && (
+          <>
+            {!loaded && <div className="absolute inset-0 animate-pulse" style={isDark ? { background: "rgba(255,255,255,0.08)" } : { background: "hsl(var(--secondary))" }} />}
+            <img
+              src={photoUrls[0]}
+              alt="Memory"
+              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+              style={{ transition: "opacity 0.3s ease" }}
+              onLoad={() => setPhotoLoaded(p => ({ ...p, 0: true }))}
+              onError={() => setPhotoErrors(p => ({ ...p, 0: true }))}
+            />
+            {loaded && (
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
+                <div className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                  <ZoomIn className="w-5 h-5 text-gray-800" />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {failed && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            <ImageOff className={`w-8 h-8 ${isDark ? "text-white/20" : "text-muted-foreground/30"}`} />
+            <p className={`text-xs ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>Photo unavailable</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group">
+      {/* Scroll track */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory rounded-3xl"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+      >
+        {photoUrls.map((url, i) => {
+          const failed = !!photoErrors[i];
+          const loaded = !!photoLoaded[i];
+          return (
+            <div
+              key={i}
+              className={`snap-start shrink-0 w-full aspect-video relative ${!failed ? "cursor-pointer" : ""}`}
+              style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}
+              onClick={() => !failed && setLightboxUrl(url)}
+            >
+              {!failed && (
+                <>
+                  {!loaded && <div className="absolute inset-0 animate-pulse" style={isDark ? { background: "rgba(255,255,255,0.08)" } : { background: "hsl(var(--secondary))" }} />}
+                  <img
+                    src={url}
+                    alt={`Memory ${i + 1}`}
+                    className={`w-full h-full object-cover ${loaded ? "opacity-100" : "opacity-0"}`}
+                    style={{ transition: "opacity 0.3s ease" }}
+                    onLoad={() => setPhotoLoaded(p => ({ ...p, [i]: true }))}
+                    onError={() => setPhotoErrors(p => ({ ...p, [i]: true }))}
+                  />
+                  {loaded && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
+                      <div className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                        <ZoomIn className="w-5 h-5 text-gray-800" />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              {failed && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                  <ImageOff className={`w-8 h-8 ${isDark ? "text-white/20" : "text-muted-foreground/30"}`} />
+                  <p className={`text-xs ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>Photo unavailable</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop prev/next arrows */}
+      {activeIdx > 0 && (
+        <button
+          onClick={() => scrollTo(activeIdx - 1)}
+          className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+        >
+          <ChevronLeft className="w-5 h-5 text-gray-800" />
+        </button>
+      )}
+      {activeIdx < photoUrls.length - 1 && (
+        <button
+          onClick={() => scrollTo(activeIdx + 1)}
+          className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+        >
+          <ChevronRight className="w-5 h-5 text-gray-800" />
+        </button>
+      )}
+
+      {/* Dot indicators */}
+      <div className="flex justify-center gap-2 mt-3">
+        {photoUrls.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => scrollTo(i)}
+            className="h-1.5 rounded-full transition-all duration-300"
+            style={{
+              width: i === activeIdx ? "1.5rem" : "0.375rem",
+              background: isDark
+                ? i === activeIdx ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"
+                : i === activeIdx ? "hsl(var(--primary))" : "hsl(var(--primary)/0.25)",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Section wrapper ─────────────────────────────────────────────────────────
 
 function Section({
@@ -716,7 +913,10 @@ function Section({
   className?: string;
   children: React.ReactNode;
 }) {
-  const v = sectionVariant(cfg.sectionStyle, idx);
+  const reducedMotion = useReducedMotion();
+  const v = reducedMotion
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.4 } }
+    : sectionVariant(cfg.sectionStyle, idx);
   return (
     <motion.div
       className={className}
@@ -1005,6 +1205,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const [reactionEmoji, setReactionEmoji] = useState<string | null>(null);
   const [reactionSent, setReactionSent]   = useState(false);
   const [reactionSkipped, setReactionSkipped] = useState(false);
+  const [balanceRevealPhase, setBalanceRevealPhase] = useState<"hidden" | "building" | "revealed">("hidden");
 
   const amountRef  = useRef<HTMLDivElement>(null);
   const amountInView = useInView(amountRef, { once: true });
@@ -1017,6 +1218,29 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
     300,
     cfg.amountStyle === "count-up" && (amountInView || isPreview),
   );
+
+  const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (!amountInView || !giftAmount || parseFloat(giftAmount) <= 0) return;
+    if (balanceRevealPhase !== "hidden") return;
+    if (reducedMotion) {
+      setBalanceRevealPhase("revealed");
+      return;
+    }
+    const t1 = setTimeout(() => setBalanceRevealPhase("building"), 200);
+    const t2 = setTimeout(() => {
+      setBalanceRevealPhase("revealed");
+      if (amountRef.current) {
+        const rect = amountRef.current.getBoundingClientRect();
+        const ox = Math.min(Math.max((rect.left + rect.width / 2) / window.innerWidth, 0.1), 0.9);
+        const oy = Math.min(Math.max((rect.top + rect.height / 2) / window.innerHeight, 0.1), 0.9);
+        confetti({ particleCount: 90, spread: 75, origin: { x: ox, y: oy }, startVelocity: 24, scalar: 1.1 });
+      }
+      playChime();
+    }, 1400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [amountInView, giftAmount, balanceRevealPhase, reducedMotion]);
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -1598,15 +1822,15 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
               {personalNote?.trim() && (
                 <Section cfg={cfg} idx={0}>
                   <div
-                    className="rounded-[2rem] p-6 md:p-12 border relative overflow-hidden"
+                    className="rounded-[2.5rem] p-8 md:p-16 border relative overflow-hidden"
                     style={isDark
                       ? {
-                          background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.06)",
+                          background: cfg.cardStyle.bg ?? "rgba(255,248,240,0.05)",
                           borderColor: cfg.cardStyle.border,
                           boxShadow: cfg.cardStyle.shadow,
                         }
                       : {
-                          background: cfg.cardStyle.bg ?? "hsl(var(--card)/0.85)",
+                          background: cfg.cardStyle.bg ?? "hsl(30,38%,98%)",
                           backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)",
                           borderColor: cfg.cardStyle.border,
                           boxShadow: cfg.cardStyle.shadow,
@@ -1617,41 +1841,51 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                     {experience === "garden-bloom" && (
                       <>
                         <GardenBloomWatermark />
-                        <div style={{ borderTop: "1.5px solid rgba(181,234,215,0.55)", marginBottom: "1.5rem", width: "100%" }} />
+                        <div style={{ borderTop: "1.5px solid rgba(181,234,215,0.55)", marginBottom: "2rem", width: "100%" }} />
                       </>
                     )}
 
                     {/* Rose Petal: stationery double-rule decoration */}
                     {experience === "rose-petal" && (
-                      <div className="flex items-center gap-3 mb-6">
+                      <div className="flex items-center gap-3 mb-7">
                         <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
                         <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
                         <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
                       </div>
                     )}
 
+                    {/* Universal top rule — for all other experiences */}
+                    {experience !== "garden-bloom" && experience !== "rose-petal" && (
+                      <div style={{ height: 1, background: cfg.cardStyle.border, marginBottom: "2rem", width: "100%", opacity: 0.5 }} />
+                    )}
+
                     {cfg.titleStyle === "typewriter" ? (
-                      <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
+                      <p className={`font-serif text-lg sm:text-xl md:text-3xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.9 }}>
                         &ldquo;<TypewriterText text={personalNote} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />&rdquo;
                       </p>
                     ) : (
-                      <p className={`font-serif text-lg sm:text-xl md:text-3xl leading-relaxed text-center ${isDark ? "text-white/90" : "text-foreground"}`}>
+                      <p className={`font-serif text-lg sm:text-xl md:text-3xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.9 }}>
                         &ldquo;{personalNote}&rdquo;
                       </p>
                     )}
 
                     {/* Garden Bloom: bottom accent line */}
                     {experience === "garden-bloom" && (
-                      <div style={{ borderBottom: "1.5px solid rgba(181,234,215,0.55)", marginTop: "1.5rem", width: "100%" }} />
+                      <div style={{ borderBottom: "1.5px solid rgba(181,234,215,0.55)", marginTop: "2rem", width: "100%" }} />
                     )}
 
                     {/* Rose Petal: bottom stationery line */}
                     {experience === "rose-petal" && (
-                      <div className="flex items-center gap-3 mt-6">
+                      <div className="flex items-center gap-3 mt-7">
                         <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
                         <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
                         <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
                       </div>
+                    )}
+
+                    {/* Universal bottom rule — for all other experiences */}
+                    {experience !== "garden-bloom" && experience !== "rose-petal" && (
+                      <div style={{ height: 1, background: cfg.cardStyle.border, marginTop: "2rem", width: "100%", opacity: 0.5 }} />
                     )}
                   </div>
                 </Section>
@@ -1711,63 +1945,16 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
               {/* Photos — section 2 (hidden when no photos) */}
               {photoUrls.length > 0 && (
                 <Section cfg={cfg} idx={2}>
-                  <div className={photoUrls.length === 1 ? "flex" : "grid grid-cols-2 md:grid-cols-3 gap-4"}>
-                    {photoUrls.map((url, i) => {
-                      const failed = !!photoErrors[i];
-                      const loaded = !!photoLoaded[i];
-                      const isSingle = photoUrls.length === 1;
-                      return (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, scale: 0.94 }}
-                          whileInView={{ opacity: 1, scale: 1 }}
-                          viewport={{ once: true }}
-                          transition={{
-                            delay: i * 0.08,
-                            type: cfg.sectionStyle === "spring-pop" || cfg.sectionStyle === "bloom-scale" || cfg.sectionStyle === "fall-in" ? "spring" : undefined,
-                            stiffness: 260,
-                            damping: 24,
-                            duration: cfg.sectionStyle === "fade-drift" || cfg.sectionStyle === "rise-stagger" ? 0.7 : undefined,
-                          }}
-                          className={`rounded-3xl overflow-hidden relative group ${failed ? "" : "cursor-pointer"} ${isSingle ? "w-full aspect-video" : `aspect-square ${i === 0 ? "md:col-span-2 md:aspect-[2/1]" : ""}`}`}
-                          style={isDark
-                            ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow }
-                            : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }
-                          }
-                          onClick={() => !failed && setLightboxUrl(url)}
-                        >
-                          {!failed && (
-                            <>
-                              {!loaded && (
-                                <div className="absolute inset-0 animate-pulse" style={isDark ? { background: "rgba(255,255,255,0.08)" } : { background: "hsl(var(--secondary))" }} />
-                              )}
-                              <img
-                                src={url}
-                                alt="Memory"
-                                className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
-                                style={{ transition: "opacity 0.3s ease" }}
-                                onLoad={() => setPhotoLoaded(prev => ({ ...prev, [i]: true }))}
-                                onError={() => setPhotoErrors(prev => ({ ...prev, [i]: true }))}
-                              />
-                              {loaded && (
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
-                                  <div className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                                    <ZoomIn className="w-5 h-5 text-gray-800" />
-                                  </div>
-                                </div>
-                              )}
-                            </>
-                          )}
-                          {failed && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                              <ImageOff className={`w-8 h-8 ${isDark ? "text-white/20" : "text-muted-foreground/30"}`} />
-                              <p className={`text-xs ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>Photo unavailable</p>
-                            </div>
-                          )}
-                        </motion.div>
-                      );
-                    })}
-                  </div>
+                  <PhotoCarousel
+                    photoUrls={photoUrls}
+                    photoErrors={photoErrors}
+                    photoLoaded={photoLoaded}
+                    setPhotoLoaded={setPhotoLoaded}
+                    setPhotoErrors={setPhotoErrors}
+                    setLightboxUrl={setLightboxUrl}
+                    cfg={cfg}
+                    isDark={isDark}
+                  />
                 </Section>
               )}
 
@@ -1890,12 +2077,12 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                 );
               })}
 
-              {/* Balance — always animates after the last link card */}
+              {/* Balance — dramatic reveal after all content */}
               {giftAmount && parseFloat(giftAmount) > 0 && (
                 <div ref={amountRef}>
                   <Section cfg={cfg} idx={2 + extraLinks.length}>
-                    {/* Midnight Stars gets a distinct dark card */}
                     {cfg.amountStyle === "stellar-reveal" ? (
+                      /* Midnight Stars: distinct dark card */
                       <div
                         className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden"
                         style={{
@@ -1913,35 +2100,74 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               <span>{giftIntent}</span>
                             </div>
                           )}
-                          <h3 className="text-xl md:text-2xl font-medium mb-2 text-white/80">You received</h3>
-                          <motion.div
-                            initial={{ opacity: 0, filter: "blur(16px)", scale: 0.9 }}
-                            whileInView={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                            className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter text-white"
-                            style={{ textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
-                          >
-                            ${formatAmt(giftAmount)}
-                          </motion.div>
+                          <h3 className="text-xl md:text-2xl font-medium mb-6 text-white/80">You received</h3>
+
+                          {/* Dramatic amount reveal */}
+                          <div className="relative flex items-center justify-center mb-8">
+                            {balanceRevealPhase === "building" && (
+                              <>
+                                <motion.div
+                                  className="absolute w-40 h-40 rounded-full border-2"
+                                  style={{ borderColor: "rgba(180,160,255,0.4)" }}
+                                  animate={{ scale: [1, 1.35, 1], opacity: [0.6, 0.15, 0.6] }}
+                                  transition={{ repeat: Infinity, duration: 1.0, ease: "easeInOut" }}
+                                />
+                                <motion.div
+                                  className="absolute w-56 h-56 rounded-full border"
+                                  style={{ borderColor: "rgba(180,160,255,0.2)" }}
+                                  animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.1, 0.4] }}
+                                  transition={{ repeat: Infinity, duration: 1.0, ease: "easeInOut", delay: 0.2 }}
+                                />
+                              </>
+                            )}
+                            <AnimatePresence mode="wait">
+                              {balanceRevealPhase !== "revealed" ? (
+                                <motion.div
+                                  key="placeholder"
+                                  className="font-serif text-6xl md:text-9xl tracking-tighter text-white"
+                                  style={{ filter: "blur(12px)", opacity: 0.25, textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
+                                  exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+                                >
+                                  $?
+                                </motion.div>
+                              ) : (
+                                <motion.div
+                                  key="amount"
+                                  className="font-serif text-6xl md:text-9xl tracking-tighter text-white"
+                                  style={{ textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
+                                  initial={{ scale: 0.7, filter: "blur(20px)", opacity: 0 }}
+                                  animate={{ scale: [0.7, 1.06, 1.0], filter: "blur(0px)", opacity: 1 }}
+                                  transition={{ type: "spring", stiffness: 260, damping: 20, duration: 0.7 }}
+                                >
+                                  ${formatAmt(giftAmount)}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+
                           <p className="text-lg mb-10 max-w-md mx-auto text-white/60">
                             Sent with intention. Yours to use however you need.
                           </p>
-                          {giftPaid ? (
-                            isPreview ? (
-                              <Button size="lg" disabled className="rounded-full h-16 px-10 text-xl w-full sm:w-auto opacity-50 cursor-default" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
-                                Redeem your balance
-                              </Button>
-                            ) : (
-                              <Link href="/redeem">
-                                <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
+                          <motion.div
+                            animate={{ opacity: balanceRevealPhase === "revealed" ? 1 : 0 }}
+                            transition={{ duration: 0.5, delay: balanceRevealPhase === "revealed" ? 0.6 : 0 }}
+                          >
+                            {giftPaid ? (
+                              isPreview ? (
+                                <Button size="lg" disabled className="rounded-full h-16 px-10 text-xl w-full sm:w-auto opacity-50 cursor-default" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
                                   Redeem your balance
                                 </Button>
-                              </Link>
-                            )
-                          ) : (
-                            <p className="text-sm text-white/40 italic">Payment pending — check back soon.</p>
-                          )}
+                              ) : (
+                                <Link href="/redeem">
+                                  <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
+                                    Redeem your balance
+                                  </Button>
+                                </Link>
+                              )
+                            ) : (
+                              <p className="text-sm text-white/40 italic">Payment pending — check back soon.</p>
+                            )}
+                          </motion.div>
                         </div>
                       </div>
                     ) : (
@@ -1978,67 +2204,71 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               <span>{giftIntent}</span>
                             </div>
                           )}
-                          <h3 className="text-xl md:text-2xl font-medium opacity-90 mb-2">You received</h3>
-                          <div className="font-serif text-6xl md:text-9xl mb-8 tracking-tighter">
-                            {cfg.amountStyle === "count-up" ? (
-                              <motion.span
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                whileInView={{ scale: 1, opacity: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                              >
-                                ${formatAmt(String(countedAmount))}
-                              </motion.span>
-                            ) : cfg.amountStyle === "crystallize" ? (
-                              <motion.span
-                                initial={{ filter: "blur(18px)", opacity: 0 }}
-                                whileInView={{ filter: "blur(0px)", opacity: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 1.0 }}
-                                style={{ display: "inline-block" }}
-                              >
-                                ${formatAmt(giftAmount)}
-                              </motion.span>
-                            ) : cfg.amountStyle === "bloom-pop" ? (
-                              <motion.span
-                                initial={{ scale: 0.6, opacity: 0 }}
-                                whileInView={{ scale: 1, opacity: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ type: "spring", stiffness: 240, damping: 18 }}
-                                style={{ display: "inline-block" }}
-                              >
-                                ${formatAmt(giftAmount)}
-                              </motion.span>
-                            ) : (
-                              <motion.span
-                                initial={{ y: 20, opacity: 0 }}
-                                whileInView={{ y: 0, opacity: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-                                style={{ display: "inline-block" }}
-                              >
-                                ${formatAmt(giftAmount)}
-                              </motion.span>
+                          <h3 className="text-xl md:text-2xl font-medium opacity-90 mb-6">You received</h3>
+
+                          {/* Dramatic amount reveal */}
+                          <div className="relative flex items-center justify-center mb-8">
+                            {balanceRevealPhase === "building" && (
+                              <>
+                                <motion.div
+                                  className="absolute w-40 h-40 rounded-full border-2 border-white/40"
+                                  animate={{ scale: [1, 1.35, 1], opacity: [0.6, 0.15, 0.6] }}
+                                  transition={{ repeat: Infinity, duration: 1.0, ease: "easeInOut" }}
+                                />
+                                <motion.div
+                                  className="absolute w-56 h-56 rounded-full border border-white/20"
+                                  animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.1, 0.4] }}
+                                  transition={{ repeat: Infinity, duration: 1.0, ease: "easeInOut", delay: 0.2 }}
+                                />
+                              </>
                             )}
+                            <AnimatePresence mode="wait">
+                              {balanceRevealPhase !== "revealed" ? (
+                                <motion.div
+                                  key="placeholder"
+                                  className="font-serif text-6xl md:text-9xl tracking-tighter"
+                                  style={{ filter: "blur(12px)", opacity: 0.25 }}
+                                  exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+                                >
+                                  $?
+                                </motion.div>
+                              ) : (
+                                <motion.div
+                                  key="amount"
+                                  className="font-serif text-6xl md:text-9xl tracking-tighter"
+                                  initial={{ scale: 0.7, filter: "blur(20px)", opacity: 0 }}
+                                  animate={{ scale: [0.7, 1.06, 1.0], filter: "blur(0px)", opacity: 1 }}
+                                  transition={{ type: "spring", stiffness: 260, damping: 20, duration: 0.7 }}
+                                >
+                                  ${cfg.amountStyle === "count-up" ? formatAmt(String(countedAmount)) : formatAmt(giftAmount)}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
+
                           <p className="text-lg opacity-80 mb-10 max-w-md mx-auto">
                             Sent with intention. Yours to use however you need.
                           </p>
-                          {giftPaid ? (
-                            isPreview ? (
-                              <Button size="lg" disabled className="rounded-full h-16 px-10 text-xl bg-white text-primary opacity-50 cursor-default shadow-xl w-full sm:w-auto">
-                                Redeem your balance
-                              </Button>
-                            ) : (
-                              <Link href="/redeem">
-                                <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
+                          <motion.div
+                            animate={{ opacity: balanceRevealPhase === "revealed" ? 1 : 0 }}
+                            transition={{ duration: 0.5, delay: balanceRevealPhase === "revealed" ? 0.6 : 0 }}
+                          >
+                            {giftPaid ? (
+                              isPreview ? (
+                                <Button size="lg" disabled className="rounded-full h-16 px-10 text-xl bg-white text-primary opacity-50 cursor-default shadow-xl w-full sm:w-auto">
                                   Redeem your balance
                                 </Button>
-                              </Link>
-                            )
-                          ) : (
-                            <p className="text-sm opacity-60 italic">Payment pending — check back soon.</p>
-                          )}
+                              ) : (
+                                <Link href="/redeem">
+                                  <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
+                                    Redeem your balance
+                                  </Button>
+                                </Link>
+                              )
+                            ) : (
+                              <p className="text-sm opacity-60 italic">Payment pending — check back soon.</p>
+                            )}
+                          </motion.div>
                         </div>
                       </div>
                     )}
