@@ -1,15 +1,42 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "wouter";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Gift, LogIn } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 const RevealPage = React.lazy(() => import("@/pages/reveal"));
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+async function saveReceivedGift(giftId: string): Promise<"saved" | "already-mine" | "claimed-by-other"> {
+  const res = await fetch(`${BASE}/api/gifted/gifts/${giftId}/save-received`, {
+    method: "PATCH",
+    credentials: "include",
+  });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    if (body?.alreadySaved) return "already-mine";
+    return "claimed-by-other";
+  }
+  if (!res.ok) {
+    throw new Error(`save-received failed: ${res.status}`);
+  }
+  const body = await res.json().catch(() => ({}));
+  if (body?.alreadySaved) return "already-mine";
+  return "saved";
+}
+
 export default function OpenPage() {
   const { id } = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
+  const [giftId, setGiftId] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "claimed">("idle");
 
   useEffect(() => {
     if (!id) {
@@ -18,9 +45,7 @@ export default function OpenPage() {
       return;
     }
 
-    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-    fetch(`${base}/api/gifted/gifts/${id}`)
+    fetch(`${BASE}/api/gifted/gifts/${id}`)
       .then(async (res) => {
         if (!res.ok) {
           setStatus("error");
@@ -66,6 +91,7 @@ export default function OpenPage() {
         localStorage.setItem("gifted_gift_id", gift.id);
         localStorage.setItem("gifted_gift_paid", gift.paid ? "true" : "false");
 
+        setGiftId(gift.id);
         setStatus("ready");
       })
       .catch(() => {
@@ -73,6 +99,31 @@ export default function OpenPage() {
         setErrorMsg("Something went wrong loading this gift");
       });
   }, [id]);
+
+  // Auto-save when gift loads for authenticated users (no reveal action required)
+  useEffect(() => {
+    if (!giftId || authLoading || !isAuthenticated) return;
+    setSaveStatus("saving");
+    saveReceivedGift(giftId)
+      .then((result) => {
+        if (result === "claimed-by-other") {
+          setSaveStatus("claimed");
+        } else {
+          setSaveStatus("saved");
+        }
+      })
+      .catch(() => setSaveStatus("idle"));
+  }, [giftId, isAuthenticated, authLoading]);
+
+  function handleRevealComplete() {
+    setRevealed(true);
+  }
+
+  function handleSaveToAccount() {
+    if (!giftId) return;
+    localStorage.setItem("gifted_auth_return", `/open/${giftId}?save-received=${giftId}`);
+    setLocation("/sign-in");
+  }
 
   if (status === "loading") {
     return (
@@ -103,14 +154,70 @@ export default function OpenPage() {
   }
 
   return (
-    <React.Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    <>
+      <React.Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        }
+      >
+        <RevealPage onRevealComplete={handleRevealComplete} />
+      </React.Suspense>
+
+      {/* Save-to-account prompt — shown after reveal for signed-out users */}
+      {revealed && !authLoading && !isAuthenticated && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Gift className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-tight">Save this gift</p>
+              <p className="text-xs text-muted-foreground">Sign in to keep it in your account</p>
+            </div>
+            <Button size="sm" className="rounded-full gap-1.5 shrink-0" onClick={handleSaveToAccount}>
+              <LogIn className="w-3.5 h-3.5" />
+              Sign in
+            </Button>
+          </div>
         </div>
-      }
-    >
-      <RevealPage />
-    </React.Suspense>
+      )}
+
+      {/* Auto-save status indicator for signed-in users */}
+      {isAuthenticated && saveStatus === "saved" && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+              <Gift className="w-5 h-5 text-green-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-tight">Gift saved to your account</p>
+              <p className="text-xs text-muted-foreground">View it anytime in My Gifts</p>
+            </div>
+            <Link href="/my-gifts">
+              <Button size="sm" variant="outline" className="rounded-full shrink-0">
+                View
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Already claimed by another account */}
+      {isAuthenticated && saveStatus === "claimed" && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl p-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+              <Gift className="w-5 h-5 text-amber-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-tight">Gift already claimed</p>
+              <p className="text-xs text-muted-foreground">This gift was saved by another account</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

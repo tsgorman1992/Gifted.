@@ -976,7 +976,7 @@ function ScrollHint({ isDark }: { isDark: boolean }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function RevealPage() {
+export default function RevealPage({ onRevealComplete }: { onRevealComplete?: () => void } = {}) {
   const [isOpen, setIsOpen]               = useState(false);
   const [videoUrl, setVideoUrl]           = useState<string | null>(null);
   const [videoError, setVideoError]       = useState(false);
@@ -1178,6 +1178,7 @@ export default function RevealPage() {
 
   const handleOpen = () => {
     setIsOpen(true);
+    onRevealComplete?.();
     fireEntryBurst(experience);
     if (cfg.ambientEffect && cfg.ambientEffect !== "stars") {
       ambientCleanup.current = startAmbientParticles(cfg.ambientEffect, cfg.ambientIntensity);

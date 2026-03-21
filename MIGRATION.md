@@ -28,6 +28,14 @@ git push github main
 
 ---
 
+## Schema Change History
+
+| Version | Column | Table | Type | Notes |
+|---|---|---|---|---|
+| Task-28 | `recipient_user_id` | `gifts` | `text` (nullable) | Links received gift to authenticated recipient. Applied via `pnpm --filter db push`. |
+
+---
+
 ## Required Environment Variables
 
 These must be set in any environment running this app. **Never commit values.**

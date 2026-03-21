@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const gifts = pgTable("gifts", {
   id: text("id").primaryKey(),
   senderUserId: text("sender_user_id"),
+  recipientUserId: text("recipient_user_id"),
   recipientName: text("recipient_name").notNull(),
   recipientPhone: text("recipient_phone"),
   senderName: text("sender_name").notNull(),

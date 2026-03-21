@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
+  Inbox,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { clearGiftSession } from "@/lib/session";
@@ -32,6 +33,18 @@ interface GiftSummary {
   createdAt: string;
 }
 
+interface ReceivedGiftSummary {
+  id: string;
+  senderName: string;
+  recipientName: string;
+  giftTitle: string;
+  occasion: string;
+  experience: string;
+  amount: string | null;
+  openedAt: string | null;
+  createdAt: string;
+}
+
 // ─── Experience config ────────────────────────────────────────────────────────
 
 const EXPERIENCE_META: Record<string, { label: string; color: string; bg: string; Icon: React.ComponentType<{ className?: string }> }> = {
@@ -53,6 +66,12 @@ const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 async function fetchMyGifts(): Promise<GiftSummary[]> {
   const res = await fetch(`${BASE}/api/gifted/my-gifts`, { credentials: "include" });
   if (!res.ok) throw new Error("Failed to load gifts");
+  return res.json();
+}
+
+async function fetchReceivedGifts(): Promise<ReceivedGiftSummary[]> {
+  const res = await fetch(`${BASE}/api/gifted/received-gifts`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to load received gifts");
   return res.json();
 }
 
@@ -128,7 +147,7 @@ function CopyButton({ url }: { url: string }) {
   );
 }
 
-// ─── Gift card ────────────────────────────────────────────────────────────────
+// ─── Sent gift card ───────────────────────────────────────────────────────────
 
 function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const [, setLocation] = useLocation();
@@ -151,17 +170,14 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
       className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
     >
       <div className="flex items-stretch">
-        {/* Left experience accent */}
         <div
           className="w-1.5 shrink-0"
           style={{ background: exp.color }}
         />
 
         <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
-          {/* Top row */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              {/* Experience badge */}
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                 style={{ background: exp.bg }}
@@ -177,7 +193,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
               </div>
             </div>
 
-            {/* Amount badge */}
             {gift.amount && parseFloat(gift.amount) > 0 && (
               <div className="shrink-0 bg-primary/10 text-primary font-semibold text-sm px-3 py-1 rounded-full border border-primary/20">
                 ${parseFloat(gift.amount).toFixed(0)}
@@ -185,7 +200,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             )}
           </div>
 
-          {/* Reaction row */}
           {gift.reaction && (
             <div className="flex items-center gap-2">
               <span className="text-lg leading-none">{gift.reaction}</span>
@@ -196,7 +210,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             </div>
           )}
 
-          {/* Timeline row — steps vary based on whether gift is scheduled */}
           <div className="flex items-center gap-0 text-xs">
             {(() => {
               const isScheduled = !!gift.scheduledFor;
@@ -240,10 +253,8 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             })()}
           </div>
 
-          {/* Bottom row */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Status detail */}
               <span className="text-xs text-muted-foreground">
                 {status === "redeemed" && gift.redeemedAt
                   ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
@@ -257,7 +268,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
               </span>
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-1 shrink-0">
               <CopyButton url={shareUrl} />
               <a
@@ -278,15 +288,90 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   );
 }
 
+// ─── Received gift card ───────────────────────────────────────────────────────
+
+function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: number }) {
+  const [, setLocation] = useLocation();
+  const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
+  const ExpIcon = exp.Icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25 + idx * 0.07, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      onClick={() => setLocation(`/open/${gift.id}`)}
+      className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
+    >
+      <div className="flex items-stretch">
+        <div
+          className="w-1.5 shrink-0"
+          style={{ background: exp.color }}
+        />
+
+        <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: exp.bg }}
+              >
+                <ExpIcon className="w-4 h-4" style={{ color: exp.color }} />
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-base leading-tight truncate">{gift.giftTitle || "A gift for you"}</p>
+                <p className="text-sm text-muted-foreground">
+                  From <span className="font-medium text-foreground">{gift.senderName}</span>
+                  {" · "}{gift.occasion}
+                </p>
+              </div>
+            </div>
+
+            {gift.amount && parseFloat(gift.amount) > 0 && (
+              <div className="shrink-0 bg-primary/10 text-primary font-semibold text-sm px-3 py-1 rounded-full border border-primary/20">
+                ${parseFloat(gift.amount).toFixed(0)}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
+                style={{ background: "#dcfce7", color: "#15803d" }}
+              >
+                <Eye className="w-3 h-3" />
+                {exp.label}
+              </span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {gift.openedAt
+                ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                : gift.createdAt
+                  ? `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                  : ""}
+            </span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
+
+type Tab = "sent" | "received";
 
 export default function MyGiftsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<Tab>("sent");
+  const queryClient = useQueryClient();
 
-  // Handle return from Google OAuth — read gifted_auth_return from localStorage
-  // Format A: "/preview"                     → navigate there (paid gate return)
-  // Format B: "/my-gifts?claim={giftId}"    → claim the gift, then stay
+  // Handle return from auth — read gifted_auth_return from localStorage
+  // Format A: "/preview"                         → navigate there (paid gate return)
+  // Format B: "/my-gifts?claim={giftId}"        → claim the gift, then stay
+  // Format C: "/open/{id}?save-received={id}"   → save as received gift, then stay here
   useEffect(() => {
     const authReturn = localStorage.getItem("gifted_auth_return");
     if (!authReturn) return;
@@ -295,6 +380,7 @@ export default function MyGiftsPage() {
     const [returnPath, qs] = authReturn.split("?", 2);
     const params = new URLSearchParams(qs ?? "");
     const claimId = params.get("claim");
+    const saveReceivedId = params.get("save-received");
 
     if (claimId) {
       fetch(`${BASE}/api/gifted/gifts/${claimId}/claim`, {
@@ -302,6 +388,14 @@ export default function MyGiftsPage() {
         credentials: "include",
       }).finally(() => {
         if (returnPath !== "/my-gifts") setLocation(returnPath);
+      });
+    } else if (saveReceivedId) {
+      fetch(`${BASE}/api/gifted/gifts/${saveReceivedId}/save-received`, {
+        method: "PATCH",
+        credentials: "include",
+      }).finally(() => {
+        queryClient.invalidateQueries({ queryKey: ["received-gifts"] });
+        setActiveTab("received");
       });
     } else if (returnPath !== "/my-gifts") {
       setLocation(returnPath);
@@ -316,6 +410,14 @@ export default function MyGiftsPage() {
   const { data: myGifts, isLoading: giftsLoading } = useQuery({
     queryKey: ["my-gifts"],
     queryFn: fetchMyGifts,
+    enabled: isAuthenticated,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
+  });
+
+  const { data: receivedGifts, isLoading: receivedLoading } = useQuery({
+    queryKey: ["received-gifts"],
+    queryFn: fetchReceivedGifts,
     enabled: isAuthenticated,
     staleTime: 20_000,
     refetchInterval: 30_000,
@@ -349,7 +451,7 @@ export default function MyGiftsPage() {
         >
           <h1 className="font-serif text-4xl font-medium mb-3">Your gift dashboard</h1>
           <p className="text-muted-foreground max-w-sm mx-auto">
-            Sign in to see all the gifts you've sent, track when they've been opened, and manage your gifting history.
+            Sign in to see all the gifts you've sent and received, track when they've been opened, and manage your gifting history.
           </p>
         </motion.div>
         <motion.div
@@ -369,11 +471,12 @@ export default function MyGiftsPage() {
     );
   }
 
-  // ── Stats
+  // ── Stats (sent tab)
   const totalSent    = myGifts?.length ?? 0;
   const totalValue   = myGifts?.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0) ?? 0;
   const openedCount  = myGifts?.filter(g => !!g.openedAt && !g.redeemedAt).length ?? 0;
   const redeemed     = myGifts?.filter(g => !!g.redeemedAt).length ?? 0;
+  const totalReceived = receivedGifts?.length ?? 0;
 
   const initials = [user?.firstName, user?.lastName]
     .filter(Boolean)
@@ -415,8 +518,8 @@ export default function MyGiftsPage() {
           </Button>
         </motion.div>
 
-        {/* ── Stats row ── */}
-        {!giftsLoading && totalSent > 0 && (
+        {/* ── Stats row (only on Sent tab) ── */}
+        {activeTab === "sent" && !giftsLoading && totalSent > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
             <StatCard label="Sent" value={totalSent} Icon={Package} delay={0.05} />
             <StatCard label="Total gifted" value={totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"} Icon={DollarSign} delay={0.1} />
@@ -425,53 +528,124 @@ export default function MyGiftsPage() {
           </div>
         )}
 
-        {/* ── Gift list ── */}
-        {giftsLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 rounded-2xl bg-muted/40 animate-pulse" />
-            ))}
-          </div>
-        ) : !myGifts || myGifts.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="text-center py-20 bg-card border border-border rounded-3xl px-6"
-          >
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
-              <Gift className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="font-serif text-2xl font-medium mb-2">No gifts sent yet</h2>
-            <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">
-              Create your first gift — a personal video, photos, note, playlist, and optional cash balance — all in one beautiful reveal.
-            </p>
-            <Button onClick={handleNewGift} className="rounded-full px-8 h-12 gap-2 shadow-md">
-              <Plus className="w-4 h-4" />
-              Send your first gift
-            </Button>
-          </motion.div>
-        ) : (
-          <div className="space-y-3">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center justify-between mb-1"
+        {/* ── Tabs ── */}
+        <div className="flex items-center gap-1 mb-6 bg-secondary/50 rounded-2xl p-1 w-fit">
+          {(["sent", "received"] as Tab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`relative px-5 py-2 rounded-xl text-sm font-medium transition-all ${
+                activeTab === tab
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              <p className="text-sm text-muted-foreground font-medium">
-                {totalSent} gift{totalSent !== 1 ? "s" : ""} sent
-              </p>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <TrendingUp className="w-3.5 h-3.5" />
-                Most recent first
-              </div>
-            </motion.div>
+              {tab === "sent" ? "Sent" : "Received"}
+              {tab === "received" && totalReceived > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
+                  {totalReceived}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
 
-            {myGifts.map((gift, i) => (
-              <GiftCard key={gift.id} gift={gift} idx={i} />
-            ))}
-          </div>
+        {/* ── Sent tab content ── */}
+        {activeTab === "sent" && (
+          giftsLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 rounded-2xl bg-muted/40 animate-pulse" />
+              ))}
+            </div>
+          ) : !myGifts || myGifts.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="text-center py-20 bg-card border border-border rounded-3xl px-6"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                <Gift className="w-8 h-8 text-primary" />
+              </div>
+              <h2 className="font-serif text-2xl font-medium mb-2">No gifts sent yet</h2>
+              <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">
+                Create your first gift — a personal video, photos, note, playlist, and optional cash balance — all in one beautiful reveal.
+              </p>
+              <Button onClick={handleNewGift} className="rounded-full px-8 h-12 gap-2 shadow-md">
+                <Plus className="w-4 h-4" />
+                Send your first gift
+              </Button>
+            </motion.div>
+          ) : (
+            <div className="space-y-3">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center justify-between mb-1"
+              >
+                <p className="text-sm text-muted-foreground font-medium">
+                  {totalSent} gift{totalSent !== 1 ? "s" : ""} sent
+                </p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Most recent first
+                </div>
+              </motion.div>
+
+              {myGifts.map((gift, i) => (
+                <GiftCard key={gift.id} gift={gift} idx={i} />
+              ))}
+            </div>
+          )
+        )}
+
+        {/* ── Received tab content ── */}
+        {activeTab === "received" && (
+          receivedLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 rounded-2xl bg-muted/40 animate-pulse" />
+              ))}
+            </div>
+          ) : !receivedGifts || receivedGifts.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="text-center py-20 bg-card border border-border rounded-3xl px-6"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                <Inbox className="w-8 h-8 text-primary" />
+              </div>
+              <h2 className="font-serif text-2xl font-medium mb-2">No received gifts yet</h2>
+              <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">
+                When someone sends you a gift and you save it to your account, it will appear here.
+              </p>
+            </motion.div>
+          ) : (
+            <div className="space-y-3">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center justify-between mb-1"
+              >
+                <p className="text-sm text-muted-foreground font-medium">
+                  {totalReceived} gift{totalReceived !== 1 ? "s" : ""} received
+                </p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Most recent first
+                </div>
+              </motion.div>
+
+              {receivedGifts.map((gift, i) => (
+                <ReceivedGiftCard key={gift.id} gift={gift} idx={i} />
+              ))}
+            </div>
+          )
         )}
       </div>
 

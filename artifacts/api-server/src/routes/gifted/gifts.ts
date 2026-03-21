@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import { db, gifts } from "@workspace/db";
-import { eq, desc, isNull, and } from "drizzle-orm";
+import { eq, desc, isNull, and, sql } from "drizzle-orm";
 import twilio from "twilio";
 
 function normPhone(raw: string): string {
@@ -281,6 +281,89 @@ router.patch("/gifted/gifts/:id/claim", async (req, res) => {
   } catch (err) {
     console.error("Error claiming gift:", err);
     res.status(500).json({ error: "Failed to claim gift" });
+  }
+});
+
+// PATCH /api/gifted/gifts/:id/save-received — link a gift to the authenticated recipient
+router.patch("/gifted/gifts/:id/save-received", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  try {
+    const { id } = req.params;
+
+    const [exists] = await db
+      .select({ id: gifts.id, recipientUserId: gifts.recipientUserId })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!exists) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    if (exists.recipientUserId && exists.recipientUserId !== userId) {
+      res.status(409).json({ error: "Gift already saved by another recipient" });
+      return;
+    }
+
+    if (exists.recipientUserId === userId) {
+      res.json({ ok: true, alreadySaved: true });
+      return;
+    }
+
+    const updated = await db
+      .update(gifts)
+      .set({ recipientUserId: userId })
+      .where(and(eq(gifts.id, id), isNull(gifts.recipientUserId)))
+      .returning({ id: gifts.id });
+
+    if (updated.length === 0) {
+      res.status(409).json({ error: "Gift already saved by another recipient" });
+      return;
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error saving received gift:", err);
+    res.status(500).json({ error: "Failed to save gift" });
+  }
+});
+
+// GET /api/gifted/received-gifts — get all gifts where the authenticated user is the recipient
+router.get("/gifted/received-gifts", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  try {
+    const rows = await db
+      .select()
+      .from(gifts)
+      .where(eq(gifts.recipientUserId, userId))
+      .orderBy(sql`${gifts.openedAt} DESC NULLS LAST`, desc(gifts.createdAt));
+
+    res.json(
+      rows.map((g) => ({
+        id: g.id,
+        senderName: g.senderName,
+        recipientName: g.recipientName,
+        giftTitle: g.giftTitle,
+        occasion: g.occasion,
+        experience: g.experience,
+        amount: (g.amount && parseFloat(g.amount) > 0) ? g.amount : null,
+        openedAt: g.openedAt,
+        createdAt: g.createdAt,
+      }))
+    );
+  } catch (err) {
+    console.error("Error fetching received gifts:", err);
+    res.status(500).json({ error: "Failed to fetch received gifts" });
   }
 });
 
