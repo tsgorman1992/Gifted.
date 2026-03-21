@@ -31,11 +31,12 @@ router.get("/share/:id", async (req, res) => {
   name = esc(name);
   from = esc(from);
 
-  const baseUrl   = `${req.protocol}://${req.get("host")}`;
+  const baseUrl   = process.env.GIFTED_BASE_URL || `${req.protocol}://${req.get("host")}`;
   const ogImage   = `${baseUrl}/api/og/gift/${id}`;
   const ogTitle   = `A gift for ${name} 🎁`;
   const ogDesc    = `${from} sent you something special on gifted. Tap to open your gift.`;
   const redirectUrl = `/open/${id}`;
+  const canonicalUrl = `${baseUrl}/share/${id}`;
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
@@ -50,6 +51,7 @@ router.get("/share/:id", async (req, res) => {
   <meta property="og:image" content="${ogImage}" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
+  <meta property="og:url" content="${canonicalUrl}" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="gifted." />
   <meta name="twitter:card" content="summary_large_image" />

@@ -539,7 +539,7 @@ export default function PreviewPage() {
     setLocation("/create");
   };
 
-  const displayUrl   = giftId ? `gifted.page/open/${giftId}` : "gifted.page/open/...";
+  const displayUrl   = giftId ? `https://gifted.page/open/${giftId}` : "https://gifted.page/open/...";
   const displayAmt   = giftAmount ? parseFloat(giftAmount).toFixed(2) : null;
   const hasBalance   = !!displayAmt && parseFloat(displayAmt) > 0;
   const isPaid       = paymentStatus === "confirmed" || paymentStatus === "confirming";
