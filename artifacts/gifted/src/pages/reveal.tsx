@@ -814,11 +814,11 @@ function PhotoCarousel({
 
   return (
     <div className="relative group">
-      {/* Scroll track */}
+      {/* Scroll track — mobile: full-width slides; desktop: 85% slides so next peeks ~15% */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory rounded-3xl"
+        className="flex overflow-x-auto snap-x snap-mandatory gap-3"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
       >
         {photoUrls.map((url, i) => {
@@ -827,8 +827,8 @@ function PhotoCarousel({
           return (
             <div
               key={i}
-              className={`snap-start shrink-0 w-full aspect-video relative ${!failed ? "cursor-pointer" : ""}`}
-              style={isDark ? { background: "rgba(255,255,255,0.06)" } : { background: "hsl(var(--secondary))" }}
+              className={`snap-start shrink-0 w-full md:w-[85%] aspect-video relative rounded-3xl overflow-hidden ${!failed ? "cursor-pointer" : ""}`}
+              style={isDark ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow } : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }}
               onClick={() => !failed && setLightboxUrl(url)}
             >
               {!failed && (
@@ -900,11 +900,18 @@ function PhotoCarousel({
   );
 }
 
+// ─── Convergence particles for balance buildup ───────────────────────────────
+const CONVERGE_PARTICLES: Array<{ x: number; y: number }> = [
+  { x: -90, y: -70 }, { x: 90, y: -70 }, { x: -120, y: 10 },
+  { x: 120, y: 10 }, { x: -60, y: 80 }, { x: 60, y: 80 },
+  { x: 0, y: -100 }, { x: 0, y: 95 },
+];
+
 // ─── Section wrapper ─────────────────────────────────────────────────────────
 
 function Section({
-  cfg,
-  idx,
+  cfg: _cfg,
+  idx: _idx,
   className = "",
   children,
 }: {
@@ -914,16 +921,18 @@ function Section({
   children: React.ReactNode;
 }) {
   const reducedMotion = useReducedMotion();
-  const v = reducedMotion
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.4 } }
-    : sectionVariant(cfg.sectionStyle, idx);
+  const initial = reducedMotion ? { opacity: 0 } : { opacity: 0, y: 28 };
+  const animate = reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 };
+  const transition = reducedMotion
+    ? { duration: 0.4 }
+    : { duration: 0.65, ease: [0.16, 1, 0.3, 1] as number[] };
   return (
     <motion.div
       className={className}
-      initial={v.initial}
-      whileInView={v.animate}
+      initial={initial}
+      whileInView={animate}
       viewport={{ once: true, margin: "-60px" }}
-      transition={v.transition}
+      transition={transition}
     >
       {children}
     </motion.div>
@@ -2118,6 +2127,16 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                                   animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.1, 0.4] }}
                                   transition={{ repeat: Infinity, duration: 1.0, ease: "easeInOut", delay: 0.2 }}
                                 />
+                                {CONVERGE_PARTICLES.map((p, i) => (
+                                  <motion.div
+                                    key={i}
+                                    className="absolute w-2 h-2 rounded-full"
+                                    style={{ background: "rgba(180,160,255,0.85)" }}
+                                    initial={{ x: p.x, y: p.y, opacity: 0, scale: 1.2 }}
+                                    animate={{ x: 0, y: 0, opacity: [0, 0.9, 0], scale: 0.2 }}
+                                    transition={{ duration: 1.0, ease: "easeIn", delay: i * 0.08 }}
+                                  />
+                                ))}
                               </>
                             )}
                             <AnimatePresence mode="wait">
@@ -2135,9 +2154,9 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                                   key="amount"
                                   className="font-serif text-6xl md:text-9xl tracking-tighter text-white"
                                   style={{ textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
-                                  initial={{ scale: 0.7, filter: "blur(20px)", opacity: 0 }}
-                                  animate={{ scale: [0.7, 1.06, 1.0], filter: "blur(0px)", opacity: 1 }}
-                                  transition={{ type: "spring", stiffness: 260, damping: 20, duration: 0.7 }}
+                                  initial={reducedMotion ? { opacity: 0 } : { scale: 0.7, filter: "blur(20px)", opacity: 0 }}
+                                  animate={reducedMotion ? { opacity: 1 } : { scale: [0.7, 1.06, 1.0], filter: "blur(0px)", opacity: 1 }}
+                                  transition={reducedMotion ? { duration: 0.4 } : { type: "spring", stiffness: 260, damping: 20, duration: 0.7 }}
                                 >
                                   ${formatAmt(giftAmount)}
                                 </motion.div>
@@ -2220,6 +2239,15 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                                   animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0.1, 0.4] }}
                                   transition={{ repeat: Infinity, duration: 1.0, ease: "easeInOut", delay: 0.2 }}
                                 />
+                                {CONVERGE_PARTICLES.map((p, i) => (
+                                  <motion.div
+                                    key={i}
+                                    className="absolute w-2 h-2 rounded-full bg-white/80"
+                                    initial={{ x: p.x, y: p.y, opacity: 0, scale: 1.2 }}
+                                    animate={{ x: 0, y: 0, opacity: [0, 0.9, 0], scale: 0.2 }}
+                                    transition={{ duration: 1.0, ease: "easeIn", delay: i * 0.08 }}
+                                  />
+                                ))}
                               </>
                             )}
                             <AnimatePresence mode="wait">
@@ -2236,9 +2264,9 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                                 <motion.div
                                   key="amount"
                                   className="font-serif text-6xl md:text-9xl tracking-tighter"
-                                  initial={{ scale: 0.7, filter: "blur(20px)", opacity: 0 }}
-                                  animate={{ scale: [0.7, 1.06, 1.0], filter: "blur(0px)", opacity: 1 }}
-                                  transition={{ type: "spring", stiffness: 260, damping: 20, duration: 0.7 }}
+                                  initial={reducedMotion ? { opacity: 0 } : { scale: 0.7, filter: "blur(20px)", opacity: 0 }}
+                                  animate={reducedMotion ? { opacity: 1 } : { scale: [0.7, 1.06, 1.0], filter: "blur(0px)", opacity: 1 }}
+                                  transition={reducedMotion ? { duration: 0.4 } : { type: "spring", stiffness: 260, damping: 20, duration: 0.7 }}
                                 >
                                   ${cfg.amountStyle === "count-up" ? formatAmt(String(countedAmount)) : formatAmt(giftAmount)}
                                 </motion.div>
