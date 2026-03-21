@@ -883,7 +883,7 @@ export default function PreviewPage() {
                         Want to track when {recipientName} opens and redeems it?
                       </p>
                       <p className="text-xs text-green-700/70 dark:text-green-400/70">
-                        Sign in or create a free account to track when they open and redeem it.
+                        Sign in to track this gift — or create a free account if you're new.
                       </p>
                       {googleEnabled && (
                         <button
@@ -900,7 +900,7 @@ export default function PreviewPage() {
                       )}
                       <button
                         type="button"
-                        onClick={() => { if (!nudgeFormOpen) setNudgeMode("sign-up"); setNudgeFormOpen(v => !v); }}
+                        onClick={() => { if (!nudgeFormOpen) setNudgeMode("sign-in"); setNudgeFormOpen(v => !v); }}
                         className="w-full text-center text-xs text-green-700/70 dark:text-green-400/70 hover:text-green-800 dark:hover:text-green-300 transition-colors underline underline-offset-2"
                       >
                         {nudgeFormOpen ? "Collapse" : (googleEnabled ? "Or continue with email" : "Continue with email")}
