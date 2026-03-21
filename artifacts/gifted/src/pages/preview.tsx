@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, User, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download,
+  CheckCircle2, Send, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -112,17 +112,8 @@ export default function PreviewPage() {
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "redirecting" | "confirming" | "confirmed" | "failed">("idle");
   const [payingError,   setPayingError]   = useState<string | null>(null);
 
-  // Inline auth gate (shown for paid gifts when sender isn't signed in)
+  // Google OAuth availability (used in nudge forms)
   const [googleEnabled,    setGoogleEnabled]    = useState(false);
-  const pendingCheckout = useRef(false);
-  const [gateFormOpen,     setGateFormOpen]     = useState(false);
-  const [gateMode,         setGateMode]         = useState<"sign-in" | "sign-up">("sign-in");
-  const [gateEmail,        setGateEmail]        = useState("");
-  const [gatePassword,     setGatePassword]     = useState("");
-  const [gateFirstName,    setGateFirstName]    = useState("");
-  const [gateLastName,     setGateLastName]     = useState("");
-  const [gateSubmitting,   setGateSubmitting]   = useState(false);
-  const [gateError,        setGateError]        = useState<string | null>(null);
 
   // Free gift nudge (shown after sharing a free gift, for anonymous senders)
   const [nudgeFormOpen,    setNudgeFormOpen]    = useState(false);
@@ -256,14 +247,12 @@ export default function PreviewPage() {
       .catch(() => {});
   }, [base]);
 
-  // Auto-trigger Stripe checkout once auth resolves — handles both email/password
-  // gate (pendingCheckout ref) and Google OAuth return (localStorage key).
+  // Auto-trigger Stripe checkout if Google OAuth was used during a pending payment
   useEffect(() => {
     if (!isAuthenticated || authLoading) return;
     const stored = localStorage.getItem("gifted_auth_pending_checkout");
-    if (stored || pendingCheckout.current) {
-      pendingCheckout.current = false;
-      if (stored) localStorage.removeItem("gifted_auth_pending_checkout");
+    if (stored) {
+      localStorage.removeItem("gifted_auth_pending_checkout");
       handlePayAndSend();
     }
   }, [isAuthenticated, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -367,36 +356,6 @@ export default function PreviewPage() {
     } catch {
       setPaymentStatus("idle");
       setPayingError("Could not start checkout. Please try again.");
-    }
-  };
-
-  // ─── Inline auth gate submit (paid gifts) ────────────────────────────────────
-  const handleGateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setGateError(null);
-    setGateSubmitting(true);
-    const endpoint = gateMode === "sign-in" ? "/api/auth/login" : "/api/auth/register";
-    const body: Record<string, string> = { email: gateEmail, password: gatePassword };
-    if (gateMode === "sign-up") { body.firstName = gateFirstName; body.lastName = gateLastName; }
-    try {
-      const res = await fetch(`${base}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setGateError(data.error || "Something went wrong. Please try again.");
-        return;
-      }
-      // Mark checkout pending before refetch so the auth effect fires handlePayAndSend
-      pendingCheckout.current = true;
-      await refetch();
-    } catch {
-      setGateError("Unable to connect. Please try again.");
-    } finally {
-      setGateSubmitting(false);
     }
   };
 
@@ -889,7 +848,7 @@ export default function PreviewPage() {
                     })}
                   </div>
 
-                  {/* CTA — authenticated: phone notification only; anonymous free gift: soft nudge */}
+                  {/* CTA — authenticated: phone notification; anonymous: optional sign-up nudge */}
                   {isAuthenticated ? (
                     <div>
                       {!notifySaved ? (
@@ -916,6 +875,78 @@ export default function PreviewPage() {
                           ✓ We'll text you when {recipientName} opens and redeems their gift.
                         </p>
                       )}
+                    </div>
+                  ) : isPaid ? (
+                    /* ── Paid gift tracking nudge (unauthenticated sender) ── */
+                    <div className="space-y-3 pt-2 border-t border-green-200 dark:border-green-800">
+                      <p className="text-sm font-semibold text-green-800 dark:text-green-300 pt-1">
+                        Want to track when {recipientName} opens and redeems it?
+                      </p>
+                      <p className="text-xs text-green-700/70 dark:text-green-400/70">
+                        Create a free account to see when they open it and when they redeem the balance.
+                      </p>
+                      {googleEnabled && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (giftId) localStorage.setItem("gifted_auth_return", `/my-gifts?claim=${giftId}`);
+                            window.location.href = `${base}/api/auth/google`;
+                          }}
+                          className="w-full h-10 flex items-center justify-center gap-2.5 rounded-xl border border-green-300 bg-white hover:bg-green-50 dark:border-green-700 dark:bg-green-950/30 dark:hover:bg-green-900/40 transition-colors text-sm font-medium text-green-900 dark:text-green-300"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
+                          Sign up with Google
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setNudgeFormOpen(v => !v)}
+                        className="w-full text-center text-xs text-green-700/70 dark:text-green-400/70 hover:text-green-800 dark:hover:text-green-300 transition-colors underline underline-offset-2"
+                      >
+                        {nudgeFormOpen ? "Collapse" : (googleEnabled ? "Or continue with email" : "Continue with email")}
+                      </button>
+                      <AnimatePresence>
+                        {nudgeFormOpen && (
+                          <motion.form
+                            key="paid-nudge-form"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.22 }}
+                            onSubmit={handleNudgeSubmit}
+                            className="overflow-hidden space-y-3"
+                          >
+                            {nudgeMode === "sign-up" && (
+                              <div className="grid grid-cols-2 gap-2">
+                                <input type="text" value={nudgeFirstName} onChange={e => setNudgeFirstName(e.target.value)} placeholder="First name"
+                                  className="h-10 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 transition" />
+                                <input type="text" value={nudgeLastName} onChange={e => setNudgeLastName(e.target.value)} placeholder="Last name"
+                                  className="h-10 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 transition" />
+                              </div>
+                            )}
+                            <input type="email" value={nudgeEmail} onChange={e => { setNudgeEmail(e.target.value); setNudgeError(null); }}
+                              placeholder="Email address" required autoComplete="email"
+                              className="w-full h-10 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 transition" />
+                            <input type="password" value={nudgePassword} onChange={e => setNudgePassword(e.target.value)}
+                              placeholder={nudgeMode === "sign-up" ? "Create a password (min. 8 chars)" : "Password"} required
+                              autoComplete={nudgeMode === "sign-in" ? "current-password" : "new-password"}
+                              className="w-full h-10 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 transition" />
+                            {nudgeError && <p className="text-xs text-destructive">{nudgeError}</p>}
+                            <Button type="submit" size="sm" disabled={nudgeSubmitting} className="w-full h-10 rounded-xl text-sm bg-green-700 hover:bg-green-800 border-0">
+                              {nudgeSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : nudgeMode === "sign-in" ? "Sign in" : "Create account"}
+                            </Button>
+                            <p className="text-center text-xs text-green-700/70 dark:text-green-400/70">
+                              {nudgeMode === "sign-in" ? "No account yet? " : "Already have one? "}
+                              <button type="button"
+                                onClick={() => { setNudgeMode(m => m === "sign-in" ? "sign-up" : "sign-in"); setNudgeError(null); }}
+                                className="text-green-800 dark:text-green-300 font-medium hover:underline"
+                              >
+                                {nudgeMode === "sign-in" ? "Sign up" : "Sign in"}
+                              </button>
+                            </p>
+                          </motion.form>
+                        )}
+                      </AnimatePresence>
                     </div>
                   ) : (linkShared && !hasBalance) ? (
                     /* ── Free gift nudge: offer to create account for tracking ── */
@@ -1138,115 +1169,20 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* Primary CTA — load balance and send (gated on auth) */}
+            {/* Primary CTA — load balance and send (no login required) */}
             {hasBalance && !isPaid && (
-              <>
-                {authLoading ? (
-                  <div className="h-14 flex items-center justify-center">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : !isAuthenticated ? (
-                  /* ── Inline auth gate ─────────────────────────────────────── */
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="rounded-2xl border border-border bg-card p-5 space-y-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                        <User className="w-4 h-4 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">Sign in to send your gift</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                          See when {recipientName} opens it and track the balance — all in your dashboard.
-                        </p>
-                      </div>
-                    </div>
-
-                    {googleEnabled && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          localStorage.setItem("gifted_auth_return", "/preview");
-                          localStorage.setItem("gifted_auth_pending_checkout", "true");
-                          window.location.href = `${base}/api/auth/google`;
-                        }}
-                        className="w-full h-11 flex items-center justify-center gap-3 rounded-xl border border-border hover:bg-secondary/60 transition-colors font-medium text-sm"
-                      >
-                        <svg width="17" height="17" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
-                        Continue with Google
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => setGateFormOpen(v => !v)}
-                      className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {gateFormOpen ? "Hide" : (googleEnabled ? "Or continue with email" : "Continue with email")}
-                    </button>
-
-                    <AnimatePresence>
-                      {gateFormOpen && (
-                        <motion.form
-                          key="gate-form"
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.22 }}
-                          onSubmit={handleGateSubmit}
-                          className="overflow-hidden space-y-3"
-                        >
-                          {gateMode === "sign-up" && (
-                            <div className="grid grid-cols-2 gap-2">
-                              <input type="text" value={gateFirstName} onChange={e => setGateFirstName(e.target.value)} placeholder="First name"
-                                className="h-10 px-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition" />
-                              <input type="text" value={gateLastName} onChange={e => setGateLastName(e.target.value)} placeholder="Last name"
-                                className="h-10 px-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition" />
-                            </div>
-                          )}
-                          <input type="email" value={gateEmail} onChange={e => { setGateEmail(e.target.value); setGateError(null); }}
-                            placeholder="Email address" required autoComplete="email"
-                            className="w-full h-10 px-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition" />
-                          <input type="password" value={gatePassword} onChange={e => setGatePassword(e.target.value)}
-                            placeholder={gateMode === "sign-up" ? "Create a password (min. 8 chars)" : "Password"} required
-                            autoComplete={gateMode === "sign-in" ? "current-password" : "new-password"}
-                            className="w-full h-10 px-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition" />
-                          {gateError && <p className="text-xs text-destructive">{gateError}</p>}
-                          <Button type="submit" size="sm" disabled={gateSubmitting} className="w-full h-10 rounded-xl text-sm">
-                            {gateSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : gateMode === "sign-in" ? "Sign in" : "Create account"}
-                          </Button>
-                          <p className="text-center text-xs text-muted-foreground">
-                            {gateMode === "sign-in" ? "No account yet? " : "Already have one? "}
-                            <button type="button"
-                              onClick={() => { setGateMode(m => m === "sign-in" ? "sign-up" : "sign-in"); setGateError(null); }}
-                              className="text-primary font-medium hover:underline"
-                            >
-                              {gateMode === "sign-in" ? "Sign up" : "Sign in"}
-                            </button>
-                          </p>
-                        </motion.form>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                ) : (
-                  /* ── Authenticated: real Stripe CTA ───────────────────────── */
-                  <Button
-                    onClick={handlePayAndSend}
-                    disabled={saving || isRedirecting}
-                    className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
-                  >
-                    {isRedirecting
-                      ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
-                      : saving
-                        ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
-                        : <><Send className="w-5 h-5" /> Load ${displayAmt} &amp; send the gift</>
-                    }
-                  </Button>
-                )}
-              </>
+              <Button
+                onClick={handlePayAndSend}
+                disabled={saving || isRedirecting || authLoading}
+                className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
+              >
+                {isRedirecting
+                  ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
+                  : saving
+                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
+                    : <><Send className="w-5 h-5" /> Load ${displayAmt} &amp; send the gift</>
+                }
+              </Button>
             )}
 
             {/* ── Share / copy — mobile: native share + copy ── */}

@@ -1189,8 +1189,14 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (!amountInView || !giftAmount || parseFloat(giftAmount) <= 0) return;
+    if (!giftAmount || parseFloat(giftAmount) <= 0) return;
     if (balanceRevealPhase !== "hidden") return;
+    // Preview mode (sender checking their own gift): skip dramatic build-up, show amount immediately
+    if (isPreview) {
+      setBalanceRevealPhase("revealed");
+      return;
+    }
+    if (!amountInView) return;
     if (reducedMotion) {
       setBalanceRevealPhase("revealed");
       return;
@@ -1207,7 +1213,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
       playChime();
     }, 1400);
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [amountInView, giftAmount, balanceRevealPhase, reducedMotion]);
+  }, [amountInView, giftAmount, balanceRevealPhase, reducedMotion, isPreview]);
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
