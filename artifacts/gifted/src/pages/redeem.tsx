@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
+import { trackEvent } from "@/lib/analytics";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,6 +146,11 @@ export default function RedeemPage() {
         });
         if (!res.ok) throw new Error("Redeem request failed");
       }
+      trackEvent("gift_redeemed", {
+        method: selectedMethod ?? undefined,
+        value:  parseFloat(amount) || 0,
+        currency: "USD",
+      });
       setScreen("success");
     } catch {
       setError("Something went wrong. Please try again or contact help@gifted.page.");

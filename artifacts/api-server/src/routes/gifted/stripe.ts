@@ -138,6 +138,7 @@ router.post("/gifted/confirm-payment", async (req, res) => {
       .update(gifts)
       .set({
         paid: true,
+        senderEmail: session.customer_details?.email ?? null,
         stripePaymentIntentId:
           typeof session.payment_intent === "string"
             ? session.payment_intent
@@ -248,6 +249,7 @@ router.post("/stripe/webhook", async (req, res) => {
         .update(gifts)
         .set({
           paid: true,
+          senderEmail: session.customer_details?.email ?? null,
           stripePaymentIntentId:
             typeof session.payment_intent === "string"
               ? session.payment_intent

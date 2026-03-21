@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
+import { trackEvent } from "@/lib/analytics";
 
 // ─── Experience configs ──────────────────────────────────────────────────────
 
@@ -1240,7 +1241,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
         fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}/opened`, {
           method: "PATCH",
           credentials: "include",
-        }).catch(() => { /* fire and forget */ });
+        }).then(() => trackEvent("gift_opened", { gift_id: resolvedGiftId })).catch(() => { /* fire and forget */ });
       }
       fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null)

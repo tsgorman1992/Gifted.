@@ -11,6 +11,7 @@ import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { useAuth } from "@/lib/auth-context";
 import QRCodeLib from "qrcode";
+import { trackEvent } from "@/lib/analytics";
 
 // ─── QR Code component ────────────────────────────────────────────────────────
 
@@ -228,6 +229,12 @@ export default function PreviewPage() {
           if (!res.ok) throw new Error("Confirm failed");
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", giftParam);
+          const paidAmt = localStorage.getItem("gifted_amount");
+          trackEvent("gift_paid", {
+            currency: "USD",
+            value:    paidAmt ? parseFloat(paidAmt) : 0,
+            gift_id:  giftParam,
+          });
         })
         .catch(() => {
           // Even if confirm fails (e.g. already confirmed), treat as paid
@@ -256,6 +263,16 @@ export default function PreviewPage() {
       handlePayAndSend();
     }
   }, [isAuthenticated, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fire signup_nudge_shown once when the paid nudge becomes visible
+  const nudgeShownFiredRef = useRef(false);
+  useEffect(() => {
+    const isPaidLocal = paymentStatus === "confirmed" || paymentStatus === "confirming";
+    if (isPaidLocal && !isAuthenticated && !authLoading && !nudgeShownFiredRef.current) {
+      nudgeShownFiredRef.current = true;
+      trackEvent("signup_nudge_shown");
+    }
+  }, [paymentStatus, isAuthenticated, authLoading]);
 
   const expMeta = EXPERIENCE_MAP[experience as keyof typeof EXPERIENCE_MAP] ?? EXPERIENCE_MAP[DEFAULT_EXPERIENCE];
   const gStyle  = { background: `linear-gradient(135deg, ${expMeta.palette.from}, ${expMeta.palette.via}, ${expMeta.palette.to})` };
@@ -316,6 +333,16 @@ export default function PreviewPage() {
       const url = `${window.location.origin}${base}/api/share/${id}`;
       setShareUrl(url);
       setSaving(false);
+
+      const amt = localStorage.getItem("gifted_amount");
+      trackEvent("gift_created", {
+        experience: localStorage.getItem("gifted_experience") || experience,
+        occasion:   localStorage.getItem("gifted_occasion")   || "general",
+        has_balance: !!(amt && parseFloat(amt) > 0),
+        has_video:  !!(localStorage.getItem("gifted_video_path")),
+        photo_count: (() => { try { return JSON.parse(localStorage.getItem("gifted_photo_paths") || "[]").length; } catch { return 0; } })(),
+      });
+
       return { id, url };
     } catch {
       setSaveError("Could not save your gift. Please try again.");
@@ -380,6 +407,7 @@ export default function PreviewPage() {
         return;
       }
       await refetch();
+      trackEvent("signup_nudge_converted", { mode: nudgeMode });
       if (giftId) {
         await fetch(`${base}/api/gifted/gifts/${giftId}/claim`, {
           method: "PATCH",
