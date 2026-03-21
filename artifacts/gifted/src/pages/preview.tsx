@@ -240,6 +240,12 @@ export default function PreviewPage() {
           // Even if confirm fails (e.g. already confirmed), treat as paid
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", giftParam);
+          const paidAmt = localStorage.getItem("gifted_amount");
+          trackEvent("gift_paid", {
+            currency: "USD",
+            value:    paidAmt ? parseFloat(paidAmt) : 0,
+            gift_id:  giftParam,
+          });
         });
 
       window.history.replaceState({}, "", window.location.pathname);
@@ -336,11 +342,11 @@ export default function PreviewPage() {
 
       const amt = localStorage.getItem("gifted_amount");
       trackEvent("gift_created", {
-        experience: localStorage.getItem("gifted_experience") || experience,
-        occasion:   localStorage.getItem("gifted_occasion")   || "general",
-        has_balance: !!(amt && parseFloat(amt) > 0),
-        has_video:  !!(localStorage.getItem("gifted_video_path")),
-        photo_count: (() => { try { return JSON.parse(localStorage.getItem("gifted_photo_paths") || "[]").length; } catch { return 0; } })(),
+        experience:  localStorage.getItem("gifted_experience") || experience,
+        occasion:    localStorage.getItem("gifted_occasion")   || "general",
+        hasBalance:  !!(amt && parseFloat(amt) > 0),
+        hasVideo:    !!(localStorage.getItem("gifted_video_path")),
+        photoCount:  (() => { try { return JSON.parse(localStorage.getItem("gifted_photo_paths") || "[]").length; } catch { return 0; } })(),
       });
 
       return { id, url };
