@@ -789,7 +789,7 @@ export default function PreviewPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-                        {isPaid ? "Payment confirmed — gift sent!" : "Gift link sent!"}
+                        {isPaid ? "Payment received — gift ready!" : "Gift link sent!"}
                       </p>
                       <p className="text-xs text-green-700/70 dark:text-green-400/70 mt-0.5">
                         {recipientName} will see a beautiful reveal when they open it.
@@ -883,7 +883,7 @@ export default function PreviewPage() {
                         Want to track when {recipientName} opens and redeems it?
                       </p>
                       <p className="text-xs text-green-700/70 dark:text-green-400/70">
-                        Create a free account to see when they open it and when they redeem the balance.
+                        Sign in or create a free account to track when they open and redeem it.
                       </p>
                       {googleEnabled && (
                         <button
@@ -895,12 +895,12 @@ export default function PreviewPage() {
                           className="w-full h-10 flex items-center justify-center gap-2.5 rounded-xl border border-green-300 bg-white hover:bg-green-50 dark:border-green-700 dark:bg-green-950/30 dark:hover:bg-green-900/40 transition-colors text-sm font-medium text-green-900 dark:text-green-300"
                         >
                           <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
-                          Sign up with Google
+                          Continue with Google
                         </button>
                       )}
                       <button
                         type="button"
-                        onClick={() => setNudgeFormOpen(v => !v)}
+                        onClick={() => { if (!nudgeFormOpen) setNudgeMode("sign-up"); setNudgeFormOpen(v => !v); }}
                         className="w-full text-center text-xs text-green-700/70 dark:text-green-400/70 hover:text-green-800 dark:hover:text-green-300 transition-colors underline underline-offset-2"
                       >
                         {nudgeFormOpen ? "Collapse" : (googleEnabled ? "Or continue with email" : "Continue with email")}
@@ -964,12 +964,12 @@ export default function PreviewPage() {
                           className="w-full h-10 flex items-center justify-center gap-2.5 rounded-xl border border-green-300 bg-white hover:bg-green-50 dark:border-green-700 dark:bg-green-950/30 dark:hover:bg-green-900/40 transition-colors text-sm font-medium text-green-900 dark:text-green-300"
                         >
                           <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
-                          Sign in with Google
+                          Continue with Google
                         </button>
                       )}
                       <button
                         type="button"
-                        onClick={() => setNudgeFormOpen(v => !v)}
+                        onClick={() => { if (!nudgeFormOpen) setNudgeMode("sign-in"); setNudgeFormOpen(v => !v); }}
                         className="w-full text-center text-xs text-green-700/70 dark:text-green-400/70 hover:text-green-800 dark:hover:text-green-300 transition-colors underline underline-offset-2"
                       >
                         {nudgeFormOpen ? "Collapse" : (googleEnabled ? "Or continue with email" : "Continue with email")}
