@@ -883,7 +883,7 @@ export default function PreviewPage() {
                         Want to track when {recipientName} opens and redeems it?
                       </p>
                       <p className="text-xs text-green-700/70 dark:text-green-400/70">
-                        Sign in to track this gift — or create a free account if you're new.
+                        Sign in to track this gift.
                       </p>
                       {googleEnabled && (
                         <button
