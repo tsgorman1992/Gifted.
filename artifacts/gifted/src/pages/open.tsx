@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Gift, LogIn } from "lucide-react";
+import { Loader2, AlertCircle, Gift, LogIn, Send } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 const RevealPage = React.lazy(() => import("@/pages/reveal"));
@@ -36,6 +36,7 @@ export default function OpenPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [giftId, setGiftId] = useState<string | null>(null);
   const [giftSenderUserId, setGiftSenderUserId] = useState<string | null>(null);
+  const [giftRecipientName, setGiftRecipientName] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "claimed">("idle");
 
@@ -94,6 +95,7 @@ export default function OpenPage() {
 
         setGiftId(gift.id);
         setGiftSenderUserId(gift.senderUserId ?? null);
+        setGiftRecipientName(gift.recipientName ?? "");
         setStatus("ready");
       })
       .catch(() => {
@@ -103,6 +105,7 @@ export default function OpenPage() {
   }, [id]);
 
   // Auto-save when gift loads for authenticated users (no reveal action required)
+  // Skip if the authenticated user is the sender — they don't receive their own gift
   useEffect(() => {
     if (!giftId || authLoading || !isAuthenticated) return;
     if (user && giftSenderUserId && user.id === giftSenderUserId) return;
@@ -128,7 +131,7 @@ export default function OpenPage() {
     setLocation("/sign-in");
   }
 
-  if (status === "loading") {
+  if (status === "loading" || (status === "ready" && authLoading)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
@@ -152,6 +155,34 @@ export default function OpenPage() {
             Go to gifted.
           </Button>
         </Link>
+      </div>
+    );
+  }
+
+  // Sender view — shown when the logged-in user is the one who created this gift
+  const isSender = !authLoading && isAuthenticated && user && giftSenderUserId && user.id === giftSenderUserId;
+  if (isSender) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+          <Send className="w-9 h-9 text-primary" />
+        </div>
+        <h1 className="font-serif text-3xl mb-3">You sent this gift</h1>
+        <p className="text-muted-foreground mb-8 max-w-sm">
+          This gift is on its way to <span className="font-medium text-foreground">{giftRecipientName}</span>. They'll see the full surprise when they open it.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Link href="/my-gifts">
+            <Button className="rounded-xl w-full sm:w-auto">
+              View sent gifts
+            </Button>
+          </Link>
+          <Link href="/">
+            <Button variant="outline" className="rounded-xl w-full sm:w-auto">
+              Go home
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
