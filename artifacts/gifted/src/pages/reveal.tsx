@@ -695,6 +695,112 @@ function fireEntryBurst(experience: string) {
   }
 }
 
+// ─── Lightbox carousel ───────────────────────────────────────────────────────
+
+function LightboxCarousel({
+  photoUrls,
+  initialIdx,
+  onClose,
+}: {
+  photoUrls: string[];
+  initialIdx: number;
+  onClose: () => void;
+}) {
+  const [idx, setIdx] = useState(initialIdx);
+  const total = photoUrls.length;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft")  setIdx(i => Math.max(0, i - 1));
+      else if (e.key === "ArrowRight") setIdx(i => Math.min(total - 1, i + 1));
+      else if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [total, onClose]);
+
+  return (
+    <motion.div
+      key="lightbox"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/92 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      {/* Photo — slides on change */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.img
+          key={idx}
+          src={photoUrls[idx]}
+          alt={`Photo ${idx + 1}`}
+          initial={{ opacity: 0, x: 48 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -48 }}
+          transition={{ duration: 0.2, ease: [0.32, 0, 0.67, 0] }}
+          className="max-w-[92vw] max-h-[80vh] rounded-2xl object-contain shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </AnimatePresence>
+
+      {/* Prev */}
+      {idx > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setIdx(i => i - 1); }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+          aria-label="Previous"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Next */}
+      {idx < total - 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setIdx(i => i + 1); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+          aria-label="Next"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Close */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+        aria-label="Close"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
+      {/* Counter + dots (only when multiple photos) */}
+      {total > 1 && (
+        <>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/50 text-sm font-medium tabular-nums select-none">
+            {idx + 1} / {total}
+          </div>
+          <div
+            className="absolute bottom-6 flex items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {photoUrls.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setIdx(i); }}
+                className="h-1.5 rounded-full transition-all duration-300 bg-white"
+                style={{ width: i === idx ? "1.5rem" : "0.375rem", opacity: i === idx ? 1 : 0.35 }}
+                aria-label={`Go to photo ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Photo carousel ──────────────────────────────────────────────────────────
 
 function PhotoCarousel({
@@ -703,7 +809,7 @@ function PhotoCarousel({
   photoLoaded,
   setPhotoLoaded,
   setPhotoErrors,
-  setLightboxUrl,
+  setLightboxIdx,
   cfg,
   isDark,
 }: {
@@ -712,7 +818,7 @@ function PhotoCarousel({
   photoLoaded: Record<number, boolean>;
   setPhotoLoaded: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
   setPhotoErrors: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
-  setLightboxUrl: (url: string | null) => void;
+  setLightboxIdx: (idx: number | null) => void;
   cfg: RevealCfg;
   isDark: boolean;
 }) {
@@ -746,7 +852,7 @@ function PhotoCarousel({
       <div
         className={`w-full rounded-3xl overflow-hidden relative group aspect-video ${!failed ? "cursor-pointer" : ""}`}
         style={isDark ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow } : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }}
-        onClick={() => !failed && setLightboxUrl(photoUrls[0])}
+        onClick={() => !failed && setLightboxIdx(0)}
       >
         {!failed && (
           <>
@@ -795,7 +901,7 @@ function PhotoCarousel({
               key={i}
               className={`snap-start shrink-0 w-full md:w-[85%] aspect-video relative rounded-3xl overflow-hidden ${!failed ? "cursor-pointer" : ""}`}
               style={isDark ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow } : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }}
-              onClick={() => !failed && setLightboxUrl(url)}
+              onClick={() => !failed && setLightboxIdx(i)}
             >
               {!failed && (
                 <>
@@ -1175,7 +1281,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const [isPreview, setIsPreview]         = useState(false);
   const [isOpening, setIsOpening]         = useState(false);
   const [openPhase, setOpenPhase]         = useState(0);
-  const [lightboxUrl, setLightboxUrl]     = useState<string | null>(null);
+  const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
   const [giftId, setGiftId]               = useState<string | null>(null);
   const [reactionEmoji, setReactionEmoji] = useState<string | null>(null);
   const [reactionSent, setReactionSent]   = useState(false);
@@ -1932,7 +2038,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                     photoLoaded={photoLoaded}
                     setPhotoLoaded={setPhotoLoaded}
                     setPhotoErrors={setPhotoErrors}
-                    setLightboxUrl={setLightboxUrl}
+                    setLightboxIdx={setLightboxIdx}
                     cfg={cfg}
                     isDark={isDark}
                   />
@@ -2379,36 +2485,14 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
         )}
       </AnimatePresence>
 
-      {/* Photo lightbox */}
+      {/* Photo lightbox — carousel-capable */}
       <AnimatePresence>
-        {lightboxUrl && (
-          <motion.div
-            key="lightbox"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-            onClick={() => setLightboxUrl(null)}
-          >
-            <motion.img
-              src={lightboxUrl}
-              alt="Photo"
-              initial={{ scale: 0.92, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.92, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 320, damping: 28 }}
-              className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              onClick={() => setLightboxUrl(null)}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </motion.div>
+        {lightboxIdx !== null && photoUrls.length > 0 && (
+          <LightboxCarousel
+            photoUrls={photoUrls}
+            initialIdx={lightboxIdx}
+            onClose={() => setLightboxIdx(null)}
+          />
         )}
       </AnimatePresence>
     </div>
