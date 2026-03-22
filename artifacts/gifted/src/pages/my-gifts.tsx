@@ -357,15 +357,39 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
 
 function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: number }) {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const ExpIcon = exp.Icon;
+
+  function handleCardClick() {
+    if (confirmDelete) return;
+    setLocation(`/open/${gift.id}`);
+  }
+
+  const handleHideReceived = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/gifts/${gift.id}/hide-received`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to hide");
+      await queryClient.invalidateQueries({ queryKey: ["received-gifts"] });
+    } catch {
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
+  }, [gift.id, queryClient]);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 + idx * 0.07, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      onClick={() => setLocation(`/open/${gift.id}`)}
+      onClick={handleCardClick}
       className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
     >
       <div className="flex items-stretch">
@@ -399,24 +423,72 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-                style={{ background: "#dcfce7", color: "#15803d" }}
+          <AnimatePresence mode="wait">
+            {confirmDelete ? (
+              <motion.div
+                key="confirm"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center justify-between gap-2"
+                onClick={(e) => e.stopPropagation()}
               >
-                <Eye className="w-3 h-3" />
-                {exp.label}
-              </span>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              {gift.openedAt
-                ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
-                : gift.createdAt
-                  ? `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                  : ""}
-            </span>
-          </div>
+                <span className="text-xs text-muted-foreground">Remove from your received gifts? Gift data is kept.</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                    className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleHideReceived}
+                    disabled={isDeleting}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? "Removing…" : "Remove"}
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="actions"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center justify-between gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
+                    style={{ background: "#dcfce7", color: "#15803d" }}
+                  >
+                    <Eye className="w-3 h-3" />
+                    {exp.label}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-xs text-muted-foreground">
+                    {gift.openedAt
+                      ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                      : gift.createdAt
+                        ? `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                        : ""}
+                  </span>
+                  <button
+                    title="Remove from received gifts"
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                    className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

@@ -350,7 +350,7 @@ router.get("/gifted/received-gifts", async (req, res) => {
     const rows = await db
       .select()
       .from(gifts)
-      .where(eq(gifts.recipientUserId, userId))
+      .where(and(eq(gifts.recipientUserId, userId), sql`(${gifts.recipientHidden} IS NULL OR ${gifts.recipientHidden} = false)`))
       .orderBy(sql`${gifts.openedAt} DESC NULLS LAST`, desc(gifts.createdAt));
 
     res.json(
@@ -411,6 +411,38 @@ router.post("/gifted/send-gift", async (req, res) => {
   }
 
   res.status(400).json({ error: "Please enter a valid phone number or email address." });
+});
+
+// PATCH /api/gifted/gifts/:id/hide-received — soft-delete: hides a received gift from recipient's dashboard
+router.patch("/gifted/gifts/:id/hide-received", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  try {
+    const { id } = req.params;
+    const [gift] = await db
+      .select({ id: gifts.id, recipientUserId: gifts.recipientUserId })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+    if (gift.recipientUserId !== userId) {
+      res.status(403).json({ error: "Not authorised" });
+      return;
+    }
+
+    await db.update(gifts).set({ recipientHidden: true }).where(eq(gifts.id, id));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error hiding received gift:", err);
+    res.status(500).json({ error: "Failed to hide gift" });
+  }
 });
 
 // PATCH /api/gifted/gifts/:id/hide — soft-delete: hides a sent gift from sender's dashboard
