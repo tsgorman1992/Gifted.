@@ -34,4 +34,4 @@ channel = "stable-25_05"
 GOOGLE_CALLBACK_URL = "https://gifted.page/api/auth/google/callback"
 
 [userenv.shared]
-GIFTED_BASE_URL = "https://www.gifted.page"
+GIFTED_BASE_URL = "https://gifted.page"

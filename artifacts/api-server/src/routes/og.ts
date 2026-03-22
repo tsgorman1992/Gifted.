@@ -226,7 +226,7 @@ function buildMainSvg(): string {
     font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     font-size="18"
     font-weight="500"
-    fill="rgba(122,74,30,0.5)">gifted.replit.app</text>
+    fill="rgba(122,74,30,0.5)">gifted.page</text>
 </svg>`;
 }
 

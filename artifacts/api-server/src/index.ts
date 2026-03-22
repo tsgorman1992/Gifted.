@@ -18,7 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
 if (!process.env.GIFTED_BASE_URL) {
   if (process.env.NODE_ENV === "production") {
     throw new Error(
-      "GIFTED_BASE_URL is required in production. Set it to the canonical public URL (e.g. https://www.gifted.page) so OG share image URLs are reachable by link preview crawlers."
+      "GIFTED_BASE_URL is required in production. Set it to the canonical public URL (e.g. https://gifted.page) so OG share image URLs are reachable by link preview crawlers."
     );
   }
   console.warn("WARNING: GIFTED_BASE_URL is not set. OG share image URLs will use the request host, which may be incorrect in production.");
