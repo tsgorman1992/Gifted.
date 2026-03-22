@@ -631,9 +631,16 @@ function startAmbientParticles(effect: AmbientEffect, intensity: "low" | "medium
   }
   const iv = setInterval(spawnBatch, batchInterval + 200);
 
+  // Auto-stop spawning new particles after 12 s; in-flight ones fall out naturally
+  const autoStop = setTimeout(() => {
+    active = false;
+    clearInterval(iv);
+  }, 12000);
+
   return () => {
     active = false;
     clearInterval(iv);
+    clearTimeout(autoStop);
     setTimeout(() => container.remove(), 7000);
   };
 }

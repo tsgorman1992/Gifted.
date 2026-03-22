@@ -158,7 +158,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const ExpIcon = exp.Icon;
 
   function handleCardClick() {
-    setLocation(`/open/${gift.id}`);
+    setLocation(`/open/${gift.id}?preview=true`);
   }
 
   return (
@@ -271,10 +271,10 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             <div className="flex items-center gap-1 shrink-0">
               <CopyButton url={shareUrl} />
               <a
-                href={shareUrl}
+                href={`${shareUrl}?preview=true`}
                 target="_blank"
                 rel="noopener noreferrer"
-                title="Open gift in new tab"
+                title="Preview gift"
                 onClick={(e) => e.stopPropagation()}
                 className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
               >
