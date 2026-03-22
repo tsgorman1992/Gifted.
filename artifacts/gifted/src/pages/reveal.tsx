@@ -850,7 +850,7 @@ function PhotoCarousel({
     const loaded = !!photoLoaded[0];
     return (
       <div
-        className={`w-full rounded-3xl overflow-hidden relative group aspect-video ${!failed ? "cursor-pointer" : ""}`}
+        className={`w-full rounded-3xl overflow-hidden relative group flex items-center justify-center min-h-[200px] ${!failed ? "cursor-pointer" : ""}`}
         style={isDark ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow } : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }}
         onClick={() => !failed && setLightboxIdx(0)}
       >
@@ -860,7 +860,7 @@ function PhotoCarousel({
             <img
               src={photoUrls[0]}
               alt="Memory"
-              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+              className={`w-full h-auto max-h-[65vh] object-contain block ${loaded ? "opacity-100" : "opacity-0"}`}
               style={{ transition: "opacity 0.3s ease" }}
               onLoad={() => setPhotoLoaded(p => ({ ...p, 0: true }))}
               onError={() => setPhotoErrors(p => ({ ...p, 0: true }))}
@@ -899,7 +899,7 @@ function PhotoCarousel({
           return (
             <div
               key={i}
-              className={`snap-start shrink-0 w-full md:w-[85%] aspect-video relative rounded-3xl overflow-hidden ${!failed ? "cursor-pointer" : ""}`}
+              className={`snap-start shrink-0 w-full md:w-[85%] relative rounded-3xl overflow-hidden flex items-center justify-center min-h-[200px] ${!failed ? "cursor-pointer" : ""}`}
               style={isDark ? { background: "rgba(255,255,255,0.06)", boxShadow: cfg.cardStyle.shadow } : { background: "hsl(var(--secondary))", boxShadow: cfg.cardStyle.shadow }}
               onClick={() => !failed && setLightboxIdx(i)}
             >
@@ -909,7 +909,7 @@ function PhotoCarousel({
                   <img
                     src={url}
                     alt={`Memory ${i + 1}`}
-                    className={`w-full h-full object-cover ${loaded ? "opacity-100" : "opacity-0"}`}
+                    className={`w-full h-auto max-h-[65vh] object-contain block ${loaded ? "opacity-100" : "opacity-0"}`}
                     style={{ transition: "opacity 0.3s ease" }}
                     onLoad={() => setPhotoLoaded(p => ({ ...p, [i]: true }))}
                     onError={() => setPhotoErrors(p => ({ ...p, [i]: true }))}
