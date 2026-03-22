@@ -295,13 +295,18 @@ router.patch("/gifted/gifts/:id/save-received", async (req, res) => {
     const { id } = req.params;
 
     const [exists] = await db
-      .select({ id: gifts.id, recipientUserId: gifts.recipientUserId })
+      .select({ id: gifts.id, recipientUserId: gifts.recipientUserId, senderUserId: gifts.senderUserId })
       .from(gifts)
       .where(eq(gifts.id, id))
       .limit(1);
 
     if (!exists) {
       res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    if (exists.senderUserId === userId) {
+      res.json({ ok: true, isSender: true });
       return;
     }
 

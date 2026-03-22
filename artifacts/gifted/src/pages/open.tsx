@@ -30,11 +30,12 @@ async function saveReceivedGift(giftId: string): Promise<"saved" | "already-mine
 export default function OpenPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [giftId, setGiftId] = useState<string | null>(null);
+  const [giftSenderUserId, setGiftSenderUserId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "claimed">("idle");
 
@@ -92,6 +93,7 @@ export default function OpenPage() {
         localStorage.setItem("gifted_gift_paid", gift.paid ? "true" : "false");
 
         setGiftId(gift.id);
+        setGiftSenderUserId(gift.senderUserId ?? null);
         setStatus("ready");
       })
       .catch(() => {
@@ -103,6 +105,7 @@ export default function OpenPage() {
   // Auto-save when gift loads for authenticated users (no reveal action required)
   useEffect(() => {
     if (!giftId || authLoading || !isAuthenticated) return;
+    if (user && giftSenderUserId && user.id === giftSenderUserId) return;
     setSaveStatus("saving");
     saveReceivedGift(giftId)
       .then((result) => {
@@ -113,7 +116,7 @@ export default function OpenPage() {
         }
       })
       .catch(() => setSaveStatus("idle"));
-  }, [giftId, isAuthenticated, authLoading]);
+  }, [giftId, isAuthenticated, authLoading, user, giftSenderUserId]);
 
   function handleRevealComplete() {
     setRevealed(true);
