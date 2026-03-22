@@ -742,7 +742,7 @@ export default function CreatePage() {
     if (!file) return;
     setVideoError(null);
     if (file.size > 200 * 1024 * 1024) {
-      setVideoError("Video must be under 200 MB.");
+      setVideoError("This video exceeds the 200 MB limit. Please choose a shorter or lower-quality clip.");
       if (videoInputRef.current) videoInputRef.current.value = "";
       return;
     }
@@ -858,6 +858,10 @@ export default function CreatePage() {
   };
 
   const handlePreview = () => {
+    if (isUploading) {
+      setStepError("Please wait — your video is still uploading.");
+      return;
+    }
     const filledLinks = extraLinks.filter(l => l.url.trim());
     const newErrors: Record<number, string> = {};
     extraLinks.forEach((link, idx) => {
@@ -941,6 +945,10 @@ export default function CreatePage() {
 
   const goNext = () => {
     setStepError(null);
+    if (isUploading) {
+      setStepError("Please wait — your video is still uploading.");
+      return;
+    }
     if (step === 1) {
       if (!recipientName.trim()) { setStepError("Please enter the recipient's name."); return; }
       if (!senderName.trim()) { setStepError("Please enter your name."); return; }
@@ -1445,7 +1453,7 @@ export default function CreatePage() {
                           <Video className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
                         </div>
                         <span className="font-medium text-sm">Add a Video</span>
-                        <span className="text-xs text-muted-foreground mt-0.5">Record or upload</span>
+                        <span className="text-xs text-muted-foreground mt-0.5">Record or upload · Max 200 MB</span>
                       </button>
                     )}
 
@@ -1889,9 +1897,18 @@ export default function CreatePage() {
                   type="button"
                   size="lg"
                   onClick={handlePreview}
-                  className="w-full sm:w-auto rounded-full h-13 px-8 text-base shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all"
+                  disabled={isUploading}
+                  className="w-full sm:w-auto rounded-full h-13 px-8 text-base shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
-                  Preview your gift <ArrowRight className="ml-2 w-4 h-4" />
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="mr-2 w-4 h-4 animate-spin" /> Video uploading…
+                    </>
+                  ) : (
+                    <>
+                      Preview your gift <ArrowRight className="ml-2 w-4 h-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </motion.div>
