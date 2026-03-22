@@ -340,7 +340,6 @@ export default function PreviewPage() {
       setShareUrl(url);
       setSaving(false);
 
-      const amt = localStorage.getItem("gifted_amount");
       trackEvent("gift_created", {
         experience:  localStorage.getItem("gifted_experience") || experience,
         occasion:    localStorage.getItem("gifted_occasion")   || "general",
