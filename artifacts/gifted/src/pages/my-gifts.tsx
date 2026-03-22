@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
@@ -8,7 +8,7 @@ import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
-  Inbox,
+  Inbox, Trash2, X,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { clearGiftSession } from "@/lib/session";
@@ -151,6 +151,9 @@ function CopyButton({ url }: { url: string }) {
 
 function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
   const statusMeta = STATUS_META[status];
@@ -158,8 +161,24 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const ExpIcon = exp.Icon;
 
   function handleCardClick() {
+    if (confirmDelete) return;
     setLocation(`/open/${gift.id}?preview=true`);
   }
+
+  const handleHide = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDeleting(true);
+    try {
+      await fetch(`${BASE}/api/gifted/gifts/${gift.id}/hide`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["my-gifts"] });
+    } catch {
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
+  }, [gift.id, queryClient]);
 
   return (
     <motion.div
@@ -253,35 +272,81 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             })()}
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground">
-                {status === "redeemed" && gift.redeemedAt
-                  ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
-                  : status === "opened" && gift.openedAt
-                    ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
-                    : status === "sent"
-                      ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                    : status === "scheduled" && gift.scheduledFor
-                      ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
-                      : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1 shrink-0">
-              <CopyButton url={shareUrl} />
-              <a
-                href={`${shareUrl}?preview=true`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Preview gift"
+          <AnimatePresence mode="wait">
+            {confirmDelete ? (
+              <motion.div
+                key="confirm"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center justify-between gap-2"
                 onClick={(e) => e.stopPropagation()}
-                className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
               >
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            </div>
-          </div>
+                <span className="text-xs text-muted-foreground">Remove from your dashboard? Gift data is kept.</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                    className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleHide}
+                    disabled={isDeleting}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? "Removing…" : "Remove"}
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="actions"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center justify-between gap-2"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted-foreground">
+                    {status === "redeemed" && gift.redeemedAt
+                      ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                      : status === "opened" && gift.openedAt
+                        ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                        : status === "sent"
+                          ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                        : status === "scheduled" && gift.scheduledFor
+                          ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
+                          : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <CopyButton url={shareUrl} />
+                  <a
+                    href={`${shareUrl}?preview=true`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Preview gift"
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <button
+                    title="Remove from dashboard"
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                    className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

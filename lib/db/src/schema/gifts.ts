@@ -33,6 +33,7 @@ export const gifts = pgTable("gifts", {
   reaction: text("reaction"),
   reactionAt: timestamp("reaction_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  senderHidden: boolean("sender_hidden").default(false),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({
