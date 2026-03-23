@@ -464,7 +464,7 @@ export default function PreviewPage() {
     try {
       await navigator.share({
         title: `A gift for ${recipientName} 🎁`,
-        text: `${senderName} sent you something on gifted.`,
+        text: `Hey ${recipientName} — I made something for you 🎁`,
         url: saved.url,
       });
       setLinkShared(true);
@@ -475,8 +475,9 @@ export default function PreviewPage() {
   const handleSMS = async () => {
     const saved = await saveGift();
     if (!saved) return;
-    const body = `Hey ${recipientName}, I made something for you 🎁\n${saved.url}`;
-    window.open(`sms:?body=${encodeURIComponent(body)}`, "_blank");
+    const body = `Hey ${recipientName} — I made something for you 🎁\n${saved.url}`;
+    // Use location.href (not window.open) so Android Chrome doesn't block the sms: scheme
+    window.location.href = `sms:?body=${encodeURIComponent(body)}`;
     setLinkShared(true);
     localStorage.setItem("gifted_link_shared", "1");
   };
