@@ -106,6 +106,9 @@ export default function PreviewPage() {
   const [desktopContact,    setDesktopContact]    = useState("");
   const [desktopSendStatus, setDesktopSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [desktopSendError,  setDesktopSendError]  = useState<string | null>(null);
+  const [showSelfSend,      setShowSelfSend]      = useState(false);
+  const [selfPhone,         setSelfPhone]         = useState("");
+  const [selfSendStatus,    setSelfSendStatus]    = useState<"idle" | "sending" | "sent">("idle");
   const [linkShared,        setLinkShared]        = useState(false);
   const [showQr,            setShowQr]            = useState(false);
 
@@ -523,6 +526,31 @@ export default function PreviewPage() {
         setLinkShared(true);
         localStorage.setItem("gifted_link_shared", "1");
       }
+    }
+  };
+
+  const handleSelfSend = async () => {
+    const phone = selfPhone.trim();
+    if (!phone) return;
+    setSelfSendStatus("sending");
+    const saved = await saveGift();
+    if (!saved) { setSelfSendStatus("idle"); return; }
+    try {
+      const res = await fetch(`${base}/api/gifted/send-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          giftUrl: saved.url,
+          recipientName: senderName || "you",
+          senderName: "gifted.",
+        }),
+      });
+      if (!res.ok) throw new Error("failed");
+      setSelfSendStatus("sent");
+    } catch {
+      try { await navigator.clipboard.writeText(saved.url); } catch { /* ignore */ }
+      setSelfSendStatus("sent");
     }
   };
 
@@ -1259,9 +1287,54 @@ export default function PreviewPage() {
                     : <><Copy className="w-4 h-4" /> Copy gift link</>}
                 </Button>
 
-                <p className="text-xs text-center text-muted-foreground leading-relaxed px-2">
-                  Paste it in iMessage or WhatsApp from your phone — when it comes from you, they'll open it.
-                </p>
+                {/* Self-send nudge */}
+                {!showSelfSend ? (
+                  <p className="text-xs text-center text-muted-foreground leading-relaxed px-2">
+                    Sending from your own number feels more personal.{" "}
+                    <button
+                      type="button"
+                      onClick={() => setShowSelfSend(true)}
+                      className="underline underline-offset-2 hover:text-foreground transition-colors"
+                    >
+                      Text the link to my phone
+                    </button>{" "}
+                    so you can forward it.
+                  </p>
+                ) : (
+                  <div className="rounded-2xl border border-border bg-muted/20 p-3.5 space-y-2">
+                    <p className="text-xs text-muted-foreground font-medium">Text this link to your phone</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        value={selfPhone}
+                        onChange={(e) => setSelfPhone(e.target.value)}
+                        placeholder="Your mobile number"
+                        className="flex-1 h-9 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSelfSend(); }}
+                        disabled={selfSendStatus !== "idle"}
+                        autoFocus
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSelfSend}
+                        disabled={!selfPhone.trim() || selfSendStatus !== "idle"}
+                        className="h-9 px-3 rounded-xl text-xs font-medium shrink-0"
+                      >
+                        {selfSendStatus === "sending"
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : selfSendStatus === "sent"
+                            ? <><Check className="w-3.5 h-3.5 mr-1" /> Sent!</>
+                            : "Send to me"}
+                      </Button>
+                    </div>
+                    {selfSendStatus === "sent" && (
+                      <p className="text-xs text-green-600">
+                        Check your phone — forward it from there and it'll come from you.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Divider */}
                 <div className="flex items-center gap-3">
