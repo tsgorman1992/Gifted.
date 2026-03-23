@@ -590,7 +590,7 @@ export default function PreviewPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-14 flex flex-col md:flex-row gap-8 md:gap-14">
 
         {/* Desktop: inline reveal experience */}
-        <div className="hidden md:flex flex-col flex-1">
+        <div className="hidden md:flex flex-col flex-1 max-w-[240px] self-start">
           <div className="sticky top-24">
             <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest mb-4 text-center">
               Their reveal experience
@@ -1327,13 +1327,6 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* Desktop hint pointing to the left panel */}
-            <div className="hidden md:flex items-center gap-3 rounded-2xl border border-border bg-secondary/20 px-4 py-3.5">
-              <Eye className="w-4 h-4 text-muted-foreground shrink-0" />
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Reveal preview</span> — click the panel on the left to see {recipientName}&apos;s experience
-              </p>
-            </div>
 
             {/* Footer link */}
             {!isPaid && (
