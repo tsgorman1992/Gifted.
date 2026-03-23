@@ -505,11 +505,18 @@ function PreviewCard({
   const iconMotion = getPreIconMotion(experience.id);
 
   return (
-    <div className="hidden lg:block w-64 flex-shrink-0">
-      <div className="sticky top-8">
+    <div className="hidden lg:block w-[340px] flex-shrink-0">
+      <div className="sticky top-24 flex flex-col items-center">
         <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest mb-3 text-center">
           Choose the mood
         </p>
+        <div className="w-full rounded-[2.25rem] p-[3px] ring-1 ring-black/10 shadow-[0_32px_80px_rgba(0,0,0,0.22)]" style={{ background: "rgba(0,0,0,0.06)" }}>
+          {/* 3-dot notch */}
+          <div className="flex items-center justify-center gap-1 py-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-black/20" />
+            <div className="w-4 h-1.5 rounded-full bg-black/20" />
+            <div className="w-1.5 h-1.5 rounded-full bg-black/20" />
+          </div>
         <AnimatePresence mode="wait">
           <motion.div
             key={experience.id}
@@ -517,7 +524,7 @@ function PreviewCard({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full rounded-[2rem] overflow-hidden shadow-2xl relative"
+            className="w-full rounded-[2rem] overflow-hidden relative"
             style={{ aspectRatio: "9/16", background: `linear-gradient(155deg, ${experience.palette.from}, ${experience.palette.via}, ${experience.palette.to})` }}
           >
             {/* Ambient particles */}
@@ -587,10 +594,11 @@ function PreviewCard({
             </div>
           </motion.div>
         </AnimatePresence>
+        </div>
 
-        <div className="mt-3 text-center">
-          <p className="text-xs font-semibold text-foreground">{experience.name}</p>
-          <p className="text-[11px] text-muted-foreground">{experience.tagline}</p>
+        <div className="mt-4 text-center">
+          <p className="text-sm font-semibold text-foreground">{experience.name}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{experience.tagline}</p>
         </div>
       </div>
     </div>
@@ -1002,7 +1010,7 @@ export default function CreatePage() {
         />
       </AnimatePresence>
 
-      <div className={`mx-auto px-6 py-12 transition-all duration-500 ${step === 1 ? "max-w-5xl" : "max-w-3xl"}`}>
+      <div className={`mx-auto px-6 py-12 transition-all duration-500 ${step === 1 ? "max-w-6xl" : "max-w-3xl"}`}>
 
         {/* Progress */}
         <ProgressBar step={step} onStepClick={(s) => { setStep(s); setStepError(null); }} />
@@ -1021,10 +1029,11 @@ export default function CreatePage() {
               exit="exit"
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="lg:flex lg:gap-12 lg:items-start">
+              <div className="lg:flex lg:gap-16 lg:items-start">
 
                 {/* Main content */}
-                <div className="lg:flex-1">
+                <div className="lg:flex-1 min-w-0">
+                  <div className="max-w-xl">
 
                   {/* Step header */}
                   <div className="mb-8">
@@ -1140,7 +1149,7 @@ export default function CreatePage() {
                         placeholder="Their name"
                         value={recipientName}
                         onChange={(e) => setRecipientName(e.target.value)}
-                        className="h-12 rounded-xl text-base"
+                        className="h-11 rounded-xl text-base"
                       />
                     </div>
                     <div className="space-y-2">
@@ -1150,7 +1159,7 @@ export default function CreatePage() {
                         placeholder="Your name"
                         value={senderName}
                         onChange={(e) => setSenderName(e.target.value)}
-                        className="h-12 rounded-xl text-base"
+                        className="h-11 rounded-xl text-base"
                       />
                     </div>
                   </div>
@@ -1171,7 +1180,7 @@ export default function CreatePage() {
                         }
                       }}
                     >
-                      <SelectTrigger className="h-12 rounded-xl text-base">
+                      <SelectTrigger className="h-11 rounded-xl text-base">
                         <SelectValue placeholder="Select occasion" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1209,6 +1218,7 @@ export default function CreatePage() {
                     >
                       Write the moment <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
+                  </div>
                   </div>
                 </div>
 
