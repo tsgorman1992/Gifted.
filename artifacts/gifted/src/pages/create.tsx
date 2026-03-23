@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone,
 } from "lucide-react";
+import QRCodeLib from "qrcode";
 import { useUpload } from "@workspace/object-storage-web";
 import { touchGiftSession } from "@/lib/session";
 
@@ -605,6 +606,85 @@ function PreviewCard({
   );
 }
 
+// ─── "Continue on phone" QR card ─────────────────────────────────────────────
+
+interface ContinueOnPhoneProps {
+  recipientName: string;
+  senderName: string;
+  recipientPhone: string;
+  occasion: string;
+  selectedExperience: string;
+  giftTitle: string;
+  personalNote: string;
+  extraLinks: Array<{url: string; label: string}>;
+  amount: string;
+  intent: string;
+  scheduledFor: string;
+  scheduledTime: string;
+}
+
+function ContinueOnPhone(props: ContinueOnPhoneProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const payload = {
+      r: props.recipientName,
+      s: props.senderName,
+      p: props.recipientPhone,
+      occ: props.occasion,
+      exp: props.selectedExperience,
+      title: props.giftTitle,
+      note: props.personalNote,
+      links: props.extraLinks.filter(l => l.url.trim()),
+      amt: props.amount,
+      int: props.intent,
+      sf: props.scheduledFor,
+      st: props.scheduledTime,
+      step: 3,
+    };
+    try {
+      const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+      const continueUrl = `https://gifted.page${base}/create?draft=${encoded}`;
+      QRCodeLib.toCanvas(canvasRef.current, continueUrl, {
+        width: 140,
+        margin: 1,
+        color: { dark: "#000000", light: "#ffffff" },
+      }).then(() => setReady(true)).catch(() => {});
+    } catch { /* ignore */ }
+  }, [props.recipientName, props.senderName, props.recipientPhone, props.occasion, props.selectedExperience, props.giftTitle, props.personalNote, props.extraLinks, props.amount, props.intent, props.scheduledFor, props.scheduledTime]);
+
+  return (
+    <div className="hidden md:flex items-center gap-5 rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-5">
+      <div className="shrink-0">
+        <div
+          className="rounded-xl overflow-hidden border border-border bg-white p-1.5"
+          style={{ opacity: ready ? 1 : 0, transition: "opacity 0.3s ease", width: 140, height: 140 }}
+        >
+          <canvas ref={canvasRef} />
+        </div>
+        {!ready && (
+          <div className="w-[140px] h-[140px] rounded-xl bg-muted animate-pulse -mt-[140px]" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <Smartphone className="w-4 h-4 text-primary shrink-0" />
+          <p className="text-sm font-semibold text-foreground">Your camera roll is on your phone</p>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Scan this QR code to open gifted. on your phone — everything you've filled in so far will be waiting for you, right at the video & photo step.
+        </p>
+        <p className="text-xs text-muted-foreground/60 mt-2">
+          Or keep going here and upload files from this computer ↓
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CreatePage() {
@@ -654,6 +734,38 @@ export default function CreatePage() {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     // Mark session start so landing page can detect stale drafts
     touchGiftSession();
+
+    // ── Restore from ?draft= QR handoff (mobile continuation) ──────────────
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const draftParam = params.get("draft");
+      if (draftParam) {
+        const payload = JSON.parse(decodeURIComponent(atob(draftParam)));
+        if (payload.r) setRecipientName(payload.r);
+        if (payload.s) setSenderName(payload.s);
+        if (payload.p) setRecipientPhone(payload.p);
+        if (payload.occ) setOccasion(payload.occ);
+        if (payload.exp && EXPERIENCE_LIST.find(e => e.id === payload.exp)) {
+          setSelectedExperience(payload.exp as ExperienceId);
+          setSuggestedExperience(payload.exp as ExperienceId);
+          setHasManuallyChosen(true);
+        }
+        if (payload.title) setGiftTitle(payload.title);
+        if (payload.note) setPersonalNote(payload.note);
+        if (Array.isArray(payload.links) && payload.links.length > 0) {
+          setExtraLinks([...payload.links, { url: "", label: "" }]);
+        }
+        if (payload.amt && parseFloat(payload.amt) > 0) setAmount(payload.amt);
+        if (payload.int) setIntent(payload.int);
+        if (payload.sf) { setScheduledFor(payload.sf); setScheduleEnabled(true); }
+        if (payload.st) setScheduledTime(payload.st);
+        if (payload.step === 3) { setStep(3); }
+        // Remove ?draft= from URL without reloading
+        const clean = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, "", clean);
+        return; // skip localStorage restore — draft is the source of truth
+      }
+    } catch { /* malformed draft param — fall through to localStorage */ }
 
     const rn = localStorage.getItem("gifted_recipient_name");
     if (rn) setRecipientName(rn);
@@ -1443,6 +1555,22 @@ export default function CreatePage() {
                     </div>
                     <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">Optional</span>
                   </div>
+
+                  {/* Continue on phone QR — desktop only */}
+                  <ContinueOnPhone
+                    recipientName={recipientName}
+                    senderName={senderName}
+                    recipientPhone={recipientPhone}
+                    occasion={occasion}
+                    selectedExperience={selectedExperience}
+                    giftTitle={giftTitle}
+                    personalNote={personalNote}
+                    extraLinks={extraLinks}
+                    amount={amount}
+                    intent={intent}
+                    scheduledFor={scheduledFor}
+                    scheduledTime={scheduledTime}
+                  />
 
                   {/* Video + Photos row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
