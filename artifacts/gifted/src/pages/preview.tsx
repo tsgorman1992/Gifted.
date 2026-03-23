@@ -1244,58 +1244,77 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* ── Send via email / phone — desktop only (mobile uses native share sheet above) ── */}
+            {/* ── Desktop share section ── */}
             {(!hasBalance || isPaid) && (
-              <div className="hidden md:block rounded-2xl border border-border bg-card p-5 space-y-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Send directly to someone</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {desktopContact.includes("@")
-                      ? "We'll copy the link — paste it into your email."
-                      : "Enter a phone number and we'll text the link for you."}
+              <div className="hidden md:flex flex-col gap-3.5">
+
+                {/* Hero: copy link */}
+                <Button
+                  onClick={handleCopy}
+                  disabled={saving || isRedirecting}
+                  className="w-full h-12 rounded-2xl text-sm font-semibold shadow-lg shadow-primary/20 gap-2"
+                >
+                  {copied
+                    ? <><Check className="w-4 h-4" /> Link copied!</>
+                    : <><Copy className="w-4 h-4" /> Copy gift link</>}
+                </Button>
+
+                <p className="text-xs text-center text-muted-foreground leading-relaxed px-2">
+                  Paste it in iMessage or WhatsApp from your phone — when it comes from you, they'll open it.
+                </p>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-[11px] text-muted-foreground/70 font-medium">or send via gifted.</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                {/* Secondary: platform SMS with honest label */}
+                <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-2.5">
+                  <p className="text-xs text-muted-foreground">
+                    We'll text it — arrives from gifted.'s number, not yours
                   </p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={desktopContact}
-                    onChange={(e) => {
-                      setDesktopContact(e.target.value);
-                      setDesktopSendStatus("idle");
-                      setDesktopSendError(null);
-                    }}
-                    placeholder="email or +1 555 000 0000"
-                    className="flex-1 h-11 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    onKeyDown={(e) => { if (e.key === "Enter") handleDesktopSend(); }}
-                    disabled={desktopSendStatus === "sending" || desktopSendStatus === "sent"}
-                  />
-                  <Button
-                    onClick={handleDesktopSend}
-                    disabled={!desktopContact.trim() || desktopSendStatus === "sending" || desktopSendStatus === "sent" || saving}
-                    className="h-11 px-5 rounded-xl text-sm font-semibold shrink-0 w-full sm:w-auto shadow-md shadow-primary/20"
-                  >
-                    {desktopSendStatus === "sending"
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : desktopSendStatus === "sent"
-                        ? <><Check className="w-4 h-4 mr-1.5" /> Done</>
-                        : desktopContact.includes("@")
-                          ? <><Copy className="w-4 h-4 mr-1.5" /> Copy link</>
-                          : <><Send className="w-4 h-4 mr-1.5" /> Send</>
-                    }
-                  </Button>
-                </div>
-                {desktopSendStatus === "sent" && (
-                  <p className="text-xs text-green-600 flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" />
-                    {desktopSendError === "sms-fallback"
-                      ? `Link copied — paste it in a message to ${recipientName}`
-                      : desktopContact.includes("@")
-                        ? `Link copied — paste it in your email to ${recipientName}`
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={desktopContact}
+                      onChange={(e) => {
+                        setDesktopContact(e.target.value);
+                        setDesktopSendStatus("idle");
+                        setDesktopSendError(null);
+                      }}
+                      placeholder="+1 555 000 0000"
+                      className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      onKeyDown={(e) => { if (e.key === "Enter") handleDesktopSend(); }}
+                      disabled={desktopSendStatus === "sending" || desktopSendStatus === "sent"}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={handleDesktopSend}
+                      disabled={!desktopContact.trim() || desktopSendStatus === "sending" || desktopSendStatus === "sent" || saving}
+                      className="h-10 px-4 rounded-xl text-sm font-medium shrink-0"
+                    >
+                      {desktopSendStatus === "sending"
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : desktopSendStatus === "sent"
+                          ? <><Check className="w-4 h-4 mr-1" /> Sent</>
+                          : <><Send className="w-4 h-4 mr-1.5" /> Send text</>}
+                    </Button>
+                  </div>
+                  {desktopSendStatus === "sent" && (
+                    <p className="text-xs text-green-600 flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5" />
+                      {desktopSendError === "sms-fallback"
+                        ? `Link copied — paste it in a message to ${recipientName}`
                         : `Text sent to ${desktopContact}`}
-                  </p>
-                )}
+                    </p>
+                  )}
+                </div>
+
+                {/* QR code — tertiary */}
                 {shareUrl && (
-                  <div className="pt-1">
+                  <div className="flex flex-col items-center gap-3">
                     <button
                       type="button"
                       onClick={() => setShowQr(v => !v)}
@@ -1304,13 +1323,10 @@ export default function PreviewPage() {
                       <QrCode className="w-3.5 h-3.5" />
                       {showQr ? "Hide QR code" : "Show QR code"}
                     </button>
-                    {showQr && (
-                      <div className="flex justify-center pt-3">
-                        <QRCodeDisplay url={shareUrl} label="Scan to open the gift" />
-                      </div>
-                    )}
+                    {showQr && <QRCodeDisplay url={shareUrl} label="Scan to open the gift" />}
                   </div>
                 )}
+
               </div>
             )}
 
