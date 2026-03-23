@@ -294,6 +294,9 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
       el.style.pointerEvents = "none";
       el.style.zIndex = "10";
 
+      // Measure container so fall distance uses pixels, not element-relative %
+      const containerH = container.offsetHeight || 300;
+
       if (effect === "petals" || effect === "rose-petals") {
         const colors = effect === "rose-petals"
           ? ["#FFB7C5", "#FF8FAB", "#E8A7B1", "#FFC0CB", "#fda4af"]
@@ -302,10 +305,12 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
         const dur = 3000 + Math.random() * 3000;
         const drift = (Math.random() - 0.5) * 60;
         const color = colors[Math.floor(Math.random() * colors.length)];
+        const startY = -containerH * 0.08;
+        const totalFall = containerH * 1.16;
         el.style.cssText = `
           position:absolute; pointer-events:none; z-index:10;
           left:${Math.random() * 100}%;
-          top:-8%;
+          top:0;
           width:${size}px; height:${size * 0.7}px;
           background:${color};
           border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
@@ -320,10 +325,10 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
           if (!active) return;
           const t = (Date.now() - startTime) / dur;
           if (t >= 1) { el.remove(); return; }
-          const y = t * 108;
+          const y = startY + t * totalFall;
           const x = drift * Math.sin(t * Math.PI * 2);
           const rot = spin * t;
-          el.style.transform = `translateY(${y}%) translateX(${x}px) rotate(${rot}deg)`;
+          el.style.transform = `translateY(${y}px) translateX(${x}px) rotate(${rot}deg)`;
           el.style.opacity = String(t > 0.8 ? (1 - t) * 5 * (0.5 + Math.random() * 0.5) : (0.5 + Math.random() * 0.5));
           requestAnimationFrame(frame);
         }
@@ -334,10 +339,12 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
         const dur = 2500 + Math.random() * 3500;
         const drift = (Math.random() - 0.5) * 40;
         const color = colors[Math.floor(Math.random() * colors.length)];
+        const startY = -containerH * 0.05;
+        const totalFall = containerH * 1.1;
         el.style.cssText = `
           position:absolute; pointer-events:none; z-index:10;
           left:${Math.random() * 100}%;
-          top:-5%;
+          top:0;
           width:${size}px; height:${size}px;
           background:${color};
           border-radius:50%;
@@ -349,9 +356,9 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
           if (!active) return;
           const t = (Date.now() - startTime) / dur;
           if (t >= 1) { el.remove(); return; }
-          const y = t * 108;
+          const y = startY + t * totalFall;
           const x = drift * t;
-          el.style.transform = `translateY(${y}%) translateX(${x}px)`;
+          el.style.transform = `translateY(${y}px) translateX(${x}px)`;
           el.style.opacity = String(t > 0.85 ? (1 - t) * 6.7 * 0.9 : 0.7 + Math.random() * 0.3);
           requestAnimationFrame(frame);
         }
@@ -364,10 +371,12 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
         const spin = Math.random() * 720 - 360;
         const color = colors[Math.floor(Math.random() * colors.length)];
         const isRect = Math.random() > 0.5;
+        const startY = -containerH * 0.05;
+        const totalFall = containerH * 1.1;
         el.style.cssText = `
           position:absolute; pointer-events:none; z-index:10;
           left:${Math.random() * 100}%;
-          top:-5%;
+          top:0;
           width:${size}px; height:${isRect ? size * 0.4 : size}px;
           background:${color};
           border-radius:${isRect ? "2px" : "50%"};
@@ -379,10 +388,10 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
           if (!active) return;
           const t = (Date.now() - startTime) / dur;
           if (t >= 1) { el.remove(); return; }
-          const y = t * 108;
+          const y = startY + t * totalFall;
           const x = drift * t;
           const rot = spin * t;
-          el.style.transform = `translateY(${y}%) translateX(${x}px) rotate(${rot}deg)`;
+          el.style.transform = `translateY(${y}px) translateX(${x}px) rotate(${rot}deg)`;
           el.style.opacity = String(t > 0.8 ? (1 - t) * 5 * 0.9 : 0.8 + Math.random() * 0.2);
           requestAnimationFrame(frame);
         }
