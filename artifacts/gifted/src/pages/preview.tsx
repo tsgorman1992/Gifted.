@@ -106,7 +106,6 @@ export default function PreviewPage() {
   const [desktopContact,    setDesktopContact]    = useState("");
   const [desktopSendStatus, setDesktopSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [desktopSendError,  setDesktopSendError]  = useState<string | null>(null);
-  const [showSelfSend,      setShowSelfSend]      = useState(false);
   const [selfPhone,         setSelfPhone]         = useState("");
   const [selfSendStatus,    setSelfSendStatus]    = useState<"idle" | "sending" | "sent">("idle");
   const [linkShared,        setLinkShared]        = useState(false);
@@ -1276,74 +1275,63 @@ export default function PreviewPage() {
             {(!hasBalance || isPaid) && (
               <div className="hidden md:flex flex-col gap-3.5">
 
-                {/* Hero: copy link */}
+                {/* Hero: text to my phone (recommended — comes from sender's own number) */}
+                <div className="rounded-2xl border-2 border-primary/25 bg-primary/5 p-4 space-y-2.5">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Text the link to my phone</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Forward it from your number — they'll actually open it
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={selfPhone}
+                      onChange={(e) => setSelfPhone(e.target.value)}
+                      placeholder="Your mobile number"
+                      className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      onKeyDown={(e) => { if (e.key === "Enter") handleSelfSend(); }}
+                      disabled={selfSendStatus !== "idle"}
+                    />
+                    <Button
+                      onClick={handleSelfSend}
+                      disabled={!selfPhone.trim() || selfSendStatus !== "idle" || saving}
+                      className="h-10 px-4 rounded-xl text-sm font-semibold shrink-0 shadow-md shadow-primary/20"
+                    >
+                      {selfSendStatus === "sending"
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : selfSendStatus === "sent"
+                          ? <><Check className="w-4 h-4 mr-1.5" /> Sent!</>
+                          : "Send to me"}
+                    </Button>
+                  </div>
+                  {selfSendStatus === "sent" && (
+                    <p className="text-xs text-green-600">
+                      Check your phone — copy the link and forward it to {recipientName}.
+                    </p>
+                  )}
+                </div>
+
+                {/* Secondary: copy link */}
                 <Button
+                  variant="outline"
                   onClick={handleCopy}
                   disabled={saving || isRedirecting}
-                  className="w-full h-12 rounded-2xl text-sm font-semibold shadow-lg shadow-primary/20 gap-2"
+                  className="w-full h-10 rounded-2xl text-sm font-medium gap-2"
                 >
                   {copied
                     ? <><Check className="w-4 h-4" /> Link copied!</>
-                    : <><Copy className="w-4 h-4" /> Copy gift link</>}
+                    : <><Copy className="w-4 h-4" /> Copy link instead</>}
                 </Button>
-
-                {/* Self-send nudge */}
-                {!showSelfSend ? (
-                  <p className="text-xs text-center text-muted-foreground leading-relaxed px-2">
-                    Sending from your own number feels more personal.{" "}
-                    <button
-                      type="button"
-                      onClick={() => setShowSelfSend(true)}
-                      className="underline underline-offset-2 hover:text-foreground transition-colors"
-                    >
-                      Text the link to my phone
-                    </button>{" "}
-                    so you can forward it.
-                  </p>
-                ) : (
-                  <div className="rounded-2xl border border-border bg-muted/20 p-3.5 space-y-2">
-                    <p className="text-xs text-muted-foreground font-medium">Text this link to your phone</p>
-                    <div className="flex gap-2">
-                      <input
-                        type="tel"
-                        value={selfPhone}
-                        onChange={(e) => setSelfPhone(e.target.value)}
-                        placeholder="Your mobile number"
-                        className="flex-1 h-9 rounded-xl border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                        onKeyDown={(e) => { if (e.key === "Enter") handleSelfSend(); }}
-                        disabled={selfSendStatus !== "idle"}
-                        autoFocus
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSelfSend}
-                        disabled={!selfPhone.trim() || selfSendStatus !== "idle"}
-                        className="h-9 px-3 rounded-xl text-xs font-medium shrink-0"
-                      >
-                        {selfSendStatus === "sending"
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : selfSendStatus === "sent"
-                            ? <><Check className="w-3.5 h-3.5 mr-1" /> Sent!</>
-                            : "Send to me"}
-                      </Button>
-                    </div>
-                    {selfSendStatus === "sent" && (
-                      <p className="text-xs text-green-600">
-                        Check your phone — forward it from there and it'll come from you.
-                      </p>
-                    )}
-                  </div>
-                )}
 
                 {/* Divider */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-px bg-border" />
-                  <span className="text-[11px] text-muted-foreground/70 font-medium">or send via gifted.</span>
+                  <span className="text-[11px] text-muted-foreground/60 font-medium">or send via gifted.</span>
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                {/* Secondary: platform SMS with honest label */}
+                {/* Tertiary: platform SMS — clearly labeled as coming from gifted.'s number */}
                 <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-2.5">
                   <p className="text-xs text-muted-foreground">
                     We'll text it — arrives from gifted.'s number, not yours
@@ -1385,7 +1373,7 @@ export default function PreviewPage() {
                   )}
                 </div>
 
-                {/* QR code — tertiary */}
+                {/* QR code — bottom toggle */}
                 {shareUrl && (
                   <div className="flex flex-col items-center gap-3">
                     <button
