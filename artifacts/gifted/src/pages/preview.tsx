@@ -77,6 +77,13 @@ function QRCodeDisplay({ url, label }: { url: string; label?: string }) {
   );
 }
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits.length ? `(${digits}` : "";
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export default function PreviewPage() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading: authLoading, refetch } = useAuth();
@@ -1287,8 +1294,8 @@ export default function PreviewPage() {
                     <input
                       type="tel"
                       value={selfPhone}
-                      onChange={(e) => setSelfPhone(e.target.value)}
-                      placeholder="Your mobile number"
+                      onChange={(e) => setSelfPhone(formatPhone(e.target.value))}
+                      placeholder="(555) 000-0000"
                       className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                       onKeyDown={(e) => { if (e.key === "Enter") handleSelfSend(); }}
                       disabled={selfSendStatus !== "idle"}
@@ -1329,11 +1336,11 @@ export default function PreviewPage() {
                       type="tel"
                       value={desktopContact}
                       onChange={(e) => {
-                        setDesktopContact(e.target.value);
+                        setDesktopContact(formatPhone(e.target.value));
                         setDesktopSendStatus("idle");
                         setDesktopSendError(null);
                       }}
-                      placeholder="+1 555 000 0000"
+                      placeholder="(555) 000-0000"
                       className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                       onKeyDown={(e) => { if (e.key === "Enter") handleDesktopSend(); }}
                       disabled={desktopSendStatus === "sending" || desktopSendStatus === "sent"}
