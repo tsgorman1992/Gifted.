@@ -24,11 +24,12 @@ function normalizePhone(phone: string): string {
  */
 router.post("/api/gifted/send-link", async (req, res) => {
   try {
-    const { phone, giftUrl, recipientName, senderName } = req.body as {
+    const { phone, giftUrl, recipientName, senderName, selfSend } = req.body as {
       phone: string;
       giftUrl: string;
       recipientName?: string;
       senderName?: string;
+      selfSend?: boolean;
     };
 
     if (!phone || !giftUrl) {
@@ -38,7 +39,12 @@ router.post("/api/gifted/send-link", async (req, res) => {
     const to = normalizePhone(phone);
     const fromName = senderName || "Someone";
     const toName = recipientName || "there";
-    const body = `Hey ${toName} 🎁\n\n${fromName} made something just for you.\n\nTap to open:\n${giftUrl}`;
+
+    // selfSend: link is going to the sender's own phone so they can forward it.
+    // Do NOT say "Tap to open" — they should copy and forward, not open the gift themselves.
+    const body = selfSend
+      ? `Your gifted. link for ${toName} is ready.\n\nCopy this link and paste it into iMessage or WhatsApp — when it comes from your number, they'll open it:\n${giftUrl}`
+      : `Hey ${toName} 🎁\n\n${fromName} made something just for you.\n\nTap to open:\n${giftUrl}`;
 
     const client = getTwilioClient();
     const fromNumber = process.env.TWILIO_PHONE_NUMBER;

@@ -542,8 +542,8 @@ export default function PreviewPage() {
         body: JSON.stringify({
           phone,
           giftUrl: saved.url,
-          recipientName: senderName || "you",
-          senderName: "gifted.",
+          recipientName,
+          selfSend: true,
         }),
       });
       if (!res.ok) throw new Error("failed");
