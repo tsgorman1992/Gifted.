@@ -614,10 +614,10 @@ export default function PreviewPage() {
   return (
     <div className="min-h-screen bg-background">
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 md:py-14 flex flex-col md:flex-row gap-8 md:gap-14">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 md:py-14 flex flex-col md:flex-row gap-8 md:gap-12">
 
-        {/* Desktop: inline reveal experience */}
-        <div className="hidden md:flex flex-col flex-1 max-w-[240px] self-start">
+        {/* Desktop: inline reveal experience — visually RIGHT on desktop via order-2 */}
+        <div className="hidden md:flex flex-col w-[360px] flex-shrink-0 self-start md:order-2">
           <div className="sticky top-24">
             <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest mb-4 text-center">
               Their reveal experience
@@ -668,8 +668,8 @@ export default function PreviewPage() {
           </div>
         </div>
 
-        {/* Right / main column */}
-        <div className="flex-[0.9] flex flex-col">
+        {/* Actions column — visually LEFT on desktop via order-1 */}
+        <div className="flex-1 min-w-0 flex flex-col md:order-1">
 
           {/* Edit link — subtle, above the card */}
           {!isPaid && (
@@ -1312,18 +1312,6 @@ export default function PreviewPage() {
                   )}
                 </div>
 
-                {/* Secondary: copy link */}
-                <Button
-                  variant="outline"
-                  onClick={handleCopy}
-                  disabled={saving || isRedirecting}
-                  className="w-full h-10 rounded-2xl text-sm font-medium gap-2"
-                >
-                  {copied
-                    ? <><Check className="w-4 h-4" /> Link copied!</>
-                    : <><Copy className="w-4 h-4" /> Copy link instead</>}
-                </Button>
-
                 {/* Divider */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-px bg-border" />
@@ -1387,6 +1375,15 @@ export default function PreviewPage() {
                     {showQr && <QRCodeDisplay url={shareUrl} label="Scan to open the gift" />}
                   </div>
                 )}
+
+                {/* Edge-case fallback — barely visible */}
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="text-xs text-muted-foreground/50 underline underline-offset-2 hover:text-muted-foreground transition-colors mx-auto block"
+                >
+                  {copied ? "Copied!" : "Just copy the link"}
+                </button>
 
               </div>
             )}
