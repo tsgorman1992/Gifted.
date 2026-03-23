@@ -528,9 +528,6 @@ function PreviewCard({
             className="w-full rounded-[2rem] overflow-hidden relative"
             style={{ aspectRatio: "9/16", background: `linear-gradient(155deg, ${experience.palette.from}, ${experience.palette.via}, ${experience.palette.to})` }}
           >
-            {/* Ambient particles */}
-            <AmbientParticles experienceId={experience.id} />
-
             {/* Soft pulsing gradient overlay */}
             <motion.div
               className="absolute inset-0 pointer-events-none"
@@ -542,6 +539,9 @@ function PreviewCard({
                   : "radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.25) 0%, transparent 70%)",
               }}
             />
+
+            {/* Ambient particles — rendered after overlay so they appear on top */}
+            <AmbientParticles experienceId={experience.id} />
 
             {/* Content */}
             <div className="absolute inset-0 flex flex-col items-center justify-center px-5 text-center">
