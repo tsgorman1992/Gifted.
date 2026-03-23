@@ -491,11 +491,7 @@ export default function PreviewPage() {
     if (!saved) return;
 
     if (isEmail) {
-      const subject = encodeURIComponent(`A gift for you 🎁`);
-      const body = encodeURIComponent(
-        `Hey ${recipientName},\n\n${senderName} made something for you on gifted.\n\nOpen it here: ${saved.url}\n\nEnjoy 🎁`
-      );
-      window.open(`mailto:${contact}?subject=${subject}&body=${body}`, "_blank");
+      try { await navigator.clipboard.writeText(saved.url); } catch { /* ignore */ }
       setDesktopSendStatus("sent");
       setLinkShared(true);
       localStorage.setItem("gifted_link_shared", "1");
@@ -519,9 +515,12 @@ export default function PreviewPage() {
         setDesktopSendStatus("sent");
         setLinkShared(true);
         localStorage.setItem("gifted_link_shared", "1");
-      } catch (err) {
-        setDesktopSendStatus("error");
-        setDesktopSendError(err instanceof Error ? err.message : "Failed to send");
+      } catch {
+        try { await navigator.clipboard.writeText(saved.url); } catch { /* ignore */ }
+        setDesktopSendStatus("sent");
+        setDesktopSendError("sms-fallback");
+        setLinkShared(true);
+        localStorage.setItem("gifted_link_shared", "1");
       }
     }
   };
@@ -1249,7 +1248,11 @@ export default function PreviewPage() {
               <div className="hidden md:block rounded-2xl border border-border bg-card p-5 space-y-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Send directly to someone</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Enter an email or phone number — we'll deliver it for you.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {desktopContact.includes("@")
+                      ? "We'll copy the link — paste it into your email."
+                      : "Enter a phone number and we'll text the link for you."}
+                  </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
@@ -1273,52 +1276,35 @@ export default function PreviewPage() {
                     {desktopSendStatus === "sending"
                       ? <Loader2 className="w-4 h-4 animate-spin" />
                       : desktopSendStatus === "sent"
-                        ? <><Check className="w-4 h-4 mr-1.5" /> Sent!</>
-                        : <><Send className="w-4 h-4 mr-1.5" /> Send</>
+                        ? <><Check className="w-4 h-4 mr-1.5" /> Done</>
+                        : desktopContact.includes("@")
+                          ? <><Copy className="w-4 h-4 mr-1.5" /> Copy link</>
+                          : <><Send className="w-4 h-4 mr-1.5" /> Send</>
                     }
                   </Button>
                 </div>
-                {desktopSendError && (
-                  <p className="text-xs text-destructive">{desktopSendError}</p>
-                )}
-                {desktopSendStatus === "sent" && !desktopSendError && (
-                  <p className="text-xs text-green-600">
-                    {desktopContact.includes("@") ? "Your email client is opening…" : "Text message sent!"}
+                {desktopSendStatus === "sent" && (
+                  <p className="text-xs text-green-600 flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    {desktopSendError === "sms-fallback"
+                      ? `Link copied — paste it in a message to ${recipientName}`
+                      : desktopContact.includes("@")
+                        ? `Link copied — paste it in your email to ${recipientName}`
+                        : `Text sent to ${desktopContact}`}
                   </p>
                 )}
-                {/* Copy link — desktop only (mobile has native share buttons above) */}
-                <div className="hidden md:block space-y-3">
-                  <div className="flex items-center gap-2 pt-1">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={handleCopy}
-                    disabled={saving || isRedirecting}
-                    className="w-full h-10 rounded-xl text-sm font-medium"
-                  >
-                    {copied ? <><Check className="w-4 h-4 mr-2" /> Link copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
-                  </Button>
-                </div>
                 {shareUrl && (
-                  <div className="hidden md:block space-y-3">
-                    <div className="flex items-center gap-2 pt-1">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-xs text-muted-foreground">or</span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
+                  <div className="pt-1">
                     <button
                       type="button"
                       onClick={() => setShowQr(v => !v)}
-                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mx-auto"
+                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <QrCode className="w-4 h-4" />
+                      <QrCode className="w-3.5 h-3.5" />
                       {showQr ? "Hide QR code" : "Show QR code"}
                     </button>
                     {showQr && (
-                      <div className="flex justify-center pt-2">
+                      <div className="flex justify-center pt-3">
                         <QRCodeDisplay url={shareUrl} label="Scan to open the gift" />
                       </div>
                     )}
