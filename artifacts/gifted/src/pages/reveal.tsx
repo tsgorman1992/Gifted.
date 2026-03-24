@@ -1323,6 +1323,11 @@ function TrackingTimeline({
     ? (STATUS_LABEL[latestEvent.status] ?? latestEvent.status)
     : null;
 
+  // Truncate long tracking numbers for display
+  const displayTrackingNumber = trackingNumber.length > 20
+    ? `${trackingNumber.slice(0, 8)}…${trackingNumber.slice(-4)}`
+    : trackingNumber;
+
   return (
     <div
       className="rounded-3xl border overflow-hidden"
@@ -1332,27 +1337,31 @@ function TrackingTimeline({
         boxShadow: cfg.cardStyle.shadow,
       }}
     >
-      <div className="px-6 pt-5 pb-4">
-        <div className="flex items-start justify-between gap-3 mb-5">
-          <div>
+      <div className="px-4 sm:px-6 pt-5 pb-4">
+
+        {/* Header: carrier + number left, status badge right */}
+        <div className="flex items-start justify-between gap-2 mb-5">
+          <div className="min-w-0">
             <p className={`text-[11px] font-semibold tracking-widest uppercase mb-1 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
               Package tracking
             </p>
-            <p className={`text-xs font-mono ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
-              {CARRIER_LABELS[carrier] ?? carrier} · {trackingNumber}
+            <p className={`text-xs font-mono leading-snug ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+              <span className="block sm:inline">{CARRIER_LABELS[carrier] ?? carrier}</span>
+              <span className="hidden sm:inline"> · </span>
+              <span className="block sm:inline">{displayTrackingNumber}</span>
             </p>
           </div>
           {isDelivered && (
             <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
               style={{ background: isDark ? "rgba(134,239,172,0.12)" : "hsl(142 76% 96%)", color: isDark ? "#86efac" : "#15803d" }}
             >
-              <span className="text-sm">✓</span> Delivered
+              <span>✓</span> Delivered
             </div>
           )}
           {!isDelivered && latestLabel && (
             <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 text-center leading-tight"
               style={{ background: isDark ? "rgba(147,197,253,0.12)" : "hsl(214 100% 96%)", color: isDark ? "#93c5fd" : "#1d4ed8" }}
             >
               {latestLabel}
@@ -1360,8 +1369,8 @@ function TrackingTimeline({
           )}
         </div>
 
-        {/* Milestone steps */}
-        <div className="flex items-center gap-0 mb-5">
+        {/* Milestone steps — labels visible on all screen sizes */}
+        <div className="flex items-start gap-0 mb-5">
           {MILESTONE_STATUSES.map((ms, i) => {
             const reached = reachedMilestones.has(ms);
             const isLast = i === MILESTONE_STATUSES.length - 1;
@@ -1382,14 +1391,15 @@ function TrackingTimeline({
                     {reached ? "✓" : (i + 1)}
                   </div>
                   <span
-                    className="text-[9px] font-medium text-center leading-tight max-w-[48px] hidden sm:block"
+                    className="text-[8px] sm:text-[9px] font-medium text-center leading-tight max-w-[44px] sm:max-w-[52px]"
                     style={{ color: reached ? (isDark ? "rgba(255,255,255,0.7)" : "hsl(var(--foreground))") : (isDark ? "rgba(255,255,255,0.25)" : "hsl(var(--muted-foreground))") }}
                   >
                     {STATUS_LABEL[ms] ?? ms}
                   </span>
                 </div>
                 {!isLast && (
-                  <div className="flex-1 h-px mx-1.5 mb-4 relative overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))" }}>
+                  // mt-3 aligns the connector with the dot center (half of 24px dot = 12px ≈ mt-3)
+                  <div className="flex-1 h-px mx-1 sm:mx-1.5 mt-3 relative overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))" }}>
                     <div
                       className="absolute inset-y-0 left-0 transition-all duration-700"
                       style={{
@@ -1406,7 +1416,7 @@ function TrackingTimeline({
 
         {/* Recent events list */}
         {events.length > 0 && (
-          <div className="space-y-2.5 border-t pt-4" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "hsl(var(--border))" }}>
+          <div className="space-y-3 border-t pt-4" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "hsl(var(--border))" }}>
             {[...events].reverse().slice(0, 5).map((ev, i) => (
               <div key={i} className="flex gap-3">
                 <div
@@ -1414,10 +1424,14 @@ function TrackingTimeline({
                   style={{ background: ev.status === "Delivered" ? (isDark ? "#86efac" : "#16a34a") : (isDark ? "rgba(255,255,255,0.25)" : "hsl(var(--primary)/0.4)") }}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className={`text-xs font-medium ${isDark ? "text-white/70" : "text-foreground"}`}>
+                  <p className={`text-xs font-medium leading-snug ${isDark ? "text-white/70" : "text-foreground"}`}>
                     {ev.message || STATUS_LABEL[ev.status] || ev.status}
-                    {ev.location && <span className={`ml-1.5 font-normal ${isDark ? "text-white/35" : "text-muted-foreground"}`}>· {ev.location}</span>}
                   </p>
+                  {ev.location && (
+                    <p className={`text-[11px] mt-0.5 ${isDark ? "text-white/35" : "text-muted-foreground"}`}>
+                      {ev.location}
+                    </p>
+                  )}
                   <p className={`text-[11px] mt-0.5 ${isDark ? "text-white/25" : "text-muted-foreground/60"}`}>
                     {formatTrackingTs(ev.timestamp)}
                   </p>
