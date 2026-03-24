@@ -9,6 +9,7 @@ import sendLinkRouter from "./gifted/send-link";
 import storageRouter from "./storage";
 import shareRouter from "./share";
 import ogRouter from "./og";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(sendLinkRouter);
 router.use(storageRouter);
 router.use(shareRouter);
 router.use("/og", ogRouter);
+router.use(adminRouter);
 
 export default router;

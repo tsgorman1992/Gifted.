@@ -17,6 +17,7 @@ import TermsPage    from "@/pages/terms";
 import PrivacyPage  from "@/pages/privacy";
 import MyGiftsPage  from "@/pages/my-gifts";
 import SignInPage   from "@/pages/sign-in";
+import AdminPage    from "@/pages/admin";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ function Router() {
         <Route path="/privacy"   component={PrivacyPage}  />
         <Route path="/my-gifts"  component={MyGiftsPage}  />
         <Route path="/sign-in"   component={SignInPage}   />
+        <Route path="/admin"     component={AdminPage}    />
         <Route component={NotFound} />
       </Switch>
     </Layout>

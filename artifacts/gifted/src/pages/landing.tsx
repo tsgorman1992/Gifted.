@@ -15,9 +15,9 @@ const PHOTOS = [
 ];
 
 const HOW_STEPS = [
-  { icon: Heart,      label: "Add Meaning",    desc: "Write a note, record a video, add photos, or link anything with a URL — a song, concert tickets, a reservation." },
-  { icon: Gift,       label: "Add a Balance",  desc: "Optionally add funds with an intention like 'Coffee on me' or 'Treat yourself'." },
-  { icon: CreditCard, label: "They open it. It's theirs.", desc: "They experience the moment, then move their balance wherever they want — instantly." },
+  { icon: Heart,      label: "Build the moment",   desc: "Write a note that sounds like you. Add a video message, photos, or link anything — concert tickets, a restaurant reservation, a song." },
+  { icon: Gift,       label: "Add a real balance",  desc: "Fund it with whatever feels right. Add a spending intention like 'Coffee on me' or 'Date night' so they know it was thoughtful, not lazy." },
+  { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they cash out however they want — Venmo, PayPal, Cash App, Zelle." },
 ];
 
 const FEATURES = [
@@ -104,9 +104,9 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-            className="text-base md:text-xl text-muted-foreground max-w-2xl mb-8 md:mb-10 leading-relaxed"
+            className="text-base md:text-xl text-muted-foreground max-w-xl mb-8 md:mb-10 leading-relaxed"
           >
-            Combine a personal message, video, photos, and a flexible cash balance into one unforgettable digital experience.
+            A video, your photos, a personal note, and money they can actually spend — wrapped into a moment they'll remember.
           </motion.p>
 
           <motion.div
@@ -126,6 +126,20 @@ export default function LandingPage() {
             >
               See how it works
             </Button>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="flex items-center gap-4 mt-5 text-xs text-muted-foreground flex-wrap"
+          >
+            {["No account required", "Takes 3 minutes", "They cash out instantly"].map((t, i) => (
+              <span key={i} className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary/60 inline-block" />
+                {t}
+              </span>
+            ))}
           </motion.div>
           </div>{/* end left col */}
 

@@ -1161,18 +1161,23 @@ export default function PreviewPage() {
 
             {/* Primary CTA — load balance and send (no login required) */}
             {hasBalance && !isPaid && (
-              <Button
-                onClick={handlePayAndSend}
-                disabled={saving || isRedirecting || authLoading}
-                className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
-              >
-                {isRedirecting
-                  ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
-                  : saving
-                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
-                    : <><Send className="w-5 h-5" /> Load ${displayAmt} &amp; send the gift</>
-                }
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  onClick={handlePayAndSend}
+                  disabled={saving || isRedirecting || authLoading}
+                  className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
+                >
+                  {isRedirecting
+                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
+                    : saving
+                      ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
+                      : <><Send className="w-5 h-5" /> Load ${displayAmt} &amp; send the gift</>
+                  }
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  Gift balance ${displayAmt} + 5% platform fee (${(parseFloat(displayAmt || "0") * 0.05).toFixed(2)}) = ${(parseFloat(displayAmt || "0") * 1.05).toFixed(2)} total
+                </p>
+              </div>
             )}
 
             {/* Link preview card */}
