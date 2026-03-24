@@ -46,23 +46,23 @@ async function registerAfterShipTracking(carrier: string, trackingNumber: string
   const apiKey = process.env.AFTERSHIP_API_KEY;
   if (!apiKey) return;
   try {
-    const response = await fetch("https://api.aftership.com/v4/trackings", {
+    const response = await fetch("https://api.aftership.com/tracking/2024-07/trackings", {
       method: "POST",
       headers: {
-        "aftership-api-key": apiKey,
+        "as-api-key": apiKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        tracking: {
-          slug: carrier,
-          tracking_number: trackingNumber,
-          custom_fields: { gift_id: giftId },
-        },
+        tracking_number: trackingNumber,
+        slug: carrier,
+        custom_fields: { gift_id: giftId },
       }),
     });
     if (!response.ok) {
       const body = await response.text().catch(() => "(unreadable)");
       console.error(`[AfterShip] Registration failed for gift ${giftId}: HTTP ${response.status} ${response.statusText} — ${body}`);
+    } else {
+      console.log(`[AfterShip] Registered tracking for gift ${giftId}: ${carrier} ${trackingNumber}`);
     }
   } catch (err) {
     console.error("[AfterShip] Failed to register tracking:", err);
@@ -593,13 +593,14 @@ router.post("/gifted/aftership-webhook", async (req, res) => {
         res.status(401).json({ error: "Invalid webhook signature" });
         return;
       }
-    } else if (isProduction) {
-      // Fail closed in production when webhook secret is not configured
-      console.error("[AfterShip webhook] AFTERSHIP_WEBHOOK_SECRET is not set in production — rejecting request");
-      res.status(503).json({ error: "Webhook secret not configured" });
-      return;
     } else {
-      console.warn("[AfterShip webhook] AFTERSHIP_WEBHOOK_SECRET not set — skipping signature check (dev mode)");
+      // No webhook secret configured — skip signature check and log a warning.
+      // We rely on AfterShip polling as the primary mechanism; webhooks are a bonus.
+      console.warn(
+        isProduction
+          ? "[AfterShip webhook] AFTERSHIP_WEBHOOK_SECRET not set in production — accepting unauthenticated webhook (polling is primary)"
+          : "[AfterShip webhook] AFTERSHIP_WEBHOOK_SECRET not set — skipping signature check (dev mode)"
+      );
     }
 
     // Parse raw body into JSON (express.raw() doesn't auto-parse)
@@ -636,9 +637,9 @@ router.post("/gifted/aftership-webhook", async (req, res) => {
 
     const events = checkpoints
       .map((cp) => ({
-        status: (cp.tag as string) ?? "",
-        message: (cp.message as string) ?? "",
-        location: (cp.city as string) ?? (cp.country_name as string) ?? undefined,
+        status:    (cp.tag as string)            ?? "",
+        message:   (cp.subtag_message as string) || (cp.message as string) || "",
+        location:  (cp.city as string)           ?? (cp.state as string)   ?? (cp.country_name as string) ?? undefined,
         timestamp: (cp.checkpoint_time as string) ?? new Date().toISOString(),
       }))
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());

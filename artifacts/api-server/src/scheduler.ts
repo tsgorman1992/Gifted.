@@ -1,13 +1,32 @@
 import { db } from "@workspace/db";
 import { gifts } from "@workspace/db/schema";
-import { and, isNotNull, lte, eq } from "drizzle-orm";
+import { and, isNotNull, isNull, lte, eq } from "drizzle-orm";
 import twilio from "twilio";
+
+interface TrackingEvent {
+  status: string;
+  message: string;
+  location?: string;
+  timestamp: string;
+}
 
 function getTwilioClient() {
   const sid   = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !token) return null;
   return twilio(sid, token);
+}
+
+async function smsSender(phone: string | null, body: string) {
+  if (!phone) return;
+  const client = getTwilioClient();
+  const from   = process.env.TWILIO_PHONE_NUMBER;
+  if (!client || !from) return;
+  try {
+    await client.messages.create({ to: phone, from, body });
+  } catch (err) {
+    console.error("[scheduler] SMS failed:", err);
+  }
 }
 
 async function sendScheduledGifts() {
@@ -58,9 +77,107 @@ async function sendScheduledGifts() {
   }
 }
 
+async function pollAfterShipTrackings() {
+  const apiKey = process.env.AFTERSHIP_API_KEY;
+  if (!apiKey) return;
+
+  try {
+    const activeGifts = await db
+      .select({
+        id: gifts.id,
+        trackingCarrier: gifts.trackingCarrier,
+        trackingNumber: gifts.trackingNumber,
+        senderPhone: gifts.senderPhone,
+        recipientName: gifts.recipientName,
+        trackingDeliveredAt: gifts.trackingDeliveredAt,
+      })
+      .from(gifts)
+      .where(
+        and(
+          isNotNull(gifts.trackingNumber),
+          isNotNull(gifts.trackingCarrier),
+          isNull(gifts.trackingDeliveredAt),
+        ),
+      );
+
+    if (!activeGifts.length) return;
+
+    console.log(`[AfterShip poll] Checking ${activeGifts.length} active shipment(s)…`);
+
+    for (const gift of activeGifts) {
+      try {
+        const url = `https://api.aftership.com/tracking/2024-07/trackings/${gift.trackingCarrier}/${gift.trackingNumber}`;
+        const res = await fetch(url, {
+          headers: {
+            "as-api-key": apiKey,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => "");
+          console.warn(`[AfterShip poll] ${gift.id}: HTTP ${res.status} — ${errBody}`);
+          continue;
+        }
+
+        const json = (await res.json()) as {
+          data?: { tracking?: Record<string, unknown> };
+        };
+        const tracking = json?.data?.tracking;
+        if (!tracking) continue;
+
+        const tag = (tracking.tag as string | undefined) ?? "";
+        const checkpoints = (tracking.checkpoints as Array<Record<string, unknown>> | undefined) ?? [];
+
+        const events: TrackingEvent[] = checkpoints
+          .map((cp) => ({
+            status:    (cp.tag as string)             ?? "",
+            message:   (cp.subtag_message as string)  || (cp.message as string) || "",
+            location:  (cp.city as string)            ?? (cp.state as string)   ?? (cp.country_name as string) ?? undefined,
+            timestamp: (cp.checkpoint_time as string) ?? new Date().toISOString(),
+          }))
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        const isDelivered = tag === "Delivered";
+
+        await db
+          .update(gifts)
+          .set({ trackingStatus: events.length > 0 ? events : undefined })
+          .where(eq(gifts.id, gift.id));
+
+        if (isDelivered) {
+          const [updated] = await db
+            .update(gifts)
+            .set({ trackingDeliveredAt: new Date() })
+            .where(and(eq(gifts.id, gift.id), isNull(gifts.trackingDeliveredAt)))
+            .returning({ senderPhone: gifts.senderPhone, recipientName: gifts.recipientName });
+
+          if (updated?.senderPhone) {
+            await smsSender(
+              updated.senderPhone,
+              `Your gift to ${updated.recipientName} just arrived 🎁`,
+            );
+            console.log(`[AfterShip poll] Gift ${gift.id} delivered — sender SMS sent.`);
+          }
+        } else {
+          console.log(`[AfterShip poll] Gift ${gift.id}: tag="${tag}", ${events.length} checkpoint(s).`);
+        }
+      } catch (err) {
+        console.error(`[AfterShip poll] Error checking gift ${gift.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[AfterShip poll] Fatal error:", err);
+  }
+}
+
 export function startScheduler() {
   const INTERVAL_MS = 10 * 60 * 1000;
-  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts.");
-  setInterval(sendScheduledGifts, INTERVAL_MS);
+  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts and tracking updates.");
+  setInterval(async () => {
+    await sendScheduledGifts();
+    await pollAfterShipTrackings();
+  }, INTERVAL_MS);
   sendScheduledGifts();
+  pollAfterShipTrackings();
 }
