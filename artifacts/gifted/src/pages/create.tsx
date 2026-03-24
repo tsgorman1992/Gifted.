@@ -423,34 +423,36 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
         return;
       } else if (effect === "bokeh") {
         const isGolden = experienceId === "golden-hour";
-        const size = 20 + Math.random() * 40;
+        const size = isGolden ? 40 + Math.random() * 60 : 20 + Math.random() * 40;
         const posX = Math.random() * 100;
         const posY = Math.random() * 100;
         const dur = 5000 + Math.random() * 8000;
+        // Golden hour: use warm WHITE / cream so they contrast against the amber background
+        // (amber-on-amber is invisible; white-on-amber reads as a sunlit glow)
         const colors = isGolden
-          ? ["rgba(247,197,130,0.25)", "rgba(232,168,80,0.18)", "rgba(255,215,0,0.15)"]
+          ? ["rgba(255,255,255,0.55)", "rgba(255,252,220,0.50)", "rgba(255,245,180,0.45)"]
           : ["rgba(255,200,160,0.22)", "rgba(255,150,130,0.18)", "rgba(255,220,100,0.15)"];
         const color = colors[Math.floor(Math.random() * colors.length)];
+        const driftX = (Math.random() - 0.5) * 40;
         el.style.cssText = `
           position:absolute; pointer-events:none; z-index:10;
           left:${posX}%; top:${posY}%;
           width:${size}px; height:${size}px;
           background:radial-gradient(circle, ${color} 0%, transparent 70%);
           border-radius:50%;
-          filter:blur(2px);
+          filter:blur(${isGolden ? 4 : 2}px);
           transform:translate(-50%,-50%);
         `;
         container.appendChild(el);
         const startTime = Date.now();
-        const startY = posY;
         function frame() {
           if (!active) return;
           const t = (Date.now() - startTime) / dur;
           if (t >= 1) { el.remove(); return; }
-          const drift = -10 * Math.sin(t * Math.PI);
-          el.style.transform = `translate(-50%, calc(-50% + ${drift}px))`;
+          const driftY = isGolden ? -30 * Math.sin(t * Math.PI) : -10 * Math.sin(t * Math.PI);
+          el.style.transform = `translate(calc(-50% + ${driftX * Math.sin(t * Math.PI)}px), calc(-50% + ${driftY}px))`;
           const opacity = Math.sin(t * Math.PI);
-          el.style.opacity = String(Math.max(0, opacity * 0.9));
+          el.style.opacity = String(Math.max(0, opacity * (isGolden ? 1 : 0.9)));
           requestAnimationFrame(frame);
         }
         requestAnimationFrame(frame);
