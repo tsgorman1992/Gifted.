@@ -349,14 +349,14 @@ function StarfieldBg() {
 
 function GoldenHourBokeh() {
   const circles = useMemo(() =>
-    Array.from({ length: 7 }, (_, i) => ({
+    Array.from({ length: 11 }, (_, i) => ({
       id: i,
       left: 5 + Math.random() * 88,
       top: 10 + Math.random() * 75,
       size: 120 + Math.random() * 200,
       dur: 12 + Math.random() * 10,
       del: Math.random() * 7,
-      opacity: 0.04 + Math.random() * 0.07,
+      opacity: 0.12 + Math.random() * 0.16,
     })),
     []
   );
@@ -664,7 +664,7 @@ function fireEntryBurst(experience: string) {
       const end = Date.now() + 4200;
       const colors = ["#F7C59F", "#E8A87C", "#FFD700", "#FFC200", "#FFECB3"];
       const frame = () => {
-        confetti({ particleCount: 4, angle: 90, spread: 85, origin: { x: Math.random(), y: 1 }, colors, gravity: 0.3, scalar: 1.2, drift: 0.5 });
+        confetti({ particleCount: 8, angle: 90, spread: 85, origin: { x: Math.random(), y: 1 }, colors, gravity: 0.3, scalar: 1.2, drift: 0.5 });
         if (Date.now() < end) requestAnimationFrame(frame);
       };
       frame();
