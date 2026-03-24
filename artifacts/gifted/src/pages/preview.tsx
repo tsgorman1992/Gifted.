@@ -52,7 +52,7 @@ function QRCodeDisplay({ url, label }: { url: string; label?: string }) {
   return (
     <div className="flex flex-col items-center gap-3">
       <div
-        className="relative rounded-2xl overflow-hidden border border-border p-3 bg-white"
+        className="relative rounded-2xl border border-border p-3 bg-white"
         style={{ opacity: ready ? 1 : 0, transition: "opacity 0.3s ease" }}
       >
         <canvas ref={canvasRef} style={{ display: "block", borderRadius: 8 }} />
