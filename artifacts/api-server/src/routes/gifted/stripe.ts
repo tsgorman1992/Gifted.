@@ -189,7 +189,12 @@ router.post("/gifted/redeem", async (req, res) => {
 
     await db
       .update(gifts)
-      .set({ redeemedAt: new Date() })
+      .set({
+        redeemedAt: new Date(),
+        payoutName:   payoutName   || null,
+        payoutMethod: payoutMethod || null,
+        payoutHandle: payoutHandle || null,
+      })
       .where(eq(gifts.id, giftId));
 
     const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";

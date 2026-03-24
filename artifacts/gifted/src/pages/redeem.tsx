@@ -10,11 +10,64 @@ import { CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw, Lock, Gift } 
 const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 
 type RedeemScreen = "otp-gate" | "otp-sent" | "banking" | "success";
+type PayoutMethod = "venmo" | "paypal" | "zelle" | "cashapp";
+
+const METHODS: {
+  id: PayoutMethod;
+  label: string;
+  placeholder: string;
+  handleLabel: string;
+  color: string;
+  selectedBg: string;
+  selectedText: string;
+  selectedBorder: string;
+}[] = [
+  {
+    id: "venmo",
+    label: "Venmo",
+    placeholder: "@username",
+    handleLabel: "Venmo Username",
+    color: "#008CFF",
+    selectedBg: "bg-[#008CFF]/10",
+    selectedText: "text-[#008CFF]",
+    selectedBorder: "border-[#008CFF]",
+  },
+  {
+    id: "cashapp",
+    label: "Cash App",
+    placeholder: "$cashtag",
+    handleLabel: "Cash App $Cashtag",
+    color: "#00D64F",
+    selectedBg: "bg-[#00D64F]/10",
+    selectedText: "text-[#00D64F]",
+    selectedBorder: "border-[#00D64F]",
+  },
+  {
+    id: "paypal",
+    label: "PayPal",
+    placeholder: "you@email.com",
+    handleLabel: "PayPal Email",
+    color: "#003087",
+    selectedBg: "bg-[#003087]/10",
+    selectedText: "text-[#003087]",
+    selectedBorder: "border-[#003087]",
+  },
+  {
+    id: "zelle",
+    label: "Zelle",
+    placeholder: "Phone or email",
+    handleLabel: "Zelle Phone or Email",
+    color: "#6D1ED4",
+    selectedBg: "bg-[#6D1ED4]/10",
+    selectedText: "text-[#6D1ED4]",
+    selectedBorder: "border-[#6D1ED4]",
+  },
+];
 
 export default function RedeemPage() {
   const [, setLocation]                     = useLocation();
   const [screen, setScreen]                 = useState<RedeemScreen>("banking"); // OTP bypassed temporarily — restore to "otp-gate" once Twilio toll-free is verified
-  const [selectedMethod, setSelectedMethod] = useState<"venmo" | "paypal" | "zelle" | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<PayoutMethod | null>(null);
   const [isProcessing, setIsProcessing]     = useState(false);
   const [error, setError]                   = useState<string | null>(null);
   const [payoutName, setPayoutName]         = useState("");
@@ -22,6 +75,7 @@ export default function RedeemPage() {
   const [amount, setAmount]                 = useState<string>("0");
   const [giftId, setGiftId]                 = useState<string | null>(null);
   const [senderName, setSenderName]         = useState<string | null>(null);
+  const [recipientName, setRecipientName]   = useState<string | null>(null);
   const [alreadyRedeemed, setAlreadyRedeemed] = useState(false);
 
   const [otpLoading, setOtpLoading]         = useState(false);
@@ -34,21 +88,28 @@ export default function RedeemPage() {
   useEffect(() => {
     const stored = localStorage.getItem("gifted_amount");
     if (stored) setAmount(stored);
+    const sn = localStorage.getItem("gifted_sender_name");
+    if (sn) setSenderName(sn);
+
     const storedId = localStorage.getItem("gifted_gift_id");
     if (storedId) {
       setGiftId(storedId);
       fetch(`${BASE}/api/gifted/gifts/${encodeURIComponent(storedId)}`, { credentials: "include" })
         .then(r => r.ok ? r.json() : null)
         .then(gift => {
-          if (gift?.redeemedAt) setAlreadyRedeemed(true);
+          if (!gift) return;
+          if (gift.redeemedAt) setAlreadyRedeemed(true);
+          if (gift.recipientName) {
+            setRecipientName(gift.recipientName);
+            setPayoutName((prev) => prev || gift.recipientName);
+          }
         })
-        .catch(() => { /* ignore */ });
+        .catch(() => {});
     }
-    const sn = localStorage.getItem("gifted_sender_name");
-    if (sn) setSenderName(sn);
   }, []);
 
   const displayAmount = parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : null;
+  const activeMethod  = METHODS.find(m => m.id === selectedMethod);
 
   const startCooldown = () => {
     setResendCooldown(30);
@@ -144,7 +205,8 @@ export default function RedeemPage() {
             payoutHandle,
           }),
         });
-        if (!res.ok) throw new Error("Redeem request failed");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Redeem request failed");
       }
       trackEvent("gift_redeemed", {
         method: selectedMethod ?? undefined,
@@ -152,8 +214,8 @@ export default function RedeemPage() {
         currency: "USD",
       });
       setScreen("success");
-    } catch {
-      setError("Something went wrong. Please try again or contact help@gifted.page.");
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again or contact help@gifted.page.");
     } finally {
       setIsProcessing(false);
     }
@@ -178,10 +240,10 @@ export default function RedeemPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background flex flex-col pt-12 pb-24 px-6">
-      <div className="max-w-2xl mx-auto w-full">
+    <div className="min-h-screen w-full bg-background flex flex-col pt-10 pb-24 px-5 sm:px-8">
+      <div className="max-w-5xl mx-auto w-full">
 
-        <Link href={giftId ? `/open/${giftId}` : "/"} className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-12 transition-colors">
+        <Link href={giftId ? `/open/${giftId}` : "/"} className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-10 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to gift
         </Link>
 
@@ -194,7 +256,7 @@ export default function RedeemPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-10"
+              className="max-w-lg mx-auto space-y-10"
             >
               <div className="text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
@@ -242,7 +304,7 @@ export default function RedeemPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-10"
+              className="max-w-lg mx-auto space-y-10"
             >
               <div className="text-center space-y-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
@@ -307,119 +369,126 @@ export default function RedeemPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-8"
             >
-              <div className="text-center space-y-3">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-8 h-8 text-green-600" />
-                </div>
-                <h1 className="font-serif text-5xl font-medium">Claim Your Gift</h1>
-                {senderName ? (
-                  <p className="text-lg text-muted-foreground">
-                    <span className="font-semibold text-foreground">{senderName}</span> sent you{" "}
-                    <span className="font-semibold text-foreground">${displayAmount}</span>. Tell us where to send it.
-                  </p>
-                ) : (
-                  <p className="text-lg text-muted-foreground">
-                    You have <span className="font-semibold text-foreground">${displayAmount}</span> available. Tell us where to send it.
-                  </p>
-                )}
-              </div>
+              {/* Desktop two-column / Mobile single-column */}
+              <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 lg:items-start">
 
-              <div className="bg-card border border-border rounded-[2rem] p-6 md:p-10 shadow-sm space-y-6">
-                <div>
-                  <h3 className="text-base font-semibold mb-1">How would you like to receive it?</h3>
-                  <p className="text-sm text-muted-foreground">Pick any app you already use. We'll send the money directly.</p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  {(["venmo", "paypal", "zelle"] as const).map((method) => {
-                    const labels: Record<string, string> = { venmo: "Venmo", paypal: "PayPal", zelle: "Zelle" };
-                    const colors: Record<string, string> = {
-                      venmo:  "bg-[#008CFF]/10 text-[#008CFF] border-[#008CFF]",
-                      paypal: "bg-[#003087]/10 text-[#003087] border-[#003087]",
-                      zelle:  "bg-[#6D1ED4]/10 text-[#6D1ED4] border-[#6D1ED4]",
-                    };
-                    const isSelected = selectedMethod === method;
-                    return (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => { setSelectedMethod(method); setPayoutHandle(""); }}
-                        className={`p-4 rounded-2xl border-2 text-center transition-all font-semibold text-sm ${
-                          isSelected ? colors[method] : "border-border hover:border-primary/40 text-muted-foreground"
-                        }`}
-                      >
-                        {labels[method]}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <AnimatePresence>
-                  {selectedMethod && (
-                    <motion.form
-                      key={selectedMethod}
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      className="overflow-hidden space-y-5 pt-4 border-t border-border"
-                      onSubmit={handleCashOut}
-                    >
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Your Name</Label>
-                          <Input
-                            placeholder="e.g. Sarah Connor"
-                            className="h-12 rounded-xl"
-                            value={payoutName}
-                            onChange={(e) => setPayoutName(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>
-                            {selectedMethod === "venmo"  && "Venmo Username"}
-                            {selectedMethod === "paypal" && "PayPal Email Address"}
-                            {selectedMethod === "zelle"  && "Zelle Phone or Email"}
-                          </Label>
-                          <Input
-                            placeholder={
-                              selectedMethod === "venmo"  ? "@your-venmo-username" :
-                              selectedMethod === "paypal" ? "you@example.com" :
-                              "Phone number or email"
-                            }
-                            className="h-12 rounded-xl"
-                            value={payoutHandle}
-                            onChange={(e) => setPayoutHandle(e.target.value)}
-                            required
-                          />
-                        </div>
+                {/* ── Left: Context card ── */}
+                <div className="lg:w-72 lg:shrink-0 lg:sticky lg:top-10">
+                  <div className="rounded-[2rem] border border-border bg-card p-8 flex flex-col items-center text-center gap-3 shadow-sm">
+                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle2 className="w-8 h-8 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-4xl font-serif font-medium">${displayAmount}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {senderName
+                          ? <>from <span className="font-semibold text-foreground">{senderName}</span></>
+                          : "ready to claim"}
+                      </p>
+                    </div>
+                    <div className="w-full border-t border-border pt-4 mt-1">
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground text-left">
+                        <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>We'll send your balance directly — usually within a few hours. Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a></span>
                       </div>
+                    </div>
+                  </div>
+                </div>
 
-                      {error && (
-                        <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                          {error}
-                        </div>
+                {/* ── Right: Payout form ── */}
+                <div className="flex-1 min-w-0">
+                  <div className="mb-6 lg:mb-8">
+                    <h1 className="font-serif text-4xl sm:text-5xl font-medium mb-2">Where should we send it?</h1>
+                    <p className="text-muted-foreground">Pick the app you already use — we'll send the money directly.</p>
+                  </div>
+
+                  <div className="bg-card border border-border rounded-[2rem] p-6 md:p-8 shadow-sm space-y-6">
+
+                    {/* Method picker */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {METHODS.map((method) => {
+                        const isSelected = selectedMethod === method.id;
+                        return (
+                          <button
+                            key={method.id}
+                            type="button"
+                            onClick={() => { setSelectedMethod(method.id); setPayoutHandle(""); }}
+                            className={`relative p-3.5 rounded-2xl border-2 text-center transition-all font-semibold text-sm flex flex-col items-center gap-2 ${
+                              isSelected
+                                ? `${method.selectedBg} ${method.selectedText} ${method.selectedBorder}`
+                                : "border-border hover:border-primary/30"
+                            }`}
+                          >
+                            {/* Brand dot */}
+                            <span
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: method.color, opacity: isSelected ? 1 : 0.5 }}
+                            />
+                            {method.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Form fields */}
+                    <AnimatePresence>
+                      {selectedMethod && activeMethod && (
+                        <motion.form
+                          key={selectedMethod}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          className="overflow-hidden space-y-5 pt-4 border-t border-border"
+                          onSubmit={handleCashOut}
+                        >
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Your Name</Label>
+                              <Input
+                                placeholder="e.g. Sarah Connor"
+                                className="h-12 rounded-xl"
+                                value={payoutName}
+                                onChange={(e) => setPayoutName(e.target.value)}
+                                required
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{activeMethod.handleLabel}</Label>
+                              <Input
+                                placeholder={activeMethod.placeholder}
+                                className="h-12 rounded-xl"
+                                value={payoutHandle}
+                                onChange={(e) => setPayoutHandle(e.target.value)}
+                                required
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
+                              />
+                            </div>
+                          </div>
+
+                          {error && (
+                            <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                              {error}
+                            </div>
+                          )}
+
+                          <Button
+                            type="submit"
+                            size="lg"
+                            disabled={isProcessing}
+                            className="w-full h-14 rounded-full text-lg shadow-lg"
+                          >
+                            {isProcessing
+                              ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting…</>
+                              : `Send Me $${displayAmount}`}
+                          </Button>
+                        </motion.form>
                       )}
+                    </AnimatePresence>
 
-                      <Button
-                        type="submit"
-                        size="lg"
-                        disabled={isProcessing}
-                        className="w-full h-14 rounded-full text-lg shadow-lg"
-                      >
-                        {isProcessing
-                          ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting…</>
-                          : `Send Me $${displayAmount}`}
-                      </Button>
-
-                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                        <Lock className="w-3.5 h-3.5 shrink-0" />
-                        <span>We'll send your balance directly to your {selectedMethod === "venmo" ? "Venmo" : selectedMethod === "paypal" ? "PayPal" : "Zelle"} — usually within a couple hours. Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a></span>
-                      </div>
-                    </motion.form>
-                  )}
-                </AnimatePresence>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -446,16 +515,16 @@ export default function RedeemPage() {
               key="success"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center bg-card rounded-[2.5rem] p-12 border border-border shadow-xl flex flex-col items-center mt-12"
+              className="max-w-lg mx-auto text-center bg-card rounded-[2.5rem] p-12 border border-border shadow-xl flex flex-col items-center mt-8"
             >
               <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-8">
                 <CheckCircle2 className="w-12 h-12 text-green-600" />
               </div>
               <h2 className="font-serif text-4xl font-medium mb-4">You're all set!</h2>
               <p className="text-lg text-muted-foreground max-w-md mx-auto mb-3">
-                We'll send your <span className="font-semibold text-foreground">${displayAmount}</span> to your{" "}
-                {selectedMethod === "venmo" ? "Venmo" : selectedMethod === "paypal" ? "PayPal" : "Zelle"}{" "}
-                — usually within a couple hours.
+                We'll send your <span className="font-semibold text-foreground">${displayAmount}</span>
+                {activeMethod && <> to your {activeMethod.label}</>}
+                {" "}— usually within a few hours.
               </p>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-10">
                 Questions? Reach us at <a href="mailto:help@gifted.page" className="underline">help@gifted.page</a>
