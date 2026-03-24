@@ -2,6 +2,13 @@ import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+export interface TrackingEvent {
+  status: string;
+  message: string;
+  location?: string;
+  timestamp: string;
+}
+
 export const gifts = pgTable("gifts", {
   id: text("id").primaryKey(),
   senderUserId: text("sender_user_id"),
@@ -38,6 +45,10 @@ export const gifts = pgTable("gifts", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   senderHidden: boolean("sender_hidden").default(false),
   recipientHidden: boolean("recipient_hidden").default(false),
+  trackingCarrier: text("tracking_carrier"),
+  trackingNumber: text("tracking_number"),
+  trackingStatus: jsonb("tracking_status").$type<TrackingEvent[]>(),
+  trackingDeliveredAt: timestamp("tracking_delivered_at", { withTimezone: true }),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({

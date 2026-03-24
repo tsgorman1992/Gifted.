@@ -1252,6 +1252,191 @@ function ScrollHint({ isDark }: { isDark: boolean }) {
   );
 }
 
+// ─── Tracking timeline ────────────────────────────────────────────────────────
+
+interface TrackingEvent {
+  status: string;
+  message: string;
+  location?: string;
+  timestamp: string;
+}
+
+const CARRIER_LABELS: Record<string, string> = {
+  usps: "USPS",
+  ups: "UPS",
+  fedex: "FedEx",
+  dhl: "DHL",
+  "canada-post": "Canada Post",
+  amazon: "Amazon Logistics",
+  lasership: "LaserShip",
+  ontrac: "OnTrac",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  InfoReceived: "Label Created",
+  InTransit: "In Transit",
+  OutForDelivery: "Out for Delivery",
+  AttemptFail: "Delivery Attempted",
+  Delivered: "Delivered",
+  AvailableForPickup: "Ready for Pickup",
+  Exception: "Exception",
+  Expired: "Expired",
+};
+
+function formatTrackingTs(ts: string): string {
+  try {
+    const d = new Date(ts);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  } catch {
+    return ts;
+  }
+}
+
+function TrackingTimeline({
+  carrier,
+  trackingNumber,
+  events,
+  deliveredAt,
+  cfg,
+  isDark,
+}: {
+  carrier: string;
+  trackingNumber: string;
+  events: TrackingEvent[];
+  deliveredAt: string | null;
+  cfg: RevealCfg;
+  isDark: boolean;
+}) {
+  const isDelivered = !!deliveredAt || events.some(e => e.status === "Delivered");
+
+  const MILESTONE_STATUSES = ["InfoReceived", "InTransit", "OutForDelivery", "Delivered"];
+
+  const reachedMilestones = new Set<string>();
+  for (const e of events) {
+    if (MILESTONE_STATUSES.includes(e.status)) reachedMilestones.add(e.status);
+    if (e.status === "OutForDelivery" || e.status === "AttemptFail") reachedMilestones.add("OutForDelivery");
+    if (e.status === "Delivered") { reachedMilestones.add("Delivered"); }
+  }
+
+  const latestEvent = events.length > 0 ? events[events.length - 1] : null;
+  const latestLabel = latestEvent
+    ? (STATUS_LABEL[latestEvent.status] ?? latestEvent.status)
+    : null;
+
+  return (
+    <div
+      className="rounded-3xl border overflow-hidden"
+      style={{
+        borderColor: isDark ? "rgba(255,255,255,0.1)" : `${cfg.cardStyle.border}`,
+        background: isDark ? "rgba(255,255,255,0.04)" : cfg.cardStyle.bg ?? "hsl(var(--card))",
+        boxShadow: cfg.cardStyle.shadow,
+      }}
+    >
+      <div className="px-6 pt-5 pb-4">
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div>
+            <p className={`text-[11px] font-semibold tracking-widest uppercase mb-1 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+              Package tracking
+            </p>
+            <p className={`text-xs font-mono ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+              {CARRIER_LABELS[carrier] ?? carrier} · {trackingNumber}
+            </p>
+          </div>
+          {isDelivered && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
+              style={{ background: isDark ? "rgba(134,239,172,0.12)" : "hsl(142 76% 96%)", color: isDark ? "#86efac" : "#15803d" }}
+            >
+              <span className="text-sm">✓</span> Delivered
+            </div>
+          )}
+          {!isDelivered && latestLabel && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shrink-0"
+              style={{ background: isDark ? "rgba(147,197,253,0.12)" : "hsl(214 100% 96%)", color: isDark ? "#93c5fd" : "#1d4ed8" }}
+            >
+              {latestLabel}
+            </div>
+          )}
+        </div>
+
+        {/* Milestone steps */}
+        <div className="flex items-center gap-0 mb-5">
+          {MILESTONE_STATUSES.map((ms, i) => {
+            const reached = reachedMilestones.has(ms);
+            const isLast = i === MILESTONE_STATUSES.length - 1;
+            return (
+              <React.Fragment key={ms}>
+                <div className="flex flex-col items-center gap-1 min-w-0">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] shrink-0 transition-all duration-500"
+                    style={{
+                      background: reached
+                        ? (isDark ? "rgba(255,255,255,0.85)" : "hsl(var(--primary))")
+                        : (isDark ? "rgba(255,255,255,0.1)" : "hsl(var(--secondary))"),
+                      color: reached
+                        ? (isDark ? "#111" : "hsl(var(--primary-foreground))")
+                        : (isDark ? "rgba(255,255,255,0.3)" : "hsl(var(--muted-foreground))"),
+                    }}
+                  >
+                    {reached ? "✓" : (i + 1)}
+                  </div>
+                  <span
+                    className="text-[9px] font-medium text-center leading-tight max-w-[48px] hidden sm:block"
+                    style={{ color: reached ? (isDark ? "rgba(255,255,255,0.7)" : "hsl(var(--foreground))") : (isDark ? "rgba(255,255,255,0.25)" : "hsl(var(--muted-foreground))") }}
+                  >
+                    {STATUS_LABEL[ms] ?? ms}
+                  </span>
+                </div>
+                {!isLast && (
+                  <div className="flex-1 h-px mx-1.5 mb-4 relative overflow-hidden" style={{ background: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))" }}>
+                    <div
+                      className="absolute inset-y-0 left-0 transition-all duration-700"
+                      style={{
+                        width: reached ? "100%" : "0%",
+                        background: isDark ? "rgba(255,255,255,0.5)" : "hsl(var(--primary))",
+                      }}
+                    />
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        {/* Recent events list */}
+        {events.length > 0 && (
+          <div className="space-y-2.5 border-t pt-4" style={{ borderColor: isDark ? "rgba(255,255,255,0.06)" : "hsl(var(--border))" }}>
+            {[...events].reverse().slice(0, 5).map((ev, i) => (
+              <div key={i} className="flex gap-3">
+                <div
+                  className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+                  style={{ background: ev.status === "Delivered" ? (isDark ? "#86efac" : "#16a34a") : (isDark ? "rgba(255,255,255,0.25)" : "hsl(var(--primary)/0.4)") }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-medium ${isDark ? "text-white/70" : "text-foreground"}`}>
+                    {ev.message || STATUS_LABEL[ev.status] || ev.status}
+                    {ev.location && <span className={`ml-1.5 font-normal ${isDark ? "text-white/35" : "text-muted-foreground"}`}>· {ev.location}</span>}
+                  </p>
+                  <p className={`text-[11px] mt-0.5 ${isDark ? "text-white/25" : "text-muted-foreground/60"}`}>
+                    {formatTrackingTs(ev.timestamp)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {events.length === 0 && (
+          <p className={`text-xs text-center py-2 ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>
+            Tracking updates will appear here once the carrier scans the package.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function RevealPage({ onRevealComplete }: { onRevealComplete?: () => void } = {}) {
@@ -1284,6 +1469,12 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const [reactionSent, setReactionSent]   = useState(false);
   const [reactionSkipped, setReactionSkipped] = useState(false);
   const [balanceRevealPhase, setBalanceRevealPhase] = useState<"hidden" | "building" | "revealed">("hidden");
+  const [trackingData, setTrackingData]   = useState<{
+    carrier: string;
+    trackingNumber: string;
+    events: TrackingEvent[];
+    deliveredAt: string | null;
+  } | null>(null);
 
   const amountRef  = useRef<HTMLDivElement>(null);
   const amountInView = useInView(amountRef, { once: true });
@@ -1394,6 +1585,21 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
           }
         })
         .catch(() => { /* ignore fetch error — gift fields remain at defaults */ });
+
+      fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}/tracking`, { credentials: "include" })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.hasTracking) {
+            setTrackingData({
+              carrier: data.carrier,
+              trackingNumber: data.trackingNumber,
+              events: data.events ?? [],
+              deliveredAt: data.deliveredAt ?? null,
+            });
+          }
+        })
+        .catch(() => {});
+
       return;
     }
 
@@ -2380,6 +2586,22 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
               )}
 
             </div>
+
+            {/* Package tracking timeline — only shown when tracking info exists */}
+            {trackingData && (
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-8">
+                <Section cfg={cfg} idx={99}>
+                  <TrackingTimeline
+                    carrier={trackingData.carrier}
+                    trackingNumber={trackingData.trackingNumber}
+                    events={trackingData.events}
+                    deliveredAt={trackingData.deliveredAt}
+                    cfg={cfg}
+                    isDark={isDark}
+                  />
+                </Section>
+              </div>
+            )}
 
             {/* Reaction panel — shown after full reveal, real gifts only */}
             {!isPreview && giftId && openPhase >= 4 && !reactionSkipped && (

@@ -333,6 +333,10 @@ export default function PreviewPage() {
       const st = localStorage.getItem("gifted_scheduled_time") || "09:00";
       if (sf) payload.scheduledFor = `${sf}T${st}:00`;
 
+      const tc = localStorage.getItem("gifted_tracking_carrier");
+      const tn = localStorage.getItem("gifted_tracking_number");
+      if (tc && tn) { payload.trackingCarrier = tc; payload.trackingNumber = tn; }
+
       const res = await fetch(`${base}/api/gifted/gifts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

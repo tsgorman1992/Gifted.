@@ -728,6 +728,11 @@ export default function CreatePage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
 
+  // Physical gift tracking state
+  const [trackingCarrier, setTrackingCarrier] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingOpen, setTrackingOpen] = useState(false);
+
   // Media state
   const [videoObjectPath, setVideoObjectPath] = useState<string | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -822,6 +827,11 @@ export default function CreatePage() {
       setSuggestedExperience(exp as ExperienceId);
       setHasManuallyChosen(true);
     }
+    const tc = localStorage.getItem("gifted_tracking_carrier");
+    if (tc) { setTrackingCarrier(tc); setTrackingOpen(true); }
+    const tn = localStorage.getItem("gifted_tracking_number");
+    if (tn) setTrackingNumber(tn);
+
     // Restore video from previous session — use a signed GCS URL for reliable playback
     const vp = localStorage.getItem("gifted_video_path");
     if (vp) {
@@ -957,6 +967,13 @@ export default function CreatePage() {
 
   const saveToLocalStorage = () => {
     localStorage.removeItem("gifted_paid_id");
+    if (trackingCarrier && trackingNumber) {
+      localStorage.setItem("gifted_tracking_carrier", trackingCarrier);
+      localStorage.setItem("gifted_tracking_number", trackingNumber);
+    } else {
+      localStorage.removeItem("gifted_tracking_carrier");
+      localStorage.removeItem("gifted_tracking_number");
+    }
     if (videoObjectPath) localStorage.setItem("gifted_video_path", videoObjectPath);
     else localStorage.removeItem("gifted_video_path");
     if (photos.length > 0) localStorage.setItem("gifted_photo_paths", JSON.stringify(photos.map((p) => p.objectPath)));
@@ -1953,6 +1970,94 @@ export default function CreatePage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Physical gift tracking */}
+              <div className="rounded-3xl p-6 border space-y-4" style={{ background: "hsl(var(--card))" }}>
+                <div className="flex items-center justify-between border-b border-border pb-4">
+                  <div>
+                    <h2 className="text-base font-semibold">Add a physical gift</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Sending something in the mail? Add tracking so they can follow it.
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">Optional</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTrackingOpen(!trackingOpen);
+                    if (trackingOpen) {
+                      setTrackingCarrier("");
+                      setTrackingNumber("");
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border text-sm font-medium transition-all ${
+                    trackingOpen
+                      ? "bg-primary/5 border-primary/30 text-primary"
+                      : "bg-secondary border-transparent text-foreground hover:border-border"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base">📦</span>
+                    {trackingOpen ? "Physical gift added" : "Add package tracking"}
+                  </div>
+                  <span className={`transition-transform duration-200 text-xs ${trackingOpen ? "rotate-180" : ""}`}>▼</span>
+                </button>
+
+                <AnimatePresence>
+                  {trackingOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22 }}
+                      className="overflow-hidden space-y-4"
+                    >
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Carrier</Label>
+                        <Select value={trackingCarrier} onValueChange={setTrackingCarrier}>
+                          <SelectTrigger className="h-11 rounded-xl">
+                            <SelectValue placeholder="Select a carrier…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="usps">USPS</SelectItem>
+                            <SelectItem value="ups">UPS</SelectItem>
+                            <SelectItem value="fedex">FedEx</SelectItem>
+                            <SelectItem value="dhl">DHL</SelectItem>
+                            <SelectItem value="canada-post">Canada Post</SelectItem>
+                            <SelectItem value="amazon">Amazon Logistics</SelectItem>
+                            <SelectItem value="lasership">LaserShip</SelectItem>
+                            <SelectItem value="ontrac">OnTrac</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Tracking number</Label>
+                        <Input
+                          placeholder="e.g. 1Z999AA10123456784"
+                          value={trackingNumber}
+                          onChange={(e) => setTrackingNumber(e.target.value.trim())}
+                          className="h-11 rounded-xl text-sm font-mono"
+                          spellCheck={false}
+                          autoCapitalize="characters"
+                        />
+                      </div>
+
+                      {trackingCarrier && trackingNumber && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-xs text-muted-foreground px-1"
+                        >
+                          A live tracking timeline will appear in their gift reveal — no carrier branding, no redirects.
+                        </motion.p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Schedule delivery */}

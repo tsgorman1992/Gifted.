@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { nanoid } from "nanoid";
+import { createHmac, timingSafeEqual } from "crypto";
 import { db, gifts } from "@workspace/db";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
 import twilio from "twilio";
@@ -41,6 +42,33 @@ function normalizePhone(raw: string): string {
 
 const router = Router();
 
+async function registerAfterShipTracking(carrier: string, trackingNumber: string, giftId: string) {
+  const apiKey = process.env.AFTERSHIP_API_KEY;
+  if (!apiKey) return;
+  try {
+    const response = await fetch("https://api.aftership.com/v4/trackings", {
+      method: "POST",
+      headers: {
+        "aftership-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        tracking: {
+          slug: carrier,
+          tracking_number: trackingNumber,
+          custom_fields: { gift_id: giftId },
+        },
+      }),
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "(unreadable)");
+      console.error(`[AfterShip] Registration failed for gift ${giftId}: HTTP ${response.status} ${response.statusText} — ${body}`);
+    }
+  } catch (err) {
+    console.error("[AfterShip] Failed to register tracking:", err);
+  }
+}
+
 router.post("/gifted/gifts", async (req, res) => {
   try {
     const {
@@ -57,10 +85,24 @@ router.post("/gifted/gifts", async (req, res) => {
       extraLinks,
       amount,
       intent,
+      trackingCarrier,
+      trackingNumber,
     } = req.body;
 
     if (!recipientName || !senderName || !experience || !occasion || !giftTitle) {
       res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+
+    const VALID_CARRIERS = new Set(["usps", "ups", "fedex", "dhl", "canada-post", "amazon", "lasership", "ontrac"]);
+    const hasCarrier = !!trackingCarrier;
+    const hasNumber = !!trackingNumber;
+    if (hasCarrier !== hasNumber) {
+      res.status(400).json({ error: "trackingCarrier and trackingNumber must be provided together" });
+      return;
+    }
+    if (hasCarrier && !VALID_CARRIERS.has(trackingCarrier)) {
+      res.status(400).json({ error: "Invalid tracking carrier" });
       return;
     }
 
@@ -92,7 +134,13 @@ router.post("/gifted/gifts", async (req, res) => {
       amount: amount || null,
       intent: intent || null,
       scheduledFor: scheduledFor,
+      trackingCarrier: trackingCarrier || null,
+      trackingNumber: trackingNumber || null,
     });
+
+    if (trackingCarrier && trackingNumber) {
+      registerAfterShipTracking(trackingCarrier, trackingNumber, id).catch(() => {});
+    }
 
     res.json({ id });
   } catch (err) {
@@ -474,6 +522,159 @@ router.patch("/gifted/gifts/:id/hide", async (req, res) => {
   } catch (err) {
     console.error("Error hiding gift:", err);
     res.status(500).json({ error: "Failed to hide gift" });
+  }
+});
+
+// GET /api/gifted/gifts/:id/tracking — public, gated by knowing the gift ID
+router.get("/gifted/gifts/:id/tracking", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [gift] = await db
+      .select({
+        trackingCarrier: gifts.trackingCarrier,
+        trackingNumber: gifts.trackingNumber,
+        trackingStatus: gifts.trackingStatus,
+        trackingDeliveredAt: gifts.trackingDeliveredAt,
+      })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    if (!gift.trackingCarrier || !gift.trackingNumber) {
+      res.json({ hasTracking: false });
+      return;
+    }
+
+    res.json({
+      hasTracking: true,
+      carrier: gift.trackingCarrier,
+      trackingNumber: gift.trackingNumber,
+      events: gift.trackingStatus ?? [],
+      deliveredAt: gift.trackingDeliveredAt,
+    });
+  } catch (err) {
+    console.error("Error fetching tracking:", err);
+    res.status(500).json({ error: "Failed to fetch tracking" });
+  }
+});
+
+// POST /api/gifted/aftership-webhook — AfterShip delivery webhook
+router.post("/gifted/aftership-webhook", async (req, res) => {
+  try {
+    // AfterShip signature verification (HMAC-SHA256 over raw request body bytes)
+    // AFTERSHIP_WEBHOOK_SECRET is the dedicated webhook signing secret from AfterShip dashboard.
+    // In production (NODE_ENV=production), this secret is REQUIRED — missing it causes a hard fail.
+    const webhookSecret = process.env.AFTERSHIP_WEBHOOK_SECRET;
+    const isProduction = process.env.NODE_ENV === "production";
+    const signature = req.headers["aftership-hmac-sha256"] as string | undefined;
+
+    // Raw body is a Buffer because express.raw() is applied to this route in app.ts
+    const rawBody: Buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body));
+
+    if (webhookSecret) {
+      if (!signature) {
+        res.status(401).json({ error: "Missing webhook signature" });
+        return;
+      }
+      const expected = createHmac("sha256", webhookSecret).update(rawBody).digest("base64");
+      try {
+        const sigBuf = Buffer.from(signature, "base64");
+        const expBuf = Buffer.from(expected, "base64");
+        if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+          res.status(401).json({ error: "Invalid webhook signature" });
+          return;
+        }
+      } catch {
+        res.status(401).json({ error: "Invalid webhook signature" });
+        return;
+      }
+    } else if (isProduction) {
+      // Fail closed in production when webhook secret is not configured
+      console.error("[AfterShip webhook] AFTERSHIP_WEBHOOK_SECRET is not set in production — rejecting request");
+      res.status(503).json({ error: "Webhook secret not configured" });
+      return;
+    } else {
+      console.warn("[AfterShip webhook] AFTERSHIP_WEBHOOK_SECRET not set — skipping signature check (dev mode)");
+    }
+
+    // Parse raw body into JSON (express.raw() doesn't auto-parse)
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(rawBody.toString("utf8")) as Record<string, unknown>;
+    } catch {
+      res.status(400).json({ error: "Invalid JSON payload" });
+      return;
+    }
+
+    // AfterShip v4 webhook: body.msg is the tracking object directly (tag/checkpoints at msg level).
+    // Also handle body.msg.tracking (forwarded) and body.data.tracking shapes.
+    const msg = body.msg as Record<string, unknown> | undefined;
+    const msgTracking = msg?.tracking as Record<string, unknown> | undefined;
+    const dataTracking = (body.data as Record<string, unknown> | undefined)?.tracking as Record<string, unknown> | undefined;
+    const msgDirect = typeof msg?.tag === "string" ? msg : undefined;
+    const tracking: Record<string, unknown> | undefined = msgTracking ?? dataTracking ?? msgDirect;
+
+    if (!tracking) {
+      res.status(400).json({ error: "Invalid webhook payload" });
+      return;
+    }
+
+    const customFields = tracking.custom_fields as Record<string, string> | undefined;
+    const giftId = customFields?.gift_id;
+    if (!giftId) {
+      res.status(200).json({ ok: true, skipped: "no gift_id" });
+      return;
+    }
+
+    const tag = (tracking.tag as string | undefined) ?? "";
+    const checkpoints = (tracking.checkpoints as Array<Record<string, unknown>> | undefined) ?? [];
+
+    const events = checkpoints
+      .map((cp) => ({
+        status: (cp.tag as string) ?? "",
+        message: (cp.message as string) ?? "",
+        location: (cp.city as string) ?? (cp.country_name as string) ?? undefined,
+        timestamp: (cp.checkpoint_time as string) ?? new Date().toISOString(),
+      }))
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    const isDelivered = tag === "Delivered";
+
+    // Always update trackingStatus so richer checkpoint data is captured on any webhook
+    await db
+      .update(gifts)
+      .set({
+        trackingStatus: events.length > 0 ? events : undefined,
+      })
+      .where(eq(gifts.id, giftId));
+
+    if (isDelivered) {
+      // Atomically mark delivered only on first transition (idempotent SMS guard)
+      // The WHERE clause fails silently if already delivered, preventing duplicate SMS
+      const [gift] = await db
+        .update(gifts)
+        .set({ trackingDeliveredAt: new Date() })
+        .where(and(eq(gifts.id, giftId), isNull(gifts.trackingDeliveredAt)))
+        .returning({ senderPhone: gifts.senderPhone, recipientName: gifts.recipientName });
+
+      // Only send SMS if this was the first delivery event (row was actually updated)
+      if (gift?.senderPhone) {
+        smsSender(
+          gift.senderPhone,
+          `Your gift to ${gift.recipientName} just arrived 🎁`
+        );
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[AfterShip webhook] error:", err);
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
