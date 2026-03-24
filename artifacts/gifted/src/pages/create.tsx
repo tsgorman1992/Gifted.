@@ -669,13 +669,13 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
     <div className="hidden md:flex items-center gap-5 rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-5">
       <div className="shrink-0">
         <div
-          className="rounded-xl overflow-hidden border border-border bg-white p-1.5"
-          style={{ opacity: ready ? 1 : 0, transition: "opacity 0.3s ease", width: 140, height: 140 }}
+          className="rounded-xl border border-border bg-white p-2"
+          style={{ opacity: ready ? 1 : 0, transition: "opacity 0.3s ease" }}
         >
-          <canvas ref={canvasRef} />
+          <canvas ref={canvasRef} style={{ display: "block" }} />
         </div>
         {!ready && (
-          <div className="w-[140px] h-[140px] rounded-xl bg-muted animate-pulse -mt-[140px]" />
+          <div className="w-[140px] h-[140px] rounded-xl bg-muted animate-pulse" />
         )}
       </div>
       <div className="flex-1 min-w-0">
