@@ -66,7 +66,7 @@ const METHODS: {
 
 export default function RedeemPage() {
   const [, setLocation]                     = useLocation();
-  const [screen, setScreen]                 = useState<RedeemScreen>("banking"); // OTP bypassed temporarily — restore to "otp-gate" once Twilio toll-free is verified
+  const [screen, setScreen]                 = useState<RedeemScreen>("otp-gate");
   const [selectedMethod, setSelectedMethod] = useState<PayoutMethod | null>(null);
   const [isProcessing, setIsProcessing]     = useState(false);
   const [error, setError]                   = useState<string | null>(null);
@@ -102,6 +102,10 @@ export default function RedeemPage() {
           if (gift.recipientName) {
             setRecipientName(gift.recipientName);
             setPayoutName((prev) => prev || gift.recipientName);
+          }
+          // If no phone on file, or already verified in a previous session, skip OTP gate
+          if (!gift.hasRecipientPhone || gift.redemptionVerified) {
+            setScreen("banking");
           }
         })
         .catch(() => {});
@@ -293,6 +297,10 @@ export default function RedeemPage() {
                     ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Sending…</>
                     : "Send verification code"}
                 </Button>
+
+                <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                  By tapping "Send verification code" you consent to receive a single SMS from gifted. (gifted.page) to confirm your identity. Message &amp; data rates may apply. This is a one-time message — you will not be subscribed to any list.
+                </p>
               </div>
             </motion.div>
           )}

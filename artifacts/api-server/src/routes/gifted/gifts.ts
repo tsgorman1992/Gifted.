@@ -181,6 +181,8 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       reaction: gift.reaction,
       reactionAt: gift.reactionAt,
       createdAt: gift.createdAt,
+      hasRecipientPhone: !!gift.recipientPhone,
+      redemptionVerified: gift.redemptionVerified ?? false,
     });
   } catch (err) {
     console.error("Error fetching gift:", err);
