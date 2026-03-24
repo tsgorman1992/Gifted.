@@ -349,33 +349,31 @@ function StarfieldBg() {
 
 function GoldenHourBokeh() {
   const circles = useMemo(() =>
-    Array.from({ length: 11 }, (_, i) => ({
-      id: i,
-      left: 5 + Math.random() * 88,
-      top: 10 + Math.random() * 75,
-      size: 120 + Math.random() * 200,
-      dur: 12 + Math.random() * 10,
-      del: Math.random() * 7,
-      opacity: 0.12 + Math.random() * 0.16,
-    })),
+    Array.from({ length: 11 }, (_, i) => {
+      const angle = (i / 11) * Math.PI * 2 + Math.random() * 0.8;
+      const dist  = 55 + Math.random() * 60;
+      return {
+        id:  i,
+        left: 5 + Math.random() * 88,
+        top:  10 + Math.random() * 75,
+        size: 130 + Math.random() * 200,
+        dur:  14 + Math.random() * 10,
+        del:  Math.random() * 8,
+        opacity: 0.15 + Math.random() * 0.18,
+        dx: Math.cos(angle) * dist,
+        dy: Math.sin(angle) * dist,
+      };
+    }),
     []
   );
-
-  useEffect(() => {
-    const sid = "gifted-bokeh-kf";
-    if (!document.getElementById(sid)) {
-      const s = document.createElement("style");
-      s.id = sid;
-      s.textContent = `@keyframes gifted-bokeh-drift{0%{transform:translate(-50%,-50%) translateY(0);}50%{transform:translate(-50%,-50%) translateY(-28px);}100%{transform:translate(-50%,-50%) translateY(0);}}`;
-      document.head.appendChild(s);
-    }
-  }, []);
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 1 }}>
       {circles.map(c => (
-        <div
+        <motion.div
           key={c.id}
+          animate={{ x: [0, c.dx, 0], y: [0, c.dy, 0] }}
+          transition={{ duration: c.dur, delay: c.del, repeat: Infinity, ease: "easeInOut" }}
           style={{
             position: "absolute",
             left: `${c.left}%`,
@@ -384,9 +382,8 @@ function GoldenHourBokeh() {
             height: c.size,
             borderRadius: "50%",
             background: `radial-gradient(circle, rgba(247,197,130,${c.opacity * 2.2}) 0%, rgba(232,168,80,${c.opacity}) 45%, transparent 70%)`,
-            animation: `gifted-bokeh-drift ${c.dur}s ${c.del}s ease-in-out infinite`,
             transform: "translate(-50%, -50%)",
-            filter: "blur(2px)",
+            filter: "blur(3px)",
           }}
         />
       ))}
