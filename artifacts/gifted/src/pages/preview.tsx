@@ -1368,8 +1368,8 @@ export default function PreviewPage() {
                   )}
                 </div>
 
-                {/* QR code — bottom toggle */}
-                {shareUrl && (
+                {/* QR code — links to preview page so sender can share from their phone */}
+                {giftId && (
                   <div className="flex flex-col items-center gap-3">
                     <button
                       type="button"
@@ -1379,18 +1379,14 @@ export default function PreviewPage() {
                       <QrCode className="w-3.5 h-3.5" />
                       {showQr ? "Hide QR code" : "Show QR code"}
                     </button>
-                    {showQr && <QRCodeDisplay url={shareUrl} label="Scan to open the gift" />}
+                    {showQr && (
+                      <QRCodeDisplay
+                        url={`${window.location.origin}${base}/preview?gift_id=${giftId}`}
+                        label="Scan to send from your phone"
+                      />
+                    )}
                   </div>
                 )}
-
-                {/* Edge-case fallback — barely visible */}
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="text-xs text-muted-foreground/50 underline underline-offset-2 hover:text-muted-foreground transition-colors mx-auto block"
-                >
-                  {copied ? "Copied!" : "Just copy the link"}
-                </button>
 
               </div>
             )}
