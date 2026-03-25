@@ -2,7 +2,6 @@ import { db } from "@workspace/db";
 import { gifts } from "@workspace/db/schema";
 import { and, isNotNull, isNull, lte, eq } from "drizzle-orm";
 import twilio from "twilio";
-import { sendScheduledDeliveryNotice } from "./lib/email";
 
 interface TrackingEvent {
   status: string;
@@ -62,10 +61,9 @@ async function sendScheduledGifts() {
           giftUrl,
         ].join("\n");
 
-        let smsSent   = false;
-        let emailSent = false;
+        let smsSent = false;
 
-        // ── Channel 1: SMS to the SENDER (they forward it themselves) ──
+        // ── SMS to the SENDER — they forward it themselves ──
         if (gift.senderPhone && client && fromPhone) {
           try {
             await client.messages.create({
@@ -80,40 +78,24 @@ async function sendScheduledGifts() {
           }
         }
 
-        // ── Channel 2: Email to the sender as backup ──
-        if (gift.senderEmail) {
-          try {
-            await sendScheduledDeliveryNotice({
-              to:            gift.senderEmail,
-              senderName:    gift.senderName,
-              recipientName: gift.recipientName,
-              giftId:        gift.id,
-              occasion:      gift.occasion,
-            });
-            emailSent = true;
-          } catch (emailErr) {
-            console.error(`[scheduler] Email failed for gift ${gift.id}:`, emailErr);
-          }
-        }
-
-        // ── Mark delivered only if at least one channel succeeded ──
-        // If both fail (network issue, missing credentials), leave scheduleDelivered=false
+        // ── Mark delivered only if SMS succeeded ──
+        // If SMS fails (network issue, missing credentials), leave scheduleDelivered=false
         // so the next scheduler tick picks it up and retries automatically.
-        if (smsSent || emailSent) {
+        if (smsSent) {
           await db
             .update(gifts)
             .set({ scheduleDelivered: true })
             .where(eq(gifts.id, gift.id));
-          console.log(`[scheduler] Gift ${gift.id} marked delivered (sms=${smsSent} email=${emailSent})`);
-        } else if (!gift.senderPhone && !gift.senderEmail) {
-          // No contact info at all — mark delivered so we don't loop forever
+          console.log(`[scheduler] Gift ${gift.id} marked delivered`);
+        } else if (!gift.senderPhone) {
+          // No phone on file — mark delivered so we don't loop forever
           await db
             .update(gifts)
             .set({ scheduleDelivered: true })
             .where(eq(gifts.id, gift.id));
-          console.warn(`[scheduler] Gift ${gift.id} has no sender contact — marked delivered without notification`);
+          console.warn(`[scheduler] Gift ${gift.id} has no sender phone — marked delivered without SMS`);
         } else {
-          console.warn(`[scheduler] Gift ${gift.id} — all channels failed, will retry next tick`);
+          console.warn(`[scheduler] Gift ${gift.id} — SMS failed, will retry next tick`);
         }
       } catch (err) {
         console.error(`[scheduler] Failed to process gift ${gift.id}:`, err);
