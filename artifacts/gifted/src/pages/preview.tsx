@@ -866,7 +866,7 @@ export default function PreviewPage() {
                 </h1>
                 <p className="text-muted-foreground mb-7 text-base">
                   {hasBalance
-                    ? `Load $${displayAmt} onto the gift, then send the link — ${recipientName}'s reveal is waiting.`
+                    ? `Pay $${displayAmt} to load the balance — you'll get a link to share with ${recipientName}.`
                     : `Send ${recipientName} the link below — they'll see a beautiful animated reveal.`}
                 </p>
               </>
@@ -1171,7 +1171,7 @@ export default function PreviewPage() {
                     ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
                     : saving
                       ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
-                      : <><Send className="w-5 h-5" /> Load ${displayAmt} &amp; send the gift</>
+                      : <><Gift className="w-5 h-5" /> Pay ${displayAmt} — get the gift link</>
                   }
                 </Button>
                 <p className="text-center text-xs text-muted-foreground">
