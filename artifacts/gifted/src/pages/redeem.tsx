@@ -509,8 +509,8 @@ export default function RedeemPage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-center space-y-6 mt-12"
             >
-              <h1 className="font-serif text-5xl font-medium">Cash Out</h1>
-              <p className="text-xl text-muted-foreground">No balance attached — enjoy the gift!</p>
+              <h1 className="font-serif text-5xl font-medium">Enjoy the gift!</h1>
+              <p className="text-xl text-muted-foreground">No balance attached — nothing to collect here.</p>
               <Link href="/">
                 <Button variant="outline" className="rounded-full h-12 px-8">Back to home</Button>
               </Link>

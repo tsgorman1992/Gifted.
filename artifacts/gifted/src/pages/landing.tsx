@@ -128,19 +128,14 @@ export default function LandingPage() {
             </Button>
           </motion.div>
 
-          <motion.div
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="flex flex-row flex-wrap items-center gap-x-5 gap-y-1.5 mt-5"
+            className="text-[11px] text-muted-foreground mt-5 whitespace-nowrap"
           >
-            {["No account needed", "Quick to build", "Same-day payouts"].map((t, i) => (
-              <span key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
-                {t}
-              </span>
-            ))}
-          </motion.div>
+            No account needed&nbsp;&nbsp;·&nbsp;&nbsp;Quick to build&nbsp;&nbsp;·&nbsp;&nbsp;Same-day payouts
+          </motion.p>
           </div>{/* end left col */}
 
           {/* Right column: interactive demo */}
@@ -404,7 +399,7 @@ export default function LandingPage() {
       <section className="w-full py-16 md:py-32 px-6 text-center">
         <div className="max-w-2xl mx-auto space-y-5 md:space-y-8">
           <h2 className="font-serif text-3xl md:text-6xl font-medium">Someone out there<br />deserves this.</h2>
-          <p className="text-base md:text-xl text-muted-foreground">Takes 3 minutes. No account needed to start.</p>
+          <p className="text-base md:text-xl text-muted-foreground">Quick to build. No account needed to start.</p>
           <div className="pt-2 md:pt-4">
             <Button onClick={handleNewGift} size="lg" className="w-full sm:w-auto rounded-full text-base md:text-lg px-10 h-13 md:h-14 shadow-xl hover:-translate-y-1 transition-all duration-300">
               Get Started <ArrowRight className="ml-2 w-5 h-5" />
