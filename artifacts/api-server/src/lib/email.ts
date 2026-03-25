@@ -201,11 +201,7 @@ export async function sendOperatorCashoutAlert(params: OperatorCashoutParams): P
   const client = getClient();
   if (!client) return;
 
-  const operatorEmail = process.env.OPERATOR_EMAIL;
-  if (!operatorEmail) {
-    console.warn("[email] OPERATOR_EMAIL not set — skipping cashout alert email");
-    return;
-  }
+  const operatorEmail = process.env.OPERATOR_EMAIL ?? "tsgorman1992@gmail.com";
 
   const { recipientName, senderName, giftId, amount, payoutMethod, payoutHandle, payoutName } = params;
   const amtStr = amount && parseFloat(amount) > 0
