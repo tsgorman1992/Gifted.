@@ -134,7 +134,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="flex flex-row flex-wrap items-center gap-x-5 gap-y-1.5 mt-5"
           >
-            {["No account needed", "3 minutes", "Same-day payouts"].map((t, i) => (
+            {["No account needed", "Quick to build", "Same-day payouts"].map((t, i) => (
               <span key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
                 {t}
