@@ -862,7 +862,7 @@ export default function PreviewPage() {
             ) : (
               <>
                 <h1 className="font-serif text-3xl md:text-4xl font-medium mb-2">
-                  {hasBalance ? "Ready to send." : "Your gift is ready."}
+                  {hasBalance ? "One step left." : "Your gift is ready."}
                 </h1>
                 <p className="text-muted-foreground mb-7 text-base">
                   {hasBalance
@@ -1180,29 +1180,31 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* Link preview card */}
-            <div className="rounded-2xl border border-border overflow-hidden bg-card">
-              <div className="p-4 flex items-start gap-3">
-                <div className="w-12 h-12 rounded-xl flex-shrink-0" style={gStyle} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">gifted.</p>
-                  <p className="text-sm font-semibold text-foreground leading-snug">A gift for {recipientName} 🎁</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate">from {senderName} — tap to open</p>
+            {/* Link preview card — hidden pre-payment when there's a balance to load */}
+            {(!hasBalance || isPaid) && (
+              <div className="rounded-2xl border border-border overflow-hidden bg-card">
+                <div className="p-4 flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl flex-shrink-0" style={gStyle} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">gifted.</p>
+                    <p className="text-sm font-semibold text-foreground leading-snug">A gift for {recipientName} 🎁</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">from {senderName} — tap to open</p>
+                  </div>
+                </div>
+                <div className="border-t border-border/60 px-4 py-2.5 flex items-center gap-3 bg-muted/30">
+                  <p className="text-xs text-muted-foreground font-mono truncate flex-1">{displayUrl}</p>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    disabled={saving || isRedirecting}
+                    className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0 disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {saving ? "Saving..." : copied ? "Copied!" : "Copy"}
+                  </button>
                 </div>
               </div>
-              <div className="border-t border-border/60 px-4 py-2.5 flex items-center gap-3 bg-muted/30">
-                <p className="text-xs text-muted-foreground font-mono truncate flex-1">{displayUrl}</p>
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  disabled={saving || isRedirecting}
-                  className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0 disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {saving ? "Saving..." : copied ? "Copied!" : "Copy"}
-                </button>
-              </div>
-            </div>
+            )}
 
             {/* Link cards — sender sees their labels before sending */}
             {previewLinks.length > 0 && (
