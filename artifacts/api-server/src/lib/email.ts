@@ -185,7 +185,56 @@ export async function sendSenderRedemptionNotice(params: SenderRedemptionParams)
   }
 }
 
-// ─── 3. Operator cashout alert ─────────────────────────────────────────────────
+// ─── 3. Scheduled delivery notice to sender ───────────────────────────────────
+
+interface ScheduledDeliveryParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+  giftId: string;
+  occasion: string;
+}
+
+export async function sendScheduledDeliveryNotice(params: ScheduledDeliveryParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName, giftId, occasion } = params;
+  const giftUrl = `${BASE_URL}/open/${giftId}`;
+  const firstName = senderName.split(" ")[0];
+
+  const body = `
+    ${h1(`Your gift for ${recipientName} is ready, ${firstName}!`)}
+    ${p(`The moment you planned has arrived. Your gift is live — just copy the link below and send it to ${recipientName} however feels right: iMessage, WhatsApp, Instagram DM, anything.`)}
+    ${p(`When it comes from your number, it means something.`, true)}
+    ${divider()}
+    <div style="background:#faf8f5;border-radius:12px;padding:16px 20px;margin:0 0 20px;">
+      <p style="margin:0 0 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#9e9087;">Gift link — tap to copy</p>
+      <a href="${giftUrl}" style="font-size:14px;color:#7c4a1e;word-break:break-all;font-family:monospace;">${giftUrl}</a>
+    </div>
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Preview your gift", giftUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Don't open this link as if you're the recipient — it marks the gift as opened.</p>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Your gift for ${recipientName} is ready to send 🎁`,
+      html: layout(`Time to send — gifted.`, body),
+    });
+    if (error) console.error("[email] sendScheduledDeliveryNotice error:", error);
+    else console.log(`[email] Scheduled delivery notice sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendScheduledDeliveryNotice exception:", err);
+  }
+}
+
+// ─── 4. Operator cashout alert ─────────────────────────────────────────────────
 
 interface OperatorCashoutParams {
   recipientName: string;

@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { gifts } from "@workspace/db/schema";
 import { and, isNotNull, isNull, lte, eq } from "drizzle-orm";
 import twilio from "twilio";
+import { sendScheduledDeliveryNotice } from "./lib/email";
 
 interface TrackingEvent {
   status: string;
@@ -47,29 +48,75 @@ async function sendScheduledGifts() {
 
     const fromPhone = process.env.TWILIO_PHONE_NUMBER;
     const client    = getTwilioClient();
+    const appOrigin = process.env.APP_ORIGIN ?? "https://gifted.page";
 
     for (const gift of pending) {
       try {
-        const appOrigin = process.env.APP_ORIGIN ?? "https://gifted.page";
-        const giftUrl   = `${appOrigin}/open/${gift.id}`;
+        const giftUrl = `${appOrigin}/open/${gift.id}`;
 
-        if (gift.recipientPhone && client && fromPhone) {
-          const senderLabel = gift.senderName ? `${gift.senderName}` : "Someone special";
-          await client.messages.create({
-            to:   gift.recipientPhone,
-            from: fromPhone,
-            body: `${senderLabel} made something just for you ✨\n\nTap to open:\n${giftUrl}`,
-          });
+        // Build the forward-ready SMS for the sender
+        const smsBody = [
+          `gifted. 🎁 Your gift for ${gift.recipientName} is live!`,
+          ``,
+          `Copy this link and send it to them — when it comes from you, it lands differently:`,
+          giftUrl,
+        ].join("\n");
+
+        let smsSent   = false;
+        let emailSent = false;
+
+        // ── Channel 1: SMS to the SENDER (they forward it themselves) ──
+        if (gift.senderPhone && client && fromPhone) {
+          try {
+            await client.messages.create({
+              to:   gift.senderPhone,
+              from: fromPhone,
+              body: smsBody,
+            });
+            smsSent = true;
+            console.log(`[scheduler] SMS sent to sender for gift ${gift.id}`);
+          } catch (smsErr) {
+            console.error(`[scheduler] SMS failed for gift ${gift.id}:`, smsErr);
+          }
         }
 
-        await db
-          .update(gifts)
-          .set({ scheduleDelivered: true })
-          .where(eq(gifts.id, gift.id));
+        // ── Channel 2: Email to the sender as backup ──
+        if (gift.senderEmail) {
+          try {
+            await sendScheduledDeliveryNotice({
+              to:            gift.senderEmail,
+              senderName:    gift.senderName,
+              recipientName: gift.recipientName,
+              giftId:        gift.id,
+              occasion:      gift.occasion,
+            });
+            emailSent = true;
+          } catch (emailErr) {
+            console.error(`[scheduler] Email failed for gift ${gift.id}:`, emailErr);
+          }
+        }
 
-        console.log(`[scheduler] Delivered scheduled gift ${gift.id} to ${gift.recipientName}`);
+        // ── Mark delivered only if at least one channel succeeded ──
+        // If both fail (network issue, missing credentials), leave scheduleDelivered=false
+        // so the next scheduler tick picks it up and retries automatically.
+        if (smsSent || emailSent) {
+          await db
+            .update(gifts)
+            .set({ scheduleDelivered: true })
+            .where(eq(gifts.id, gift.id));
+          console.log(`[scheduler] Gift ${gift.id} marked delivered (sms=${smsSent} email=${emailSent})`);
+        } else if (!gift.senderPhone && !gift.senderEmail) {
+          // No contact info at all — mark delivered so we don't loop forever
+          await db
+            .update(gifts)
+            .set({ scheduleDelivered: true })
+            .where(eq(gifts.id, gift.id));
+          console.warn(`[scheduler] Gift ${gift.id} has no sender contact — marked delivered without notification`);
+        } else {
+          console.warn(`[scheduler] Gift ${gift.id} — all channels failed, will retry next tick`);
+        }
       } catch (err) {
-        console.error(`[scheduler] Failed to deliver gift ${gift.id}:`, err);
+        console.error(`[scheduler] Failed to process gift ${gift.id}:`, err);
       }
     }
   } catch (err) {
