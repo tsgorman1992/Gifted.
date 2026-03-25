@@ -106,7 +106,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             className="text-base md:text-xl text-muted-foreground max-w-xl mb-8 md:mb-10 leading-relaxed"
           >
-            A video, your photos, a personal note, and money they can actually spend — wrapped into a moment they'll remember.
+            A video, your photos, a personal note, and real money they can actually use. All wrapped into one moment they'll remember.
           </motion.p>
 
           <motion.div
@@ -132,11 +132,11 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="flex items-center gap-4 mt-5 text-xs text-muted-foreground flex-wrap"
+            className="flex flex-col sm:flex-row sm:items-center sm:gap-5 mt-5 gap-2"
           >
-            {["No account required", "Takes 3 minutes", "Payouts within 24 hours, guaranteed"].map((t, i) => (
-              <span key={i} className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary/60 inline-block" />
+            {["No account required", "Ready in 3 minutes", "Payouts within 24 hours"].map((t, i) => (
+              <span key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
                 {t}
               </span>
             ))}
