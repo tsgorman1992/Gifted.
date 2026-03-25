@@ -1135,7 +1135,7 @@ export default function PreviewPage() {
                 <div>
                   <p className="text-sm font-semibold text-foreground">Scheduled delivery</p>
                   <p className="text-xs text-muted-foreground">
-                    {recipientName} will receive the link on{" "}
+                    You'll get a link to share on{" "}
                     {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", {
                       weekday: "long", month: "long", day: "numeric",
                     })}{" "}at{" "}

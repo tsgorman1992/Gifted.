@@ -2212,7 +2212,7 @@ export default function CreatePage() {
                       </div>
                       {scheduledFor && (
                         <p className="text-xs text-muted-foreground mt-1 pl-7">
-                          {recipientName || "Your recipient"} will get the link on{" "}
+                          You'll get a link to share on{" "}
                           {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}{" "}
                           at{" "}
                           {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.
