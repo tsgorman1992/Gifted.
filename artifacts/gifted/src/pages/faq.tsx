@@ -8,7 +8,7 @@ const FAQS = [
   {
     question: "How does the cash balance work?",
     answer:
-      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they provide their payout details and our team sends the balance directly to them — usually within a few hours. No gift cards, no restrictions — just real money, their way.",
+      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they provide their payout details and our team sends the balance directly to them within 24 hours — guaranteed. No gift cards, no restrictions — just real money, their way.",
   },
   {
     question: "Do I need to include a cash balance?",
@@ -18,7 +18,7 @@ const FAQS = [
   {
     question: "How long does the payout take?",
     answer:
-      "Payouts are processed manually by the gifted. team — usually within a few hours of the recipient submitting their details. We'll send the balance directly to the account or handle they provide.",
+      "Within 24 hours of the recipient submitting their details — guaranteed. In practice it's usually much faster. We send the balance directly to the Venmo, Cash App, PayPal, or Zelle account they provide.",
   },
   {
     question: "Is my payment information secure?",
@@ -73,7 +73,7 @@ const FAQS = [
   {
     question: "Something went wrong — how do I get help?",
     answer:
-      "We're sorry to hear that! Head to our Contact page and send us a message, or email us directly at help@gifted.page. We typically respond within a few hours and will do everything we can to make it right.",
+      "We're sorry to hear that! Head to our Contact page and send us a message, or email us directly at help@gifted.page. We respond within 24 hours and will do everything we can to make it right.",
   },
 ];
 
@@ -148,7 +148,7 @@ export default function FaqPage() {
           <Mail className="w-10 h-10 text-primary mx-auto mb-4" />
           <h2 className="font-serif text-2xl font-medium mb-2">Still have questions?</h2>
           <p className="text-muted-foreground mb-6">
-            Our team is here to help. We typically respond within a few hours.
+            Our team is here to help. We respond within 24 hours.
           </p>
           <Link href="/contact">
             <Button className="rounded-full px-8 h-12">
