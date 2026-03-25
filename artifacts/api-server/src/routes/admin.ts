@@ -54,6 +54,9 @@ router.get("/admin/stats", async (req, res) => {
 router.get("/admin/cashouts", async (req, res) => {
   if (!checkAuth(req, res)) return;
   try {
+    // Intentionally does NOT filter on senderHidden — operator visibility must
+    // never be limited by sender-side hide actions. Senders hiding a gift from
+    // their own dashboard does not affect the operator's ability to process payouts.
     const rows = await db
       .select()
       .from(gifts)
@@ -82,6 +85,9 @@ router.get("/admin/cashouts", async (req, res) => {
 router.get("/admin/gifts", async (req, res) => {
   if (!checkAuth(req, res)) return;
   try {
+    // Intentionally does NOT filter on senderHidden — operator visibility must
+    // never be limited by sender-side hide actions. All gifts are visible here
+    // regardless of whether the sender has hidden them from their own dashboard.
     const rows = await db
       .select({
         id:            gifts.id,

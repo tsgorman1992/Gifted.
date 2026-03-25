@@ -158,6 +158,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hideError, setHideError] = useState<string | null>(null);
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
   const statusMeta = STATUS_META[status];
@@ -172,11 +173,19 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const handleHide = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsDeleting(true);
+    setHideError(null);
     try {
-      await fetch(`${BASE}/api/gifted/gifts/${gift.id}/hide`, {
+      const res = await fetch(`${BASE}/api/gifted/gifts/${gift.id}/hide`, {
         method: "PATCH",
         credentials: "include",
       });
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}));
+        setHideError(data.error ?? "This gift can't be removed right now.");
+        setIsDeleting(false);
+        return;
+      }
+      if (!res.ok) throw new Error("Failed to hide");
       await queryClient.invalidateQueries({ queryKey: ["my-gifts"] });
     } catch {
       setIsDeleting(false);
@@ -295,13 +304,17 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
-                className="flex items-center justify-between gap-2"
+                className="flex flex-col gap-1.5"
                 onClick={(e) => e.stopPropagation()}
               >
-                <span className="text-xs text-muted-foreground">Remove from your dashboard? Gift data is kept.</span>
+                {hideError ? (
+                  <p className="text-xs text-destructive leading-snug">{hideError}</p>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Remove from your dashboard? Gift data is kept.</span>
+                )}
                 <div className="flex items-center gap-1 shrink-0">
                   <button
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setHideError(null); }}
                     className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
                     disabled={isDeleting}
                   >

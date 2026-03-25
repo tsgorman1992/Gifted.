@@ -42,6 +42,28 @@ function normalizePhone(raw: string): string {
 
 const router = Router();
 
+async function assertGiftIsDeletable(giftId: string): Promise<void> {
+  const [gift] = await db
+    .select({ paid: gifts.paid, amount: gifts.amount, redeemedAt: gifts.redeemedAt })
+    .from(gifts)
+    .where(eq(gifts.id, giftId))
+    .limit(1);
+
+  if (!gift) return;
+
+  const hasPaidBalance =
+    gift.paid === true &&
+    gift.amount != null &&
+    parseFloat(gift.amount) > 0 &&
+    gift.redeemedAt == null;
+
+  if (hasPaidBalance) {
+    const err = new Error("This gift has an unredeemed balance — it can't be removed until the recipient claims their funds") as Error & { statusCode: number };
+    err.statusCode = 409;
+    throw err;
+  }
+}
+
 async function registerAfterShipTracking(carrier: string, trackingNumber: string, giftId: string) {
   const apiKey = process.env.AFTERSHIP_API_KEY;
   if (!apiKey) return;
@@ -519,9 +541,15 @@ router.patch("/gifted/gifts/:id/hide", async (req, res) => {
       return;
     }
 
+    await assertGiftIsDeletable(id);
+
     await db.update(gifts).set({ senderHidden: true }).where(eq(gifts.id, id));
     res.json({ ok: true });
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.statusCode === 409) {
+      res.status(409).json({ error: err.message });
+      return;
+    }
     console.error("Error hiding gift:", err);
     res.status(500).json({ error: "Failed to hide gift" });
   }
