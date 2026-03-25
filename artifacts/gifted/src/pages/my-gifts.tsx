@@ -77,8 +77,12 @@ async function fetchReceivedGifts(): Promise<ReceivedGiftSummary[]> {
 
 type GiftStatus = "draft" | "scheduled" | "sent" | "opened" | "redeemed";
 
+function hasBalance(gift: GiftSummary): boolean {
+  return !!gift.amount && parseFloat(gift.amount) > 0;
+}
+
 function getStatus(gift: GiftSummary): GiftStatus {
-  if (gift.redeemedAt) return "redeemed";
+  if (gift.redeemedAt && hasBalance(gift)) return "redeemed";
   if (gift.openedAt)   return "opened";
   if (gift.paid)       return "sent";
   if (gift.scheduledFor && !gift.scheduleDelivered) return "scheduled";
@@ -232,38 +236,49 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
           <div className="flex items-center gap-0 text-xs">
             {(() => {
               const isScheduled = !!gift.scheduledFor;
+              const giftHasBalance = hasBalance(gift);
               type TimelineStep = "scheduled" | "sent" | "opened" | "redeemed";
               const steps: TimelineStep[] = isScheduled
-                ? ["scheduled", "sent", "opened", "redeemed"]
-                : ["sent", "opened", "redeemed"];
+                ? (giftHasBalance ? ["scheduled", "sent", "opened", "redeemed"] : ["scheduled", "sent", "opened"])
+                : (giftHasBalance ? ["sent", "opened", "redeemed"] : ["sent", "opened"]);
               const orderedStatuses: GiftStatus[] = isScheduled
-                ? ["scheduled", "sent", "opened", "redeemed"]
-                : ["sent", "opened", "redeemed"];
+                ? (giftHasBalance ? ["scheduled", "sent", "opened", "redeemed"] : ["scheduled", "sent", "opened"])
+                : (giftHasBalance ? ["sent", "opened", "redeemed"] : ["sent", "opened"]);
               const effectiveStatus: GiftStatus = (status === "draft" || status === "scheduled")
                 ? (isScheduled ? "scheduled" : "sent")
                 : status;
               const statusIdx = orderedStatuses.indexOf(effectiveStatus);
+              const isLastStep = (i: number) => i === steps.length - 1;
               return steps.map((step, i) => {
                 const done = i <= statusIdx && status !== "draft";
-                const StepIcon = STATUS_META[step].Icon;
+                const isFinalCompleted = done && isLastStep(i);
+                const StepIcon = isFinalCompleted && !giftHasBalance && step === "opened"
+                  ? CheckCircle2
+                  : STATUS_META[step].Icon;
+                const stepColor = isFinalCompleted && !giftHasBalance && step === "opened"
+                  ? "#15803d"
+                  : STATUS_META[step].color;
+                const stepBg = isFinalCompleted && !giftHasBalance && step === "opened"
+                  ? "#dcfce7"
+                  : STATUS_META[step].bg;
                 const label = step === "scheduled" ? "Scheduled" : step === "sent" ? "Sent" : step === "opened" ? "Opened" : "Redeemed";
                 return (
                   <React.Fragment key={step}>
                     <div className="flex flex-col items-center gap-0.5">
                       <div
                         className="w-6 h-6 rounded-full flex items-center justify-center transition-colors"
-                        style={{ background: done ? STATUS_META[step].bg : "hsl(var(--secondary))", color: done ? STATUS_META[step].color : "hsl(var(--muted-foreground))" }}
+                        style={{ background: done ? stepBg : "hsl(var(--secondary))", color: done ? stepColor : "hsl(var(--muted-foreground))" }}
                       >
                         <StepIcon className="w-3 h-3" />
                       </div>
-                      <span className="text-[10px] leading-tight" style={{ color: done ? STATUS_META[step].color : "hsl(var(--muted-foreground)/0.5)" }}>
+                      <span className="text-[10px] leading-tight" style={{ color: done ? stepColor : "hsl(var(--muted-foreground)/0.5)" }}>
                         {label}
                       </span>
                     </div>
                     {i < steps.length - 1 && (
                       <div
                         className="flex-1 h-px mx-1 mb-3 transition-colors"
-                        style={{ background: done && i < statusIdx ? STATUS_META[steps[i + 1]].color + "66" : "hsl(var(--border))" }}
+                        style={{ background: done && i < statusIdx ? (STATUS_META[steps[i + 1]] ? STATUS_META[steps[i + 1]].color + "66" : stepColor + "66") : "hsl(var(--border))" }}
                       />
                     )}
                   </React.Fragment>
@@ -612,7 +627,7 @@ export default function MyGiftsPage() {
   const totalSent    = myGifts?.length ?? 0;
   const totalValue   = myGifts?.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0) ?? 0;
   const openedCount  = myGifts?.filter(g => !!g.openedAt && !g.redeemedAt).length ?? 0;
-  const redeemed     = myGifts?.filter(g => !!g.redeemedAt).length ?? 0;
+  const redeemed     = myGifts?.filter(g => !!g.redeemedAt && hasBalance(g)).length ?? 0;
   const totalReceived = receivedGifts?.length ?? 0;
 
   const initials = [user?.firstName, user?.lastName]
