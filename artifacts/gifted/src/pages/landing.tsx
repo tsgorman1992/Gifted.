@@ -17,14 +17,14 @@ const PHOTOS = [
 const HOW_STEPS = [
   { icon: Heart,      label: "Build the moment",   desc: "Write a note that sounds like you. Add a video message, photos, or link anything — concert tickets, a restaurant reservation, a song." },
   { icon: Gift,       label: "Add a real balance",  desc: "Fund it with whatever feels right. Add a spending intention like 'Coffee on me' or 'Date night' so they know it was thoughtful, not lazy." },
-  { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they cash out however they want — Venmo, PayPal, Cash App, Zelle." },
+  { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they provide their details and our team sends the balance directly to them — usually within a few hours." },
 ];
 
 const FEATURES = [
   { icon: Play,       title: "Video Messages",  desc: "Record a heartfelt message they can keep forever." },
   { icon: ImageIcon,  title: "Photo Memories",  desc: "Add up to 6 photos to remind them of the good times." },
   { icon: Link2,      title: "Add Any Link",     desc: "Concert tickets, a dinner reservation, a song — anything with a URL becomes part of the gift." },
-  { icon: CreditCard, title: "Flexible Funds",  desc: "No more restrictive gift cards. They cash out how they want." },
+  { icon: CreditCard, title: "Flexible Funds",  desc: "No more restrictive gift cards. Recipients provide their details and we transfer the balance directly — usually within a few hours." },
 ];
 
 const LINK_DEMOS = [
@@ -134,7 +134,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="flex items-center gap-4 mt-5 text-xs text-muted-foreground flex-wrap"
           >
-            {["No account required", "Takes 3 minutes", "They cash out instantly"].map((t, i) => (
+            {["No account required", "Takes 3 minutes", "Direct transfer — usually within hours"].map((t, i) => (
               <span key={i} className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/60 inline-block" />
                 {t}

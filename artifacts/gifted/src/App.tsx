@@ -15,6 +15,7 @@ import RedeemPage   from "@/pages/redeem";
 import FaqPage      from "@/pages/faq";
 import TermsPage    from "@/pages/terms";
 import PrivacyPage  from "@/pages/privacy";
+import ContactPage  from "@/pages/contact";
 import MyGiftsPage  from "@/pages/my-gifts";
 import SignInPage   from "@/pages/sign-in";
 import AdminPage    from "@/pages/admin";
@@ -35,6 +36,7 @@ function Router() {
         <Route path="/help"      component={FaqPage}      />
         <Route path="/terms"     component={TermsPage}    />
         <Route path="/privacy"   component={PrivacyPage}  />
+        <Route path="/contact"   component={ContactPage}  />
         <Route path="/my-gifts"  component={MyGiftsPage}  />
         <Route path="/sign-in"   component={SignInPage}   />
         <Route path="/admin"     component={AdminPage}    />

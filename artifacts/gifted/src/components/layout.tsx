@@ -94,9 +94,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span className="text-sm text-muted-foreground">Personal in the moment. Flexible in the end.</span>
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
-            <Link href="/terms"   className="hover:text-foreground transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link href="/faq"     className="hover:text-foreground transition-colors">FAQ</Link>
+            <Link href="/terms"    className="hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/privacy"  className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link href="/faq"      className="hover:text-foreground transition-colors">FAQ</Link>
+            <Link href="/contact"  className="hover:text-foreground transition-colors">Contact</Link>
           </div>
         </div>
       </footer>

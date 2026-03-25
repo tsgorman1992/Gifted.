@@ -86,7 +86,7 @@ export default function PrivacyPage() {
             We retain your gift content (videos, photos, notes) for as long as your account is active or until you delete the gift. Gift links remain active indefinitely unless you request removal.
           </p>
           <p>
-            Account data is retained until you delete your account. You can request account deletion by emailing privacy@gifted.so.
+            Account data is retained until you delete your account. You can request account deletion by emailing privacy@gifted.page.
           </p>
         </Section>
 
@@ -101,8 +101,8 @@ export default function PrivacyPage() {
           </ul>
           <p>
             To exercise any of these rights, email{" "}
-            <a href="mailto:privacy@gifted.so" className="text-primary hover:underline">
-              privacy@gifted.so
+            <a href="mailto:privacy@gifted.page" className="text-primary hover:underline">
+              privacy@gifted.page
             </a>
             . We'll respond within 30 days.
           </p>
@@ -122,7 +122,7 @@ export default function PrivacyPage() {
 
         <Section title="Children's Privacy">
           <p>
-            gifted. is not intended for children under 13. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, contact us at privacy@gifted.so.
+            gifted. is not intended for children under 13. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, contact us at privacy@gifted.page.
           </p>
         </Section>
 
@@ -135,8 +135,8 @@ export default function PrivacyPage() {
         <Section title="Contact">
           <p>
             Questions about your privacy?{" "}
-            <a href="mailto:privacy@gifted.so" className="text-primary hover:underline">
-              privacy@gifted.so
+            <a href="mailto:privacy@gifted.page" className="text-primary hover:underline">
+              privacy@gifted.page
             </a>
           </p>
         </Section>

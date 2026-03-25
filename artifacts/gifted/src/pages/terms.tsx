@@ -49,7 +49,7 @@ export default function TermsPage() {
 
           <Section title="3. Accounts">
             <p>
-              You are responsible for keeping your account credentials secure. You are responsible for all activity that occurs under your account. Notify us immediately at help@gifted.so if you believe your account has been compromised.
+              You are responsible for keeping your account credentials secure. You are responsible for all activity that occurs under your account. Notify us immediately at help@gifted.page if you believe your account has been compromised.
             </p>
             <p>
               We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or misuse the platform.
@@ -61,7 +61,7 @@ export default function TermsPage() {
               When you add a cash balance to a gift, you authorize gifted. to charge your payment method for the stated gift amount plus a 5% platform service fee. The minimum gift balance is $10. Payment is collected at the time of sending. The platform fee is non-refundable and covers premium delivery, experience design, and secure payout processing.
             </p>
             <p>
-              gifted. holds gift balances on behalf of senders until recipients redeem them. Once a recipient submits valid payout information, gifted. initiates a transfer. Payout timing depends on the chosen method: instant debit card transfers typically arrive within 30 minutes; standard transfers take 1–3 business days.
+              gifted. holds gift balances on behalf of senders until recipients redeem them. Once a recipient submits valid payout information, the gifted. team processes the transfer manually — typically within a few hours.
             </p>
             <p>
               Gift balances do not expire during the 90-day redemption window. If a gift balance has not been redeemed within 90 days of sending, gifted. will automatically refund the gift balance (not the platform fee) to the original payment method. We will make reasonable efforts to notify you before processing the refund.
@@ -73,7 +73,7 @@ export default function TermsPage() {
 
           <Section title="5. Refunds">
             <p>
-              If a gift balance has not been redeemed, you may request a refund within 90 days of sending by emailing help@gifted.so. Refunds are processed to the original payment method within 5–10 business days. The 5% platform fee is not refundable.
+              If a gift balance has not been redeemed, you may request a refund within 90 days of sending by emailing help@gifted.page. Refunds are processed to the original payment method within 5–10 business days. The 5% platform fee is not refundable.
             </p>
             <p>
               Unredeemed gift balances are automatically refunded after 90 days. Once a recipient has redeemed a gift balance, the transaction is final and cannot be reversed.
@@ -118,8 +118,8 @@ export default function TermsPage() {
           <Section title="10. Contact">
             <p>
               Questions about these terms? Email us at{" "}
-              <a href="mailto:legal@gifted.so" className="text-primary hover:underline">
-                legal@gifted.so
+              <a href="mailto:legal@gifted.page" className="text-primary hover:underline">
+                legal@gifted.page
               </a>
               .
             </p>

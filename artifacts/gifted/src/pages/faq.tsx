@@ -8,7 +8,7 @@ const FAQS = [
   {
     question: "How does the cash balance work?",
     answer:
-      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they can transfer the balance to their debit card (instant) or bank account (1–3 business days). No gift cards, no restrictions — just real money, their way.",
+      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they provide their payout details and our team sends the balance directly to them — usually within a few hours. No gift cards, no restrictions — just real money, their way.",
   },
   {
     question: "Do I need to include a cash balance?",
@@ -18,7 +18,7 @@ const FAQS = [
   {
     question: "How long does the payout take?",
     answer:
-      "Instant debit card transfers typically arrive within 30 minutes. Standard bank transfers (ACH) take 1–3 business days. The recipient chooses their preferred method when they redeem.",
+      "Payouts are processed manually by the gifted. team — usually within a few hours of the recipient submitting their details. We'll send the balance directly to the account or handle they provide.",
   },
   {
     question: "Is my payment information secure?",
@@ -38,7 +38,7 @@ const FAQS = [
   {
     question: "What happens if my recipient can't access the link?",
     answer:
-      "If your recipient has trouble opening the link, the easiest fix is to re-send it to them directly. If the problem persists, email us at help@gifted.so and we'll make sure they can access their gift.",
+      "If your recipient has trouble opening the link, the easiest fix is to re-send it to them directly. If the problem persists, email us at help@gifted.page and we'll make sure they can access their gift.",
   },
   {
     question: "Can I send a gift without creating an account?",
@@ -58,7 +58,22 @@ const FAQS = [
   {
     question: "Can I cancel or refund a gift?",
     answer:
-      "If the gift hasn't been redeemed yet, contact us at help@gifted.so and we'll process a refund. Once a balance has been redeemed by the recipient, it cannot be reversed.",
+      "If the gift hasn't been redeemed yet, contact us at help@gifted.page and we'll process a refund. Once a balance has been redeemed by the recipient, it cannot be reversed.",
+  },
+  {
+    question: "What is a spending intention?",
+    answer:
+      "A spending intention is an optional label you can add to the gift balance — like \"Coffee on me\", \"Date night\", or \"Treat yourself\". It makes the gift feel more thoughtful and personal, giving the recipient a sense of how you'd love them to spend it, without actually restricting what they do with the money.",
+  },
+  {
+    question: "What is physical gift tracking, and when does it arrive?",
+    answer:
+      "If the sender included a link to a physical item (like a product, delivery, or experience), you can tap that link inside the gift to track or view it. Delivery timing depends entirely on wherever the sender linked to — gifted. doesn't ship physical items itself.",
+  },
+  {
+    question: "Something went wrong — how do I get help?",
+    answer:
+      "We're sorry to hear that! Head to our Contact page and send us a message, or email us directly at help@gifted.page. We typically respond within a few hours and will do everything we can to make it right.",
   },
 ];
 
@@ -135,11 +150,11 @@ export default function FaqPage() {
           <p className="text-muted-foreground mb-6">
             Our team is here to help. We typically respond within a few hours.
           </p>
-          <a href="mailto:help@gifted.so">
+          <Link href="/contact">
             <Button className="rounded-full px-8 h-12">
-              Email us at help@gifted.so
+              Get in touch
             </Button>
-          </a>
+          </Link>
         </motion.div>
 
         <div className="mt-10 text-center">
