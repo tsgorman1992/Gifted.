@@ -17,14 +17,14 @@ const PHOTOS = [
 const HOW_STEPS = [
   { icon: Heart,      label: "Build the moment",   desc: "Write a note that sounds like you. Add a video message, photos, or link anything — concert tickets, a restaurant reservation, a song." },
   { icon: Gift,       label: "Add a real balance",  desc: "Fund it with whatever feels right. Add a spending intention like 'Coffee on me' or 'Date night' so they know it was thoughtful, not lazy." },
-  { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they provide their payout details and our team sends the balance directly to them — within 24 hours, guaranteed." },
+  { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they provide their payout details and our team sends the balance directly to them — typically same day." },
 ];
 
 const FEATURES = [
   { icon: Play,       title: "Video Messages",  desc: "Record a heartfelt message they can keep forever." },
   { icon: ImageIcon,  title: "Photo Memories",  desc: "Add up to 6 photos to remind them of the good times." },
   { icon: Link2,      title: "Add Any Link",     desc: "Concert tickets, a dinner reservation, a song — anything with a URL becomes part of the gift." },
-  { icon: CreditCard, title: "Flexible Funds",  desc: "No more restrictive gift cards. Recipients choose Venmo, Cash App, PayPal, or Zelle — and we send the balance within 24 hours, guaranteed." },
+  { icon: CreditCard, title: "Flexible Funds",  desc: "No more restrictive gift cards. Recipients choose Venmo, Cash App, PayPal, or Zelle — and we send the balance same day." },
 ];
 
 const LINK_DEMOS = [
@@ -132,10 +132,10 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="flex flex-col sm:flex-row sm:items-center sm:gap-5 mt-5 gap-2"
+            className="flex flex-row flex-wrap items-center gap-x-5 gap-y-1.5 mt-5"
           >
-            {["No account required", "Ready in 3 minutes", "Payouts within 24 hours"].map((t, i) => (
-              <span key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {["No account needed", "3 minutes", "Same-day payouts"].map((t, i) => (
+              <span key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
                 {t}
               </span>

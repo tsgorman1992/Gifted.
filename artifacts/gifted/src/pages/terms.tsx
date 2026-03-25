@@ -61,7 +61,7 @@ export default function TermsPage() {
               When you add a cash balance to a gift, you authorize gifted. to charge your payment method for the stated gift amount plus a 5% platform service fee. The minimum gift balance is $10. Payment is collected at the time of sending. The platform fee is non-refundable and covers premium delivery, experience design, and secure payout processing.
             </p>
             <p>
-              gifted. holds gift balances on behalf of senders until recipients redeem them. Once a recipient submits valid payout information, the gifted. team processes the transfer within 24 hours, guaranteed.
+              gifted. holds gift balances on behalf of senders until recipients redeem them. Once a recipient submits valid payout information, the gifted. team processes the transfer same day, typically within a few hours.
             </p>
             <p>
               Gift balances do not expire during the 90-day redemption window. If a gift balance has not been redeemed within 90 days of sending, gifted. will automatically refund the gift balance (not the platform fee) to the original payment method. We will make reasonable efforts to notify you before processing the refund.
