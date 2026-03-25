@@ -2016,14 +2016,12 @@ export default function CreatePage() {
                       </motion.div>
                     )}
 
-                    {/* Phone number */}
+                    {/* Phone number — only needed when there's a cash balance to protect */}
+                    {amount && parseFloat(amount) >= 10 && (
                     <div className="space-y-2 pt-4 border-t border-border mt-2">
                       <Label htmlFor="recipientPhone">
                         Their phone number{" "}
-                        {amount && parseFloat(amount) >= 10
-                          ? <span className="text-destructive text-xs font-normal">— required to receive the balance</span>
-                          : <span className="text-muted-foreground text-xs font-normal">(optional)</span>
-                        }
+                        <span className="text-destructive text-xs font-normal">— required</span>
                       </Label>
                       <Input
                         id="recipientPhone"
@@ -2043,12 +2041,11 @@ export default function CreatePage() {
                       )}
                       {!phoneError && (
                         <p className="text-xs text-muted-foreground">
-                          {amount && parseFloat(amount) >= 10
-                            ? "Required to verify who they are when they redeem. Never used for marketing."
-                            : "Add their number and we'll deliver the link — or skip it and share it yourself."}
+                          Used to verify their identity when they redeem the balance. Never used for marketing.
                         </p>
                       )}
                     </div>
+                    )}
                   </div>
                 </div>
               </div>
