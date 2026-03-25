@@ -74,7 +74,7 @@ router.post("/gifted/send-otp", async (req, res) => {
     console.log(`[OTP] Sending from=${fromNumber} to=${toNumber}`);
 
     const msg = await client.messages.create({
-      body: `Your gifted. verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.`,
+      body: `Your gifted. verification code is: ${otp}. Expires in 10 min. Do not share. Reply STOP to opt out, HELP for help. Msg & data rates may apply.`,
       from: fromNumber,
       to: toNumber,
     });
