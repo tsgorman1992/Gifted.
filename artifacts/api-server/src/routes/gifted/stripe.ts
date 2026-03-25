@@ -3,6 +3,11 @@ import Stripe from "stripe";
 import twilio from "twilio";
 import { db, gifts } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import {
+  sendSenderReceipt,
+  sendSenderRedemptionNotice,
+  sendOperatorCashoutAlert,
+} from "../../lib/email";
 
 function getTwilioClient() {
   const sid   = process.env.TWILIO_ACCOUNT_SID;
@@ -134,17 +139,36 @@ router.post("/gifted/confirm-payment", async (req, res) => {
       return;
     }
 
+    // Fetch gift before update so we know if this is a new payment transition
+    const [existing] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
+    const alreadyPaid = existing?.paid ?? false;
+
+    const senderEmail = session.customer_details?.email ?? null;
+
     await db
       .update(gifts)
       .set({
         paid: true,
-        senderEmail: session.customer_details?.email ?? null,
+        senderEmail,
         stripePaymentIntentId:
           typeof session.payment_intent === "string"
             ? session.payment_intent
             : (session.payment_intent?.id ?? null),
       })
       .where(eq(gifts.id, giftId));
+
+    // Send sender receipt email only on the first payment confirmation
+    if (!alreadyPaid && senderEmail && existing) {
+      sendSenderReceipt({
+        to: senderEmail,
+        senderName:    existing.senderName,
+        recipientName: existing.recipientName,
+        giftId:        existing.id,
+        amount:        existing.amount,
+        occasion:      existing.occasion,
+        giftTitle:     existing.giftTitle,
+      }).catch(() => {});
+    }
 
     res.json({ success: true });
   } catch (err) {
@@ -205,13 +229,34 @@ router.post("/gifted/redeem", async (req, res) => {
       `gifted. 🎉\n${gift.recipientName} redeemed their ${amount} gift. Your generosity made their day!`
     );
 
-    // Notify operator via SMS
+    // Notify sender via email
+    if (gift.senderEmail) {
+      sendSenderRedemptionNotice({
+        to:            gift.senderEmail,
+        senderName:    gift.senderName,
+        recipientName: gift.recipientName,
+        giftId:        gift.id,
+        amount:        gift.amount,
+        payoutMethod:  payoutMethod ?? null,
+      }).catch(() => {});
+    }
+
+    // Notify operator via SMS + email
     if (payoutName && payoutMethod && payoutHandle) {
       const methodLabel = payoutMethod.charAt(0).toUpperCase() + payoutMethod.slice(1);
       const senderLabel = gift.senderName ? ` from ${gift.senderName}` : "";
       await notifyOperator(
         `gifted. redemption 🎁\n${amount || "unknown amount"} — ${payoutName}\n${methodLabel}: ${payoutHandle}\nGift${senderLabel} → send now`
       );
+      sendOperatorCashoutAlert({
+        recipientName: gift.recipientName,
+        senderName:    gift.senderName,
+        giftId:        gift.id,
+        amount:        gift.amount,
+        payoutMethod,
+        payoutHandle,
+        payoutName,
+      }).catch(() => {});
     }
 
     res.json({ success: true });

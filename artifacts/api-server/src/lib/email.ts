@@ -1,0 +1,249 @@
+import { Resend } from "resend";
+
+const FROM = "gifted. <hello@gifted.page>";
+const REPLY_TO = "help@gifted.page";
+const BASE_URL = "https://gifted.page";
+
+function getClient(): Resend | null {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.warn("[email] RESEND_API_KEY not set — skipping email");
+    return null;
+  }
+  return new Resend(key);
+}
+
+// ─── Shared layout ────────────────────────────────────────────────────────────
+
+function layout(title: string, body: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background:#faf8f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#faf8f5;padding:40px 16px;">
+  <tr><td align="center">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+      <!-- Logo -->
+      <tr><td style="padding-bottom:32px;text-align:center;">
+        <a href="${BASE_URL}" style="text-decoration:none;">
+          <span style="font-size:28px;font-weight:500;color:#7c4a1e;letter-spacing:-0.5px;font-family:Georgia,serif;">gifted.</span>
+        </a>
+      </td></tr>
+
+      <!-- Card -->
+      <tr><td style="background:#ffffff;border-radius:20px;padding:40px 36px;border:1px solid #ede8e1;">
+        ${body}
+      </td></tr>
+
+      <!-- Footer -->
+      <tr><td style="padding:24px 0;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#9e9087;line-height:1.6;">
+          gifted. &middot; Premium digital gifting<br/>
+          <a href="${BASE_URL}/privacy" style="color:#9e9087;text-decoration:underline;">Privacy</a>
+          &nbsp;&middot;&nbsp;
+          <a href="mailto:${REPLY_TO}" style="color:#9e9087;text-decoration:underline;">Help</a>
+        </p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function btn(text: string, url: string): string {
+  return `<a href="${url}" style="display:inline-block;background:#7c4a1e;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:100px;margin-top:8px;">${text}</a>`;
+}
+
+function h1(text: string): string {
+  return `<h1 style="margin:0 0 12px;font-size:26px;font-weight:600;color:#1a1310;font-family:Georgia,serif;line-height:1.25;">${text}</h1>`;
+}
+
+function p(text: string, muted = false): string {
+  const color = muted ? "#6b6059" : "#2c2520";
+  return `<p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:${color};">${text}</p>`;
+}
+
+function divider(): string {
+  return `<hr style="border:none;border-top:1px solid #ede8e1;margin:28px 0;" />`;
+}
+
+function detail(label: string, value: string): string {
+  return `<tr>
+    <td style="padding:6px 0;font-size:13px;color:#6b6059;vertical-align:top;width:40%;">${label}</td>
+    <td style="padding:6px 0;font-size:13px;color:#1a1310;font-weight:600;vertical-align:top;">${value}</td>
+  </tr>`;
+}
+
+// ─── 1. Sender payment confirmation ───────────────────────────────────────────
+
+interface SenderReceiptParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+  giftId: string;
+  amount: string | null;
+  occasion: string;
+  giftTitle: string;
+}
+
+export async function sendSenderReceipt(params: SenderReceiptParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName, giftId, amount, occasion, giftTitle } = params;
+  const giftUrl = `${BASE_URL}/open/${giftId}`;
+  const amtStr = amount && parseFloat(amount) > 0
+    ? `$${parseFloat(amount).toFixed(2)}`
+    : null;
+
+  const body = `
+    ${h1(`Your gift is ready, ${senderName.split(" ")[0]}!`)}
+    ${p(`Everything is set. Your gift for <strong>${recipientName}</strong> has been created and funded. All that's left is to send them the link.`)}
+    ${divider()}
+    <table cellpadding="0" cellspacing="0" width="100%">
+      ${detail("For", recipientName)}
+      ${detail("Occasion", occasion.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()))}
+      ${detail("Title", giftTitle)}
+      ${amtStr ? detail("Gift balance", amtStr) : ""}
+    </table>
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("View your gift", giftUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Copy the link and share it however feels right — text, iMessage, WhatsApp, email.</p>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Your gift for ${recipientName} is ready 🎁`,
+      html: layout(`Gift ready — gifted.`, body),
+    });
+    if (error) console.error("[email] sendSenderReceipt error:", error);
+    else console.log(`[email] Sender receipt sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendSenderReceipt exception:", err);
+  }
+}
+
+// ─── 2. Sender redemption notification ────────────────────────────────────────
+
+interface SenderRedemptionParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+  giftId: string;
+  amount: string | null;
+  payoutMethod: string | null;
+}
+
+export async function sendSenderRedemptionNotice(params: SenderRedemptionParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName, giftId, amount, payoutMethod } = params;
+  const dashboardUrl = `${BASE_URL}/my-gifts`;
+  const amtStr = amount && parseFloat(amount) > 0
+    ? `$${parseFloat(amount).toFixed(2)}`
+    : "their gift";
+
+  const methodLabel = payoutMethod
+    ? payoutMethod.charAt(0).toUpperCase() + payoutMethod.slice(1)
+    : null;
+
+  const body = `
+    ${h1(`${recipientName} redeemed their gift!`)}
+    ${p(`Great news — ${recipientName} just claimed the ${amtStr} balance from your gift.${methodLabel ? ` They've requested their payout via <strong>${methodLabel}</strong>.` : ""}`)}
+    ${p(`Your generosity landed. That's what gifted. is all about.`, true)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("See their reaction", dashboardUrl)}
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `${recipientName} redeemed your gift 🎉`,
+      html: layout(`Gift redeemed — gifted.`, body),
+    });
+    if (error) console.error("[email] sendSenderRedemptionNotice error:", error);
+    else console.log(`[email] Redemption notice sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendSenderRedemptionNotice exception:", err);
+  }
+}
+
+// ─── 3. Operator cashout alert ─────────────────────────────────────────────────
+
+interface OperatorCashoutParams {
+  recipientName: string;
+  senderName: string;
+  giftId: string;
+  amount: string | null;
+  payoutMethod: string;
+  payoutHandle: string;
+  payoutName: string | null;
+}
+
+export async function sendOperatorCashoutAlert(params: OperatorCashoutParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const operatorEmail = process.env.OPERATOR_EMAIL;
+  if (!operatorEmail) {
+    console.warn("[email] OPERATOR_EMAIL not set — skipping cashout alert email");
+    return;
+  }
+
+  const { recipientName, senderName, giftId, amount, payoutMethod, payoutHandle, payoutName } = params;
+  const amtStr = amount && parseFloat(amount) > 0
+    ? `$${parseFloat(amount).toFixed(2)}`
+    : "unknown";
+  const methodLabel = payoutMethod.charAt(0).toUpperCase() + payoutMethod.slice(1);
+  const adminUrl = `${BASE_URL}/admin`;
+
+  const body = `
+    ${h1(`New cashout request`)}
+    ${p(`A recipient has requested their gift balance. Send this payout now.`)}
+    ${divider()}
+    <table cellpadding="0" cellspacing="0" width="100%">
+      ${detail("Recipient", recipientName)}
+      ${detail("From sender", senderName)}
+      ${detail("Amount", amtStr)}
+      ${detail("Method", methodLabel)}
+      ${detail("Handle", payoutHandle)}
+      ${payoutName ? detail("Name on account", payoutName) : ""}
+    </table>
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Open admin dashboard", adminUrl)}
+    </div>
+    ${p(`Reply to this email once you've sent the payout.`, true)}
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to: operatorEmail,
+      replyTo: REPLY_TO,
+      subject: `Cashout request: ${amtStr} → ${methodLabel} ${payoutHandle}`,
+      html: layout(`Cashout request — gifted.`, body),
+    });
+    if (error) console.error("[email] sendOperatorCashoutAlert error:", error);
+    else console.log(`[email] Cashout alert sent to operator`);
+  } catch (err) {
+    console.error("[email] sendOperatorCashoutAlert exception:", err);
+  }
+}
