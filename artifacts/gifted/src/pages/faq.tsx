@@ -8,7 +8,7 @@ const FAQS = [
   {
     question: "How does the cash balance work?",
     answer:
-      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they provide their payout details and our team sends the balance directly to them — typically same day. No gift cards, no restrictions — just real money, their way.",
+      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they provide their payout details and our team sends the balance directly to them — same day. No gift cards, no restrictions — just real money, their way.",
   },
   {
     question: "Do I need to include a cash balance?",
@@ -18,7 +18,7 @@ const FAQS = [
   {
     question: "How long does the payout take?",
     answer:
-      "Typically within a few hours of the recipient submitting their details — usually same day. We send the balance directly to the Venmo, Cash App, PayPal, or Zelle account they provide.",
+      "Same day. We send the balance directly to the Venmo, Cash App, PayPal, or Zelle account they provide — usually within a few hours of them submitting their details.",
   },
   {
     question: "Is my payment information secure?",
