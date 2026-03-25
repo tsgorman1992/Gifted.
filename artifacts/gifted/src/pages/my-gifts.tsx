@@ -629,7 +629,7 @@ export default function MyGiftsPage() {
             Sign in
           </Button>
           <Button size="lg" variant="outline" className="rounded-full px-10 h-13" onClick={handleNewGift}>
-            Send a gift
+            Build a moment
           </Button>
         </motion.div>
       </div>

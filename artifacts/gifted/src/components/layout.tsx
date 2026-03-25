@@ -81,7 +81,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               )
             )}
             <Button onClick={handleSendGift} className="rounded-full px-6 shadow-md hover:-translate-y-0.5 transition-transform duration-300">
-              Send a gift
+              Build a moment
             </Button>
           </nav>
         </div>

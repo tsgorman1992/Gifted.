@@ -116,7 +116,7 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"
           >
             <Button onClick={handleNewGift} size="lg" className="w-full sm:w-auto rounded-full text-base md:text-lg px-8 h-13 md:h-14 shadow-xl shadow-primary/20 hover:-translate-y-1 transition-all duration-300">
-              Send a gift
+              Build a moment
             </Button>
             <Button
               size="lg"
