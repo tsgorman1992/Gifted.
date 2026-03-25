@@ -750,6 +750,8 @@ export default function CreatePage() {
   const [occasion, setOccasion] = useState("Birthday");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [phoneValidating, setPhoneValidating] = useState(false);
   const [senderName, setSenderName] = useState("");
   const [giftTitle, setGiftTitle] = useState("");
   const [personalNote, setPersonalNote] = useState("");
@@ -1036,7 +1038,39 @@ export default function CreatePage() {
     }
   };
 
-  const handlePreview = () => {
+  const validatePhone = async (phone: string): Promise<boolean> => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 10) return true;
+    setPhoneValidating(true);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/gifted/validate-phone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      if (!res.ok) return true;
+      const data = await res.json();
+      if (data.valid === false) {
+        setPhoneError("This number doesn't appear to be valid. Please double-check it.");
+        return false;
+      }
+      setPhoneError(null);
+      return true;
+    } catch {
+      return true;
+    } finally {
+      setPhoneValidating(false);
+    }
+  };
+
+  const handlePhoneBlur = async () => {
+    const digits = recipientPhone.replace(/\D/g, "");
+    if (digits.length < 10) return;
+    await validatePhone(recipientPhone);
+  };
+
+  const handlePreview = async () => {
     if (isUploading) {
       setStepError("Please wait — your video is still uploading.");
       return;
@@ -1070,6 +1104,13 @@ export default function CreatePage() {
       }
       if (recipientPhone.replace(/\D/g, "").length < 10) {
         setStepError("Please enter a complete 10-digit phone number.");
+        return;
+      }
+    }
+    if (recipientPhone.replace(/\D/g, "").length >= 10) {
+      const valid = await validatePhone(recipientPhone);
+      if (!valid) {
+        setStepError("The phone number doesn't appear to be valid. Please check it above.");
         return;
       }
     }
@@ -1990,14 +2031,23 @@ export default function CreatePage() {
                         inputMode="numeric"
                         placeholder="(555) 000-0000"
                         value={recipientPhone}
-                        onChange={(e) => setRecipientPhone(formatPhoneNumber(e.target.value))}
-                        className="h-12 rounded-xl text-base"
+                        onChange={(e) => {
+                          setPhoneError(null);
+                          setRecipientPhone(formatPhoneNumber(e.target.value));
+                        }}
+                        onBlur={handlePhoneBlur}
+                        className={`h-12 rounded-xl text-base${phoneError ? " border-destructive" : ""}`}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        {amount && parseFloat(amount) >= 10
-                          ? "Required to verify who they are when they redeem. Never used for marketing."
-                          : "Add their number and we'll deliver the link — or skip it and share it yourself."}
-                      </p>
+                      {phoneError && (
+                        <p className="text-xs text-destructive">{phoneError}</p>
+                      )}
+                      {!phoneError && (
+                        <p className="text-xs text-muted-foreground">
+                          {amount && parseFloat(amount) >= 10
+                            ? "Required to verify who they are when they redeem. Never used for marketing."
+                            : "Add their number and we'll deliver the link — or skip it and share it yourself."}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
