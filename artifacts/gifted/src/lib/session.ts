@@ -52,11 +52,26 @@ export function touchGiftSession() {
 
 /**
  * Call at the very start of a new gift creation (create page mount).
- * Clears completed-gift markers from any prior gift so the preview page
- * cannot restore a stale gift ID, while preserving draft form field data.
+ *
+ * - If a previous gift was completed (its ID or link-shared flag is present),
+ *   wipe the ENTIRE session (form fields + markers) so the new gift starts
+ *   completely fresh.
+ * - If no completed gift is found (mid-build refresh / browser reload),
+ *   wipe only the completed-gift markers and preserve draft form field data
+ *   so the user can resume where they left off.
  */
 export function resetCompletedGiftState() {
-  COMPLETED_GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
+  const prevCompleted =
+    localStorage.getItem("gifted_free_gift_id") ||
+    localStorage.getItem("gifted_paid_id") ||
+    localStorage.getItem("gifted_link_shared");
+
+  if (prevCompleted) {
+    GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
+  } else {
+    COMPLETED_GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
+  }
+
   localStorage.setItem("gifted_session_start", String(Date.now()));
 }
 
