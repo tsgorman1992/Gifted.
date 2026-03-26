@@ -176,7 +176,7 @@ const stepVariants = {
 
 // ─── Progress indicator ───────────────────────────────────────────────────────
 
-const STEP_LABELS = ["Set the scene", "Write the moment", "Complete the gift"];
+const STEP_LABELS = ["Set the scene", "Write the moment", "Complete the moment"];
 
 function ProgressBar({ step, onStepClick }: { step: number; onStepClick: (s: number) => void }) {
   return (
@@ -1616,7 +1616,7 @@ export default function CreatePage() {
                   onClick={goNext}
                   className="w-full sm:w-auto rounded-full h-13 px-8 text-base shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
                 >
-                  Complete the gift <ArrowRight className="ml-2 w-4 h-4" />
+                  Complete the moment <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
             </motion.div>
@@ -1636,7 +1636,7 @@ export default function CreatePage() {
               <ContextPill />
 
               <div className="mb-8">
-                <h1 className="font-serif text-4xl font-medium mb-2">Complete the gift.</h1>
+                <h1 className="font-serif text-4xl font-medium mb-2">Complete the moment.</h1>
                 <p className="text-muted-foreground">
                   Everything here is optional — add as much or as little as feels right.
                 </p>
@@ -2238,7 +2238,7 @@ export default function CreatePage() {
                     </>
                   ) : (
                     <>
-                      Preview your gift <ArrowRight className="ml-2 w-4 h-4" />
+                      Preview your moment <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   )}
                 </Button>
