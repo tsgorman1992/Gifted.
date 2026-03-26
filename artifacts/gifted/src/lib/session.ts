@@ -15,6 +15,8 @@ const GIFT_KEYS = [
   "gifted_video_path",
   "gifted_photo_paths",
   "gifted_paid_id",
+  "gifted_free_gift_id",
+  "gifted_free_gift_url",
   "gifted_gift_id",
   "gifted_gift_paid",
   "gifted_session_start",

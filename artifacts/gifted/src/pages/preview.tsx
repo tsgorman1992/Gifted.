@@ -223,6 +223,14 @@ export default function PreviewPage() {
       setPaymentStatus("confirmed");
     }
 
+    // Restore free gift state (survives OAuth redirect — giftId only lives in state otherwise)
+    const savedFreeId = localStorage.getItem("gifted_free_gift_id");
+    const savedFreeUrl = localStorage.getItem("gifted_free_gift_url");
+    if (savedFreeId && savedFreeUrl && !savedPaidId) {
+      setGiftId(savedFreeId);
+      setShareUrl(savedFreeUrl);
+    }
+
     // Restore linkShared for free gifts (paid gifts use paymentStatus)
     if (localStorage.getItem("gifted_link_shared") && !savedPaidId) {
       setLinkShared(true);
@@ -370,6 +378,14 @@ export default function PreviewPage() {
 
       const url = `${window.location.origin}${base}/api/share/${id}`;
       setShareUrl(url);
+
+      // Persist for free gifts so giftId + shareUrl survive the OAuth redirect
+      const amt2 = localStorage.getItem("gifted_amount");
+      if (!amt2 || parseFloat(amt2) <= 0) {
+        localStorage.setItem("gifted_free_gift_id", id);
+        localStorage.setItem("gifted_free_gift_url", url);
+      }
+
       setSaving(false);
 
       trackEvent("gift_created", {
