@@ -859,7 +859,7 @@ function PhotoCarousel({
             <img
               src={photoUrls[0]}
               alt="Memory"
-              className={`w-full h-auto max-h-[65vh] object-contain block ${loaded ? "opacity-100" : "opacity-0"}`}
+              className={`w-full h-auto max-h-[50vh] sm:max-h-[65vh] object-contain block ${loaded ? "opacity-100" : "opacity-0"}`}
               style={{ transition: "opacity 0.3s ease" }}
               onLoad={() => setPhotoLoaded(p => ({ ...p, 0: true }))}
               onError={() => onPhotoError ? onPhotoError(0) : setPhotoErrors(p => ({ ...p, 0: true }))}
@@ -908,7 +908,7 @@ function PhotoCarousel({
                   <img
                     src={url}
                     alt={`Memory ${i + 1}`}
-                    className={`w-full h-auto max-h-[65vh] object-contain block ${loaded ? "opacity-100" : "opacity-0"}`}
+                    className={`w-full h-auto max-h-[50vh] sm:max-h-[65vh] object-contain block ${loaded ? "opacity-100" : "opacity-0"}`}
                     style={{ transition: "opacity 0.3s ease" }}
                     onLoad={() => setPhotoLoaded(p => ({ ...p, [i]: true }))}
                     onError={() => onPhotoError ? onPhotoError(i) : setPhotoErrors(p => ({ ...p, [i]: true }))}
@@ -2054,7 +2054,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
           >
 
             {/* Hero */}
-            <div className="w-full h-[60vh] md:h-[70vh] relative flex items-end">
+            <div className="w-full h-[40vh] sm:h-[52vh] md:h-[70vh] relative flex items-end">
               <div className="absolute inset-0">
                 <div className="w-full h-full" style={gStyle} />
                 <div
@@ -2132,13 +2132,13 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
             <ScrollHint isDark={isDark} />
 
             {/* Content sections */}
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8 md:space-y-14 -mt-4 md:-mt-6 relative z-20">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-5 sm:space-y-8 md:space-y-14 -mt-4 md:-mt-6 relative z-20">
 
               {/* Note / message — section 0 (hidden when no note) */}
               {personalNote?.trim() && (
                 <Section cfg={cfg} idx={0}>
                   <div
-                    className="rounded-[2.5rem] p-8 md:p-16 border relative overflow-hidden"
+                    className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border relative overflow-hidden"
                     style={isDark
                       ? {
                           background: cfg.cardStyle.bg ?? "rgba(255,248,240,0.05)",
@@ -2157,7 +2157,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                     {experience === "garden-bloom" && (
                       <>
                         <GardenBloomWatermark />
-                        <div style={{ borderTop: "1.5px solid rgba(181,234,215,0.55)", marginBottom: "2rem", width: "100%" }} />
+                        <div style={{ borderTop: "1.5px solid rgba(181,234,215,0.55)", marginBottom: "1.25rem", width: "100%" }} />
                       </>
                     )}
 
@@ -2172,27 +2172,27 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
 
                     {/* Universal top rule — for all other experiences */}
                     {experience !== "garden-bloom" && experience !== "rose-petal" && (
-                      <div style={{ height: 1, background: cfg.cardStyle.border, marginBottom: "2rem", width: "100%", opacity: 0.5 }} />
+                      <div style={{ height: 1, background: cfg.cardStyle.border, marginBottom: "1.25rem", width: "100%", opacity: 0.5 }} />
                     )}
 
                     {cfg.titleStyle === "typewriter" ? (
-                      <p className={`font-serif text-lg sm:text-xl md:text-3xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.9 }}>
+                      <p className={`font-serif text-sm sm:text-base md:text-xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.8 }}>
                         &ldquo;<TypewriterText text={personalNote} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />&rdquo;
                       </p>
                     ) : (
-                      <p className={`font-serif text-lg sm:text-xl md:text-3xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.9 }}>
+                      <p className={`font-serif text-sm sm:text-base md:text-xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.8 }}>
                         &ldquo;{personalNote}&rdquo;
                       </p>
                     )}
 
                     {/* Garden Bloom: bottom accent line */}
                     {experience === "garden-bloom" && (
-                      <div style={{ borderBottom: "1.5px solid rgba(181,234,215,0.55)", marginTop: "2rem", width: "100%" }} />
+                      <div style={{ borderBottom: "1.5px solid rgba(181,234,215,0.55)", marginTop: "1.25rem", width: "100%" }} />
                     )}
 
                     {/* Rose Petal: bottom stationery line */}
                     {experience === "rose-petal" && (
-                      <div className="flex items-center gap-3 mt-7">
+                      <div className="flex items-center gap-3 mt-4 sm:mt-7">
                         <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
                         <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
                         <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
@@ -2201,7 +2201,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
 
                     {/* Universal bottom rule — for all other experiences */}
                     {experience !== "garden-bloom" && experience !== "rose-petal" && (
-                      <div style={{ height: 1, background: cfg.cardStyle.border, marginTop: "2rem", width: "100%", opacity: 0.5 }} />
+                      <div style={{ height: 1, background: cfg.cardStyle.border, marginTop: "1.25rem", width: "100%", opacity: 0.5 }} />
                     )}
                   </div>
                 </Section>
@@ -2439,7 +2439,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                     {cfg.amountStyle === "stellar-reveal" ? (
                       /* Midnight Stars: distinct dark card */
                       <div
-                        className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden"
+                        className="w-full rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 md:p-14 text-center relative overflow-hidden"
                         style={{
                           background: "linear-gradient(135deg, rgba(48,43,99,0.9), rgba(36,36,62,0.95))",
                           border: "1px solid rgba(255,255,255,0.15)",
@@ -2455,10 +2455,10 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               <span>{giftIntent}</span>
                             </div>
                           )}
-                          <h3 className="text-xl md:text-2xl font-medium mb-6 text-white/80">You received</h3>
+                          <h3 className="text-base sm:text-xl md:text-2xl font-medium mb-4 sm:mb-6 text-white/80">You received</h3>
 
                           {/* Dramatic amount reveal */}
-                          <div className="relative flex items-center justify-center mb-8">
+                          <div className="relative flex items-center justify-center mb-5 sm:mb-8">
                             {balanceRevealPhase === "building" && (
                               <>
                                 <motion.div
@@ -2489,7 +2489,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               {balanceRevealPhase !== "revealed" ? (
                                 <motion.div
                                   key="placeholder"
-                                  className="font-serif text-6xl md:text-9xl tracking-tighter text-white"
+                                  className="font-serif text-5xl sm:text-6xl md:text-9xl tracking-tighter text-white"
                                   style={{ filter: "blur(12px)", opacity: 0.25, textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
                                   exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
                                 >
@@ -2498,7 +2498,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               ) : (
                                 <motion.div
                                   key="amount"
-                                  className="font-serif text-6xl md:text-9xl tracking-tighter text-white"
+                                  className="font-serif text-5xl sm:text-6xl md:text-9xl tracking-tighter text-white"
                                   style={{ textShadow: "0 0 40px rgba(180,160,255,0.5)" }}
                                   initial={reducedMotion ? { opacity: 0 } : { scale: 0.7, filter: "blur(20px)", opacity: 0 }}
                                   animate={reducedMotion ? { opacity: 1 } : { scale: [0.7, 1.06, 1.0], filter: "blur(0px)", opacity: 1 }}
@@ -2510,7 +2510,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                             </AnimatePresence>
                           </div>
 
-                          <p className="text-lg mb-10 max-w-md mx-auto text-white/60">
+                          <p className="text-sm sm:text-base mb-5 sm:mb-8 max-w-md mx-auto text-white/60">
                             Sent with intention. Yours to use however you need.
                           </p>
                           <motion.div
@@ -2538,7 +2538,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                     ) : (
                       /* Standard card for all other experiences */
                       <div
-                        className="w-full rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden"
+                        className="w-full rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 md:p-14 text-center relative overflow-hidden"
                         style={
                           cfg.amountStyle === "glow-reveal"
                             ? {
@@ -2569,10 +2569,10 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               <span>{giftIntent}</span>
                             </div>
                           )}
-                          <h3 className="text-xl md:text-2xl font-medium opacity-90 mb-6">You received</h3>
+                          <h3 className="text-base sm:text-xl md:text-2xl font-medium opacity-90 mb-4 sm:mb-6">You received</h3>
 
                           {/* Dramatic amount reveal */}
-                          <div className="relative flex items-center justify-center mb-8">
+                          <div className="relative flex items-center justify-center mb-5 sm:mb-8">
                             {balanceRevealPhase === "building" && (
                               <>
                                 <motion.div
@@ -2600,7 +2600,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               {balanceRevealPhase !== "revealed" ? (
                                 <motion.div
                                   key="placeholder"
-                                  className="font-serif text-6xl md:text-9xl tracking-tighter"
+                                  className="font-serif text-5xl sm:text-6xl md:text-9xl tracking-tighter"
                                   style={{ filter: "blur(12px)", opacity: 0.25 }}
                                   exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
                                 >
@@ -2609,7 +2609,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               ) : (
                                 <motion.div
                                   key="amount"
-                                  className="font-serif text-6xl md:text-9xl tracking-tighter"
+                                  className="font-serif text-5xl sm:text-6xl md:text-9xl tracking-tighter"
                                   initial={reducedMotion ? { opacity: 0 } : { scale: 0.7, filter: "blur(20px)", opacity: 0 }}
                                   animate={reducedMotion ? { opacity: 1 } : { scale: [0.7, 1.06, 1.0], filter: "blur(0px)", opacity: 1 }}
                                   transition={reducedMotion ? { duration: 0.4 } : { type: "spring", stiffness: 260, damping: 20, duration: 0.7 }}
@@ -2620,7 +2620,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                             </AnimatePresence>
                           </div>
 
-                          <p className="text-lg opacity-80 mb-10 max-w-md mx-auto">
+                          <p className="text-sm sm:text-base opacity-80 mb-5 sm:mb-8 max-w-md mx-auto">
                             Sent with intention. Yours to use however you need.
                           </p>
                           <motion.div
