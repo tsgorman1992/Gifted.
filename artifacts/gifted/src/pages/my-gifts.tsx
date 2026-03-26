@@ -93,7 +93,7 @@ function getStatus(gift: GiftSummary): GiftStatus {
 const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string; Icon: React.ComponentType<{ className?: string }> }> = {
   draft:     { label: "Draft",           color: "#92400e", bg: "#fef3c7", Icon: Clock },
   scheduled: { label: "Scheduled",       color: "#0369a1", bg: "#e0f2fe", Icon: CalendarClock },
-  ready:     { label: "Ready to share",  color: "#b45309", bg: "#fef3c7", Icon: Share2 },
+  ready:     { label: "Ready to share",  color: "#92400e", bg: "#fef3c7", Icon: Share2 },
   sent:      { label: "Sent",            color: "#1d4ed8", bg: "#dbeafe", Icon: Package },
   opened:    { label: "Opened",          color: "#6d28d9", bg: "#ede9fe", Icon: Eye },
   redeemed:  { label: "Redeemed",        color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
@@ -294,7 +294,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                     ? CheckCircle2
                     : STATUS_META[step].Icon;
                 const stepColor = isActiveReady
-                  ? "#b45309"
+                  ? "#92400e"
                   : isFinalCompleted && !giftHasBalance && step === "opened"
                     ? "#15803d"
                     : STATUS_META[step].color;
@@ -393,7 +393,9 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <CopyButton url={shareUrl} />
+                  {status !== "ready" && status !== "sent" && (
+                    <CopyButton url={shareUrl} />
+                  )}
                   <a
                     href={`${shareUrl}?preview=true`}
                     target="_blank"
