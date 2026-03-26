@@ -2798,7 +2798,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
           >
             <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
             <span className="text-xs font-medium text-white/70 whitespace-nowrap">
-              Previewing as <span className="text-white font-semibold">{recipientName}</span>
+              Previewing as <span className="text-white font-semibold">{recipientName}</span> will see it
             </span>
             <div className="w-px h-4 bg-white/15 shrink-0" />
             <button
