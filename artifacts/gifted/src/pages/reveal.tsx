@@ -1478,6 +1478,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
   const [giftPaid, setGiftPaid]           = useState<boolean>(true);
   const [isPreview, setIsPreview]         = useState(false);
+  const [previewBarCopied, setPreviewBarCopied] = useState(false);
   const [isOpening, setIsOpening]         = useState(false);
   const [openPhase, setOpenPhase]         = useState(0);
   const [lightboxIdx, setLightboxIdx]     = useState<number | null>(null);
@@ -1877,15 +1878,6 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
               />
             </div>
 
-            {/* Preview mode banner — pre-reveal screen */}
-            {isPreview && (
-              <div className="absolute top-5 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold shadow-lg backdrop-blur-md" style={{ background: "rgba(0,0,0,0.55)", color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.18)" }}>
-                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-                  Preview mode — only you can see this
-                </div>
-              </div>
-            )}
 
             {/* Screen flash when box opens */}
             <AnimatePresence>
@@ -2060,16 +2052,6 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
             transition={{ duration: 0.6, delay: 0.1 }}
             className="w-full pb-20 md:pb-32 relative z-10"
           >
-
-            {/* Preview mode banner */}
-            {isPreview && (
-              <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold shadow-lg backdrop-blur-md" style={{ background: "rgba(0,0,0,0.55)", color: "rgba(255,255,255,0.9)", border: "1px solid rgba(255,255,255,0.18)" }}>
-                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-                  Preview mode — only you can see this
-                </div>
-              </div>
-            )}
 
             {/* Hero */}
             <div className="w-full h-[60vh] md:h-[70vh] relative flex items-end">
@@ -2797,6 +2779,52 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Sender preview bar — slides up from bottom after 1s, stays throughout the experience */}
+      {isPreview && (
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 1, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed bottom-0 left-0 right-0 z-[60] flex justify-center pb-4 px-4 pointer-events-none"
+        >
+          <div
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl pointer-events-auto max-w-full"
+            style={{
+              background: "rgba(10, 10, 14, 0.88)",
+              backdropFilter: "blur(20px) saturate(1.4)",
+              border: "1px solid rgba(255,255,255,0.12)",
+            }}
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+            <span className="text-xs font-medium text-white/70 whitespace-nowrap">
+              Previewing as <span className="text-white font-semibold">{recipientName}</span>
+            </span>
+            <div className="w-px h-4 bg-white/15 shrink-0" />
+            <button
+              type="button"
+              onClick={async () => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("preview");
+                await navigator.clipboard.writeText(url.toString());
+                setPreviewBarCopied(true);
+                setTimeout(() => setPreviewBarCopied(false), 2000);
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white transition-colors whitespace-nowrap"
+            >
+              {previewBarCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {previewBarCopied ? "Copied!" : "Copy link"}
+            </button>
+            <div className="w-px h-4 bg-white/15 shrink-0" />
+            <Link
+              href="/my-gifts"
+              className="text-xs font-semibold text-white/80 hover:text-white transition-colors whitespace-nowrap"
+            >
+              Dashboard
+            </Link>
+          </div>
+        </motion.div>
+      )}
 
       {/* Photo lightbox — carousel-capable */}
       <AnimatePresence>

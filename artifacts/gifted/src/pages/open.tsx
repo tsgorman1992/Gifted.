@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Gift, LogIn, Send, Copy, Check } from "lucide-react";
+import { Loader2, AlertCircle, Gift, LogIn, Copy, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 const RevealPage = React.lazy(() => import("@/pages/reveal"));
@@ -169,21 +169,28 @@ export default function OpenPage() {
 
   // Sender view — shown when the logged-in user is the one who created this gift
   const isSender = !authLoading && isAuthenticated && user && giftSenderUserId && user.id === giftSenderUserId;
+  // When coming from the dashboard, the URL has ?preview=true — let the sender through to the full experience
+  const isPreviewMode = new URLSearchParams(window.location.search).get("preview") === "true";
+
   const handleSenderCopy = async () => {
-    await navigator.clipboard.writeText(window.location.href);
+    // Copy the clean shareable link (strip ?preview=true)
+    const url = new URL(window.location.href);
+    url.searchParams.delete("preview");
+    await navigator.clipboard.writeText(url.toString());
     setSenderCopied(true);
     setTimeout(() => setSenderCopied(false), 2000);
   };
 
-  if (isSender) {
+  // Only block with the info screen when NOT in preview mode (e.g. raw direct link, link unfurl)
+  if (isSender && !isPreviewMode) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-          <Send className="w-9 h-9 text-primary" />
+          <Gift className="w-9 h-9 text-primary" />
         </div>
-        <h1 className="font-serif text-3xl mb-3">You sent this gift</h1>
+        <h1 className="font-serif text-3xl mb-3">Your gift for {giftRecipientName}</h1>
         <p className="text-muted-foreground mb-6 max-w-sm">
-          This gift is on its way to <span className="font-medium text-foreground">{giftRecipientName}</span>. They'll see the full surprise when they open it.
+          Share the link below when you're ready. <span className="font-medium text-foreground">{giftRecipientName}</span> will see the full surprise when they open it.
         </p>
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <Button
