@@ -8,7 +8,7 @@ import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
-  Inbox, Trash2, X, Share2,
+  Inbox, Trash2, X, Share2, Send,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { clearGiftSession } from "@/lib/session";
@@ -574,6 +574,7 @@ export default function MyGiftsPage() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("sent");
   const queryClient = useQueryClient();
+  const [senderBlockedNotice, setSenderBlockedNotice] = useState(false);
 
   // Handle return from auth — read gifted_auth_return from localStorage
   // Format A: "/preview"                         → navigate there (paid gate return)
@@ -600,10 +601,17 @@ export default function MyGiftsPage() {
       fetch(`${BASE}/api/gifted/gifts/${saveReceivedId}/save-received`, {
         method: "PATCH",
         credentials: "include",
-      }).finally(() => {
-        queryClient.invalidateQueries({ queryKey: ["received-gifts"] });
-        setActiveTab("received");
-      });
+      }).then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        const blockedAsSender = body?.isSender === true;
+        if (!blockedAsSender && res.ok) {
+          queryClient.invalidateQueries({ queryKey: ["received-gifts"] });
+          setActiveTab("received");
+        } else if (blockedAsSender) {
+          setSenderBlockedNotice(true);
+          setActiveTab("sent");
+        }
+      }).catch(() => {});
     } else if (returnPath !== "/my-gifts") {
       setLocation(returnPath);
     }
@@ -724,6 +732,32 @@ export default function MyGiftsPage() {
             New gift
           </Button>
         </motion.div>
+
+        {/* ── Sender-blocked notice ── */}
+        <AnimatePresence>
+          {senderBlockedNotice && (
+            <motion.div
+              key="sender-blocked"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3"
+            >
+              <Send className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-amber-800 flex-1">
+                You can't save your own gift as received. It's already in your Sent tab.
+              </p>
+              <button
+                onClick={() => setSenderBlockedNotice(false)}
+                className="text-amber-500 hover:text-amber-700 transition-colors shrink-0"
+                aria-label="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ── Stats row (only on Sent tab) ── */}
         {activeTab === "sent" && !giftsLoading && totalSent > 0 && (

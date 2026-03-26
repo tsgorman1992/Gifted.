@@ -9,11 +9,14 @@ const RevealPage = React.lazy(() => import("@/pages/reveal"));
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-async function saveReceivedGift(giftId: string): Promise<"saved" | "already-mine" | "claimed-by-other"> {
+async function saveReceivedGift(giftId: string): Promise<"saved" | "already-mine" | "claimed-by-other" | "is-sender"> {
   const res = await fetch(`${BASE}/api/gifted/gifts/${giftId}/save-received`, {
     method: "PATCH",
     credentials: "include",
   });
+  if (res.status === 403) {
+    return "is-sender";
+  }
   if (res.status === 409) {
     const body = await res.json().catch(() => ({}));
     if (body?.alreadySaved) return "already-mine";
@@ -24,6 +27,7 @@ async function saveReceivedGift(giftId: string): Promise<"saved" | "already-mine
   }
   const body = await res.json().catch(() => ({}));
   if (body?.alreadySaved) return "already-mine";
+  if (body?.isSender) return "is-sender";
   return "saved";
 }
 
@@ -115,6 +119,8 @@ export default function OpenPage() {
       .then((result) => {
         if (result === "claimed-by-other") {
           setSaveStatus("claimed");
+        } else if (result === "is-sender") {
+          setSaveStatus("idle");
         } else {
           setSaveStatus("saved");
         }
@@ -128,6 +134,7 @@ export default function OpenPage() {
 
   function handleSaveToAccount() {
     if (!giftId) return;
+    if (isAuthenticated && user && giftSenderUserId && user.id === giftSenderUserId) return;
     localStorage.setItem("gifted_auth_return", `/open/${giftId}?save-received=${giftId}`);
     setLocation("/sign-in");
   }

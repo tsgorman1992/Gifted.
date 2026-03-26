@@ -367,7 +367,7 @@ router.patch("/gifted/gifts/:id/save-received", async (req, res) => {
     const { id } = req.params;
 
     const [exists] = await db
-      .select({ id: gifts.id, recipientUserId: gifts.recipientUserId, senderUserId: gifts.senderUserId })
+      .select({ id: gifts.id, recipientUserId: gifts.recipientUserId, senderUserId: gifts.senderUserId, senderEmail: gifts.senderEmail })
       .from(gifts)
       .where(eq(gifts.id, id))
       .limit(1);
@@ -377,8 +377,13 @@ router.patch("/gifted/gifts/:id/save-received", async (req, res) => {
       return;
     }
 
-    if (exists.senderUserId === userId) {
-      res.json({ ok: true, isSender: true });
+    const userEmail = (req as any).user?.email as string | null | undefined;
+
+    const isSenderById = exists.senderUserId != null && exists.senderUserId === userId;
+    const isSenderByEmail = !isSenderById && exists.senderUserId == null && userEmail != null && exists.senderEmail != null && exists.senderEmail.toLowerCase() === userEmail.toLowerCase();
+
+    if (isSenderById || isSenderByEmail) {
+      res.status(403).json({ error: "You cannot save your own gift as received", isSender: true });
       return;
     }
 
@@ -419,10 +424,19 @@ router.get("/gifted/received-gifts", async (req, res) => {
   }
 
   try {
+    const userEmail = (req as any).user?.email as string | null | undefined;
+
     const rows = await db
       .select()
       .from(gifts)
-      .where(and(eq(gifts.recipientUserId, userId), sql`(${gifts.recipientHidden} IS NULL OR ${gifts.recipientHidden} = false)`))
+      .where(and(
+        eq(gifts.recipientUserId, userId),
+        sql`(${gifts.recipientHidden} IS NULL OR ${gifts.recipientHidden} = false)`,
+        sql`(${gifts.senderUserId} IS NULL OR ${gifts.senderUserId} != ${userId})`,
+        ...(userEmail
+          ? [sql`NOT (${gifts.senderUserId} IS NULL AND lower(${gifts.senderEmail}) = lower(${userEmail}))`]
+          : [])
+      ))
       .orderBy(sql`${gifts.openedAt} DESC NULLS LAST`, desc(gifts.createdAt));
 
     res.json(
