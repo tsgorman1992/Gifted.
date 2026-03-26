@@ -19,12 +19,27 @@ const GIFT_KEYS = [
   "gifted_free_gift_url",
   "gifted_gift_id",
   "gifted_gift_paid",
+  "gifted_link_shared",
   "gifted_session_start",
 ];
 
 export function clearGiftSession() {
   GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
 }
+
+/**
+ * Keys that represent a *completed* gift (shared or paid).
+ * These must be wiped whenever the create page starts a new gift so that
+ * the preview page cannot accidentally restore a previous gift's ID.
+ */
+const COMPLETED_GIFT_KEYS = [
+  "gifted_free_gift_id",
+  "gifted_free_gift_url",
+  "gifted_paid_id",
+  "gifted_gift_id",
+  "gifted_gift_paid",
+  "gifted_link_shared",
+];
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
@@ -33,6 +48,16 @@ export function touchGiftSession() {
   if (!localStorage.getItem("gifted_session_start")) {
     localStorage.setItem("gifted_session_start", String(Date.now()));
   }
+}
+
+/**
+ * Call at the very start of a new gift creation (create page mount).
+ * Clears completed-gift markers from any prior gift so the preview page
+ * cannot restore a stale gift ID, while preserving draft form field data.
+ */
+export function resetCompletedGiftState() {
+  COMPLETED_GIFT_KEYS.forEach((k) => localStorage.removeItem(k));
+  localStorage.setItem("gifted_session_start", String(Date.now()));
 }
 
 /**

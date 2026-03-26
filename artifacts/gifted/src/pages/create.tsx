@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import QRCodeLib from "qrcode";
 import { useUpload } from "@workspace/object-storage-web";
-import { touchGiftSession } from "@/lib/session";
+import { resetCompletedGiftState } from "@/lib/session";
 
 import {
   EXPERIENCE_LIST,
@@ -781,8 +781,9 @@ export default function CreatePage() {
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-    // Mark session start so landing page can detect stale drafts
-    touchGiftSession();
+    // Clear any completed-gift state from a prior gift so the preview page
+    // cannot accidentally restore a stale gift ID into this new session.
+    resetCompletedGiftState();
 
     // ── Restore from ?draft= QR handoff (mobile continuation) ──────────────
     try {
