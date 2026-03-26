@@ -28,36 +28,8 @@ function QRCodeDisplay({ url, label }: { url: string; label?: string }) {
       width: 200,
       margin: 2,
       color: { dark: "#000000", light: "#ffffff" },
-      errorCorrectionLevel: 'H',
+      errorCorrectionLevel: 'M',
     }).then(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      const size = canvas.width;
-      const rectW = size * 0.38;
-      const rectH = size * 0.16;
-      const rectX = (size - rectW) / 2;
-      const rectY = (size - rectH) / 2;
-      const radius = rectH * 0.25;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(rectX + radius, rectY);
-      ctx.lineTo(rectX + rectW - radius, rectY);
-      ctx.quadraticCurveTo(rectX + rectW, rectY, rectX + rectW, rectY + radius);
-      ctx.lineTo(rectX + rectW, rectY + rectH - radius);
-      ctx.quadraticCurveTo(rectX + rectW, rectY + rectH, rectX + rectW - radius, rectY + rectH);
-      ctx.lineTo(rectX + radius, rectY + rectH);
-      ctx.quadraticCurveTo(rectX, rectY + rectH, rectX, rectY + rectH - radius);
-      ctx.lineTo(rectX, rectY + radius);
-      ctx.quadraticCurveTo(rectX, rectY, rectX + radius, rectY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#000000';
-      ctx.font = `bold ${Math.round(size * 0.075)}px Georgia, serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('gifted.', size / 2, size / 2);
       setReady(true);
     }).catch(() => setError(true));
   }, [url]);
@@ -87,6 +59,9 @@ function QRCodeDisplay({ url, label }: { url: string; label?: string }) {
         style={{ opacity: ready ? 1 : 0, transition: "opacity 0.3s ease" }}
       >
         <canvas ref={canvasRef} style={{ display: "block", borderRadius: 8 }} />
+        {ready && (
+          <p className="text-center text-[10px] font-semibold tracking-wide text-muted-foreground/60 mt-1.5" style={{ fontFamily: "Georgia, serif" }}>gifted.</p>
+        )}
       </div>
       {!ready && (
         <div className="w-[224px] h-[224px] rounded-2xl border border-border bg-secondary animate-pulse" />
