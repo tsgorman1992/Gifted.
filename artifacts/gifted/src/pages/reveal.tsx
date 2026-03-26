@@ -2329,6 +2329,19 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                 const hasFailed = !!linkFailures[linkIdx];
                 const hasCopied = !!linkCopied[linkIdx];
 
+                const youtubeId = (() => {
+                  try {
+                    const parsed = new URL(link.url);
+                    if (parsed.hostname.includes("youtu.be")) return parsed.pathname.slice(1).split("?")[0] || null;
+                    if (parsed.hostname.includes("youtube.com")) {
+                      if (parsed.pathname.startsWith("/shorts/")) return parsed.pathname.split("/shorts/")[1].split("?")[0] || null;
+                      return parsed.searchParams.get("v");
+                    }
+                    return null;
+                  } catch { return null; }
+                })();
+                const isYouTube = !!youtubeId;
+
                 const handleLinkClick = (e: React.MouseEvent) => {
                   e.preventDefault();
                   try {
@@ -2359,7 +2372,32 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                       }
                     >
                       {experience === "garden-bloom" && <GardenBloomWatermark />}
-                      {hasFailed ? (
+
+                      {isYouTube ? (
+                        <div className="flex flex-col gap-3">
+                          {link.label && (
+                            <p className={`font-semibold text-base leading-snug line-clamp-2 ${isDark ? "text-white" : "text-foreground"}`}>{link.label}</p>
+                          )}
+                          <div className="relative w-full rounded-2xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
+                            <iframe
+                              src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&playsinline=1`}
+                              title={label}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                              allowFullScreen
+                              className="absolute inset-0 w-full h-full"
+                              style={{ border: "none" }}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleLinkClick}
+                            className={`flex items-center gap-1.5 text-xs font-medium self-start transition-opacity hover:opacity-70 ${isDark ? "text-white/40" : "text-muted-foreground"}`}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Open on YouTube
+                          </button>
+                        </div>
+                      ) : hasFailed ? (
                         <div className="flex flex-col gap-3">
                           <div className="flex items-center gap-4">
                             <div
