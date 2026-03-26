@@ -2369,7 +2369,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               <ExternalLink className={`w-6 h-6 ${isDark ? "text-white/40" : "text-muted-foreground/50"}`} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`font-semibold text-base leading-tight line-clamp-1 ${isDark ? "text-white/70" : "text-foreground/70"}`}>{label}</p>
+                              <p className={`font-semibold text-base leading-snug line-clamp-2 ${isDark ? "text-white/70" : "text-foreground/70"}`}>{label}</p>
                               <p className={`text-sm ${isDark ? "text-white/40" : "text-muted-foreground"}`}>Couldn&apos;t open this link</p>
                             </div>
                           </div>
@@ -2399,7 +2399,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                               }
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={`font-semibold text-base leading-tight line-clamp-1 ${isDark ? "text-white" : "text-foreground"}`}>{label}</p>
+                              <p className={`font-semibold text-base leading-snug line-clamp-2 ${isDark ? "text-white" : "text-foreground"}`}>{label}</p>
                               <p className={`text-sm truncate ${isDark ? "text-white/50" : "text-muted-foreground"}`}>{subtitle}</p>
                             </div>
                             <ExternalLink className={`w-5 h-5 flex-shrink-0 ${isDark ? "text-white/40" : "text-muted-foreground"}`} />
