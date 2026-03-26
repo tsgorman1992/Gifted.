@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
@@ -1485,6 +1485,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const [reactionEmoji, setReactionEmoji] = useState<string | null>(null);
   const [reactionSent, setReactionSent]   = useState(false);
   const [reactionSkipped, setReactionSkipped] = useState(false);
+  const [, navigate] = useLocation();
   const [balanceRevealPhase, setBalanceRevealPhase] = useState<"hidden" | "building" | "revealed">("hidden");
   const [trackingData, setTrackingData]   = useState<{
     carrier: string;
@@ -2767,18 +2768,29 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                 <p className={`text-sm mb-6 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
                   Build a moment in minutes — a personal note, video, photos, and a cash balance they can actually use.
                 </p>
-                <Link href="/create">
-                  <button
-                    type="button"
-                    className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all hover:-translate-y-0.5 ${
-                      isDark
-                        ? "bg-white text-black hover:bg-white/90"
-                        : "bg-foreground text-background hover:bg-foreground/90"
-                    }`}
-                  >
-                    Build a moment <Sparkles className="w-4 h-4" />
-                  </button>
-                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const keys = [
+                      "gifted_recipient_name", "gifted_sender_name", "gifted_recipient_phone",
+                      "gifted_occasion", "gifted_gift_title", "gifted_personal_note",
+                      "gifted_extra_links", "gifted_playlist_url", "gifted_amount",
+                      "gifted_intent", "gifted_experience", "gifted_video_path",
+                      "gifted_photo_paths", "gifted_gift_id", "gifted_gift_paid",
+                      "gifted_scheduled_for", "gifted_scheduled_time",
+                      "gifted_tracking_carrier", "gifted_tracking_number",
+                    ];
+                    keys.forEach(k => localStorage.removeItem(k));
+                    navigate("/create");
+                  }}
+                  className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all hover:-translate-y-0.5 ${
+                    isDark
+                      ? "bg-white text-black hover:bg-white/90"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                  }`}
+                >
+                  Build a moment <Sparkles className="w-4 h-4" />
+                </button>
               </div>
             </div>}
 
