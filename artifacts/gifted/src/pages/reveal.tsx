@@ -807,6 +807,7 @@ function PhotoCarousel({
   setPhotoLoaded,
   setPhotoErrors,
   setLightboxIdx,
+  onPhotoError,
   cfg,
   isDark,
 }: {
@@ -816,6 +817,7 @@ function PhotoCarousel({
   setPhotoLoaded: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
   setPhotoErrors: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
   setLightboxIdx: (idx: number | null) => void;
+  onPhotoError?: (i: number) => void;
   cfg: RevealCfg;
   isDark: boolean;
 }) {
@@ -860,7 +862,7 @@ function PhotoCarousel({
               className={`w-full h-auto max-h-[65vh] object-contain block ${loaded ? "opacity-100" : "opacity-0"}`}
               style={{ transition: "opacity 0.3s ease" }}
               onLoad={() => setPhotoLoaded(p => ({ ...p, 0: true }))}
-              onError={() => setPhotoErrors(p => ({ ...p, 0: true }))}
+              onError={() => onPhotoError ? onPhotoError(0) : setPhotoErrors(p => ({ ...p, 0: true }))}
             />
             {loaded && (
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
@@ -909,7 +911,7 @@ function PhotoCarousel({
                     className={`w-full h-auto max-h-[65vh] object-contain block ${loaded ? "opacity-100" : "opacity-0"}`}
                     style={{ transition: "opacity 0.3s ease" }}
                     onLoad={() => setPhotoLoaded(p => ({ ...p, [i]: true }))}
-                    onError={() => setPhotoErrors(p => ({ ...p, [i]: true }))}
+                    onError={() => onPhotoError ? onPhotoError(i) : setPhotoErrors(p => ({ ...p, [i]: true }))}
                   />
                   {loaded && (
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
@@ -1460,6 +1462,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const [videoRefreshing, setVideoRefreshing] = useState(false);
   const videoRef                          = useRef<HTMLVideoElement>(null);
   const videoPathRef                      = useRef<string | null>(null);
+  const photoPathsRef                     = useRef<string[]>([]);
   const [photoUrls, setPhotoUrls]         = useState<string[]>([]);
   const [photoErrors, setPhotoErrors]     = useState<Record<number, boolean>>({});
   const [photoLoaded, setPhotoLoaded]     = useState<Record<number, boolean>>({});
@@ -1588,6 +1591,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
           }
 
           if (Array.isArray(gift.photoPaths) && gift.photoPaths.length > 0) {
+            photoPathsRef.current = gift.photoPaths;
             Promise.all(
               gift.photoPaths.map((p: string) =>
                 fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(p)}`)
@@ -1639,6 +1643,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
     if (pp) {
       try {
         const paths: string[] = JSON.parse(pp);
+        photoPathsRef.current = paths;
         Promise.all(
           paths.map(p =>
             fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(p)}`)
@@ -1808,6 +1813,30 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
     setVideoError(true);
     setVideoRefreshing(false);
   }, [base, videoRefreshing]);
+
+  const handlePhotoError = useCallback(async (i: number) => {
+    const path = photoPathsRef.current[i];
+    if (!path) {
+      setPhotoErrors(p => ({ ...p, [i]: true }));
+      return;
+    }
+    try {
+      const res = await fetch(`${base}/api/storage/object-url?path=${encodeURIComponent(path)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.url) {
+          setPhotoUrls(prev => {
+            const next = [...prev];
+            next[i] = data.url;
+            return next;
+          });
+          setPhotoErrors(p => ({ ...p, [i]: false }));
+          return;
+        }
+      }
+    } catch { /* fall through */ }
+    setPhotoErrors(p => ({ ...p, [i]: true }));
+  }, [base]);
 
 
   // ── Page-level style override for dark themes
@@ -2256,6 +2285,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                     setPhotoLoaded={setPhotoLoaded}
                     setPhotoErrors={setPhotoErrors}
                     setLightboxIdx={setLightboxIdx}
+                    onPhotoError={handlePhotoError}
                     cfg={cfg}
                     isDark={isDark}
                   />

@@ -92,7 +92,7 @@ router.get("/storage/object-url", async (req: Request, res: Response) => {
     return;
   }
   try {
-    const signedUrl = await objectStorageService.getObjectEntitySignedUrl(rawPath, 3600);
+    const signedUrl = await objectStorageService.getObjectEntitySignedUrl(rawPath, 604800);
     res.json({ url: signedUrl });
   } catch (error) {
     if (error instanceof ObjectNotFoundError) {
