@@ -310,6 +310,19 @@ export default function PreviewPage() {
     }
   }, [isAuthenticated, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Silently claim the gift when the user signs in (handles Google OAuth return)
+  const claimedRef = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated || authLoading || claimedRef.current) return;
+    const id = giftId || localStorage.getItem("gifted_gift_id");
+    if (!id) return;
+    claimedRef.current = true;
+    fetch(`${base}/api/gifted/gifts/${id}/claim`, {
+      method: "PATCH",
+      credentials: "include",
+    }).catch(() => {});
+  }, [isAuthenticated, authLoading, giftId, base]);
+
   // Fire signup_nudge_shown once when the paid nudge becomes visible
   const nudgeShownFiredRef = useRef(false);
   useEffect(() => {
@@ -463,7 +476,6 @@ export default function PreviewPage() {
           credentials: "include",
         }).catch(() => {});
       }
-      setLocation("/my-gifts");
     } catch {
       setNudgeError("Unable to connect. Please try again.");
     } finally {
@@ -991,7 +1003,7 @@ export default function PreviewPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (giftId) localStorage.setItem("gifted_auth_return", `/my-gifts?claim=${giftId}`);
+                            if (giftId) localStorage.setItem("gifted_auth_return", `/preview`);
                             window.location.href = `${base}/api/auth/google`;
                           }}
                           className="w-full h-10 flex items-center justify-center gap-2.5 rounded-xl border border-green-300 bg-white hover:bg-green-50 dark:border-green-700 dark:bg-green-950/30 dark:hover:bg-green-900/40 transition-colors text-sm font-medium text-green-900 dark:text-green-300"
@@ -1060,7 +1072,7 @@ export default function PreviewPage() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (giftId) localStorage.setItem("gifted_auth_return", `/my-gifts?claim=${giftId}`);
+                            if (giftId) localStorage.setItem("gifted_auth_return", `/preview`);
                             window.location.href = `${base}/api/auth/google`;
                           }}
                           className="w-full h-10 flex items-center justify-center gap-2.5 rounded-xl border border-green-300 bg-white hover:bg-green-50 dark:border-green-700 dark:bg-green-950/30 dark:hover:bg-green-900/40 transition-colors text-sm font-medium text-green-900 dark:text-green-300"

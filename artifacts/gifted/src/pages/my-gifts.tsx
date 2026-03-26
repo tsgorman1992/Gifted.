@@ -8,7 +8,7 @@ import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
-  Inbox, Trash2, X,
+  Inbox, Trash2, X, Share2,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { clearGiftSession } from "@/lib/session";
@@ -75,7 +75,7 @@ async function fetchReceivedGifts(): Promise<ReceivedGiftSummary[]> {
   return res.json();
 }
 
-type GiftStatus = "draft" | "scheduled" | "sent" | "opened" | "redeemed";
+type GiftStatus = "draft" | "scheduled" | "ready" | "sent" | "opened" | "redeemed";
 
 function hasBalance(gift: GiftSummary): boolean {
   return !!gift.amount && parseFloat(gift.amount) > 0;
@@ -84,17 +84,19 @@ function hasBalance(gift: GiftSummary): boolean {
 function getStatus(gift: GiftSummary): GiftStatus {
   if (gift.redeemedAt && hasBalance(gift)) return "redeemed";
   if (gift.openedAt)   return "opened";
+  if (gift.paid && !hasBalance(gift)) return "ready";
   if (gift.paid)       return "sent";
   if (gift.scheduledFor && !gift.scheduleDelivered) return "scheduled";
   return "draft";
 }
 
 const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string; Icon: React.ComponentType<{ className?: string }> }> = {
-  draft:     { label: "Draft",     color: "#92400e", bg: "#fef3c7", Icon: Clock },
-  scheduled: { label: "Scheduled", color: "#0369a1", bg: "#e0f2fe", Icon: CalendarClock },
-  sent:      { label: "Sent",      color: "#1d4ed8", bg: "#dbeafe", Icon: Package },
-  opened:    { label: "Opened",    color: "#6d28d9", bg: "#ede9fe", Icon: Eye },
-  redeemed:  { label: "Redeemed",  color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
+  draft:     { label: "Draft",           color: "#92400e", bg: "#fef3c7", Icon: Clock },
+  scheduled: { label: "Scheduled",       color: "#0369a1", bg: "#e0f2fe", Icon: CalendarClock },
+  ready:     { label: "Ready to share",  color: "#b45309", bg: "#fef3c7", Icon: Share2 },
+  sent:      { label: "Sent",            color: "#1d4ed8", bg: "#dbeafe", Icon: Package },
+  opened:    { label: "Opened",          color: "#6d28d9", bg: "#ede9fe", Icon: Eye },
+  redeemed:  { label: "Redeemed",        color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
 };
 
 function greeting(firstName: string | null) {
@@ -126,7 +128,7 @@ function StatCard({ label, value, sub, Icon, delay }: {
   );
 }
 
-function CopyButton({ url }: { url: string }) {
+function CopyButton({ url, full = false }: { url: string; full?: boolean }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -135,6 +137,23 @@ function CopyButton({ url }: { url: string }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  if (full) {
+    return (
+      <button
+        onClick={handleCopy}
+        className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-primary/10 border border-primary/20 text-primary font-medium text-sm hover:bg-primary/20 transition-all"
+      >
+        <AnimatePresence mode="wait">
+          {copied
+            ? <motion.span key="check" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><Check className="w-4 h-4 text-green-600" /><span className="text-green-700">Copied!</span></motion.span>
+            : <motion.span key="copy" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><Copy className="w-4 h-4" />Copy gift link</motion.span>
+          }
+        </AnimatePresence>
+      </button>
+    );
+  }
+
   return (
     <button
       onClick={handleCopy}
@@ -253,13 +272,13 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
               const orderedStatuses: GiftStatus[] = isScheduled
                 ? (giftHasBalance ? ["scheduled", "sent", "opened", "redeemed"] : ["scheduled", "sent", "opened"])
                 : (giftHasBalance ? ["sent", "opened", "redeemed"] : ["sent", "opened"]);
-              const effectiveStatus: GiftStatus = (status === "draft" || status === "scheduled")
+              const effectiveStatus: GiftStatus = (status === "draft" || status === "scheduled" || status === "ready")
                 ? (isScheduled ? "scheduled" : "sent")
                 : status;
               const statusIdx = orderedStatuses.indexOf(effectiveStatus);
               const isLastStep = (i: number) => i === steps.length - 1;
               return steps.map((step, i) => {
-                const done = i <= statusIdx && status !== "draft";
+                const done = i <= statusIdx && status !== "draft" && status !== "ready";
                 const isFinalCompleted = done && isLastStep(i);
                 const StepIcon = isFinalCompleted && !giftHasBalance && step === "opened"
                   ? CheckCircle2
@@ -336,41 +355,52 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
-                className="flex items-center justify-between gap-2"
+                className="flex flex-col gap-2"
+                onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground">
-                    {status === "redeemed" && gift.redeemedAt
-                      ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
-                      : status === "opened" && gift.openedAt
-                        ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
-                        : status === "sent"
-                          ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                        : status === "scheduled" && gift.scheduledFor
-                          ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
-                          : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
-                  </span>
-                </div>
+                {(status === "ready" || status === "sent") && (
+                  <CopyButton url={shareUrl} full />
+                )}
 
-                <div className="flex items-center gap-1 shrink-0">
-                  <CopyButton url={shareUrl} />
-                  <a
-                    href={`${shareUrl}?preview=true`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Preview gift"
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                  <button
-                    title="Remove from dashboard"
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                    className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-muted-foreground">
+                      {status === "redeemed" && gift.redeemedAt
+                        ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                        : status === "opened" && gift.openedAt
+                          ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                          : status === "sent"
+                            ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                          : status === "ready"
+                            ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                          : status === "scheduled" && gift.scheduledFor
+                            ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
+                            : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {status !== "ready" && status !== "sent" && (
+                      <CopyButton url={shareUrl} />
+                    )}
+                    <a
+                      href={`${shareUrl}?preview=true`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Preview gift"
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                    <button
+                      title="Remove from dashboard"
+                      onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                      className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Gift, LogIn, Send } from "lucide-react";
+import { Loader2, AlertCircle, Gift, LogIn, Send, Copy, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 const RevealPage = React.lazy(() => import("@/pages/reveal"));
@@ -39,6 +39,7 @@ export default function OpenPage() {
   const [giftRecipientName, setGiftRecipientName] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "claimed">("idle");
+  const [senderCopied, setSenderCopied] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -161,6 +162,12 @@ export default function OpenPage() {
 
   // Sender view — shown when the logged-in user is the one who created this gift
   const isSender = !authLoading && isAuthenticated && user && giftSenderUserId && user.id === giftSenderUserId;
+  const handleSenderCopy = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setSenderCopied(true);
+    setTimeout(() => setSenderCopied(false), 2000);
+  };
+
   if (isSender) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
@@ -168,20 +175,32 @@ export default function OpenPage() {
           <Send className="w-9 h-9 text-primary" />
         </div>
         <h1 className="font-serif text-3xl mb-3">You sent this gift</h1>
-        <p className="text-muted-foreground mb-8 max-w-sm">
+        <p className="text-muted-foreground mb-6 max-w-sm">
           This gift is on its way to <span className="font-medium text-foreground">{giftRecipientName}</span>. They'll see the full surprise when they open it.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Link href="/my-gifts">
-            <Button className="rounded-xl w-full sm:w-auto">
-              View sent gifts
-            </Button>
-          </Link>
-          <Link href="/">
-            <Button variant="outline" className="rounded-xl w-full sm:w-auto">
-              Go home
-            </Button>
-          </Link>
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <Button
+            onClick={handleSenderCopy}
+            className="w-full rounded-xl gap-2"
+          >
+            {senderCopied ? (
+              <><Check className="w-4 h-4" /> Copied!</>
+            ) : (
+              <><Copy className="w-4 h-4" /> Copy gift link</>
+            )}
+          </Button>
+          <div className="flex gap-3">
+            <Link href="/my-gifts" className="flex-1">
+              <Button variant="outline" className="rounded-xl w-full">
+                Back to dashboard
+              </Button>
+            </Link>
+            <Link href="/" className="flex-1">
+              <Button variant="outline" className="rounded-xl w-full">
+                Go home
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
