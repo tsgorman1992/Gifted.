@@ -158,6 +158,7 @@ router.post("/gifted/gifts", async (req, res) => {
       extraLinks: (Array.isArray(extraLinks) && extraLinks.length > 0) ? extraLinks : null,
       amount: amount || null,
       intent: intent || null,
+      paid: !amount || parseFloat(amount) === 0,
       scheduledFor: scheduledFor,
       trackingCarrier: trackingCarrier || null,
       trackingNumber: trackingNumber || null,
