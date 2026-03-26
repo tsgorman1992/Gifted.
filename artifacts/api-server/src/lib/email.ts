@@ -243,3 +243,125 @@ export async function sendOperatorCashoutAlert(params: OperatorCashoutParams): P
     console.error("[email] sendOperatorCashoutAlert exception:", err);
   }
 }
+
+// ─── 4. Gift opened notification (email fallback when no SMS) ─────────────────
+
+interface GiftOpenedParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+  giftId: string;
+}
+
+export async function sendGiftOpenedNotice(params: GiftOpenedParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName, giftId } = params;
+  const dashboardUrl = `${BASE_URL}/my-gifts`;
+
+  const body = `
+    ${h1(`${recipientName} just opened your gift! 🎁`)}
+    ${p(`Your gift for <strong>${recipientName}</strong> has been opened. Head to your dashboard to see their reaction.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("See their reaction", dashboardUrl)}
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `${recipientName} opened your gift 🎁`,
+      html: layout(`Gift opened — gifted.`, body),
+    });
+    if (error) console.error("[email] sendGiftOpenedNotice error:", error);
+    else console.log(`[email] Gift opened notice sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendGiftOpenedNotice exception:", err);
+  }
+}
+
+// ─── 5. Stale gift nudge (email fallback when no SMS) ─────────────────────────
+
+interface SenderNudgeParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+  giftId: string;
+}
+
+export async function sendSenderNudgeEmail(params: SenderNudgeParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName, giftId } = params;
+  const giftUrl = `${BASE_URL}/open/${giftId}`;
+
+  const body = `
+    ${h1(`Your gift to ${recipientName} hasn't been opened yet`)}
+    ${p(`Just a heads up — your gift for <strong>${recipientName}</strong> is still waiting. If you haven't shared the link yet, here it is ready to forward.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("View gift link", giftUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Copy the link and send it however feels right — text, iMessage, WhatsApp, or email.</p>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Your gift for ${recipientName} is still waiting to be opened`,
+      html: layout(`Gift not opened yet — gifted.`, body),
+    });
+    if (error) console.error("[email] sendSenderNudgeEmail error:", error);
+    else console.log(`[email] Nudge email sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendSenderNudgeEmail exception:", err);
+  }
+}
+
+// ─── 6. Scheduled gift ready (email fallback when no SMS) ─────────────────────
+
+interface ScheduledReadyParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+  giftId: string;
+}
+
+export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName, giftId } = params;
+  const giftUrl = `${BASE_URL}/open/${giftId}`;
+
+  const body = `
+    ${h1(`Your gift for ${recipientName} is live!`)}
+    ${p(`The moment you scheduled has arrived. Your gift for <strong>${recipientName}</strong> is ready — copy the link below and send it whenever you're ready.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("View gift link", giftUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Copy the link and share it however feels right — when it comes from you, it lands differently.</p>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Your gift for ${recipientName} is ready to share 🎁`,
+      html: layout(`Gift ready — gifted.`, body),
+    });
+    if (error) console.error("[email] sendScheduledGiftReadyEmail error:", error);
+    else console.log(`[email] Scheduled ready email sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendScheduledGiftReadyEmail exception:", err);
+  }
+}

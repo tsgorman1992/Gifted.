@@ -295,17 +295,34 @@ router.post("/stripe/webhook", async (req, res) => {
     const giftId = session.metadata?.giftId;
 
     if (giftId && session.payment_status === "paid") {
+      const [existing] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
+      const alreadyPaid = existing?.paid ?? false;
+      const senderEmail = session.customer_details?.email ?? null;
+
       await db
         .update(gifts)
         .set({
           paid: true,
-          senderEmail: session.customer_details?.email ?? null,
+          senderEmail,
           stripePaymentIntentId:
             typeof session.payment_intent === "string"
               ? session.payment_intent
               : (session.payment_intent?.id ?? null),
         })
         .where(eq(gifts.id, giftId));
+
+      // Send receipt if not already sent (webhook may fire after confirm-payment already handled it)
+      if (!alreadyPaid && senderEmail && existing) {
+        sendSenderReceipt({
+          to: senderEmail,
+          senderName:    existing.senderName,
+          recipientName: existing.recipientName,
+          giftId:        existing.id,
+          amount:        existing.amount,
+          occasion:      existing.occasion,
+          giftTitle:     existing.giftTitle,
+        }).catch(() => {});
+      }
     }
   }
 

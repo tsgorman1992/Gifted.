@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { gifts } from "@workspace/db/schema";
 import { and, isNotNull, isNull, lte, eq } from "drizzle-orm";
 import twilio from "twilio";
+import { sendSenderNudgeEmail, sendScheduledGiftReadyEmail } from "./lib/email";
 
 interface TrackingEvent {
   status: string;
@@ -88,12 +89,20 @@ async function sendScheduledGifts() {
             .where(eq(gifts.id, gift.id));
           console.log(`[scheduler] Gift ${gift.id} marked delivered`);
         } else if (!gift.senderPhone) {
-          // No phone on file — mark delivered so we don't loop forever
+          // No phone on file — try email fallback, then mark delivered so we don't loop forever
+          if (gift.senderEmail) {
+            await sendScheduledGiftReadyEmail({
+              to: gift.senderEmail,
+              senderName: gift.senderName,
+              recipientName: gift.recipientName,
+              giftId: gift.id,
+            }).catch(() => {});
+          }
           await db
             .update(gifts)
             .set({ scheduleDelivered: true })
             .where(eq(gifts.id, gift.id));
-          console.warn(`[scheduler] Gift ${gift.id} has no sender phone — marked delivered without SMS`);
+          console.warn(`[scheduler] Gift ${gift.id} has no sender phone — marked delivered${gift.senderEmail ? " (email fallback sent)" : " without notification"}`);
         } else {
           console.warn(`[scheduler] Gift ${gift.id} — SMS failed, will retry next tick`);
         }
@@ -209,7 +218,9 @@ async function nudgeStaleGifts() {
       .select({
         id: gifts.id,
         recipientName: gifts.recipientName,
+        senderName: gifts.senderName,
         senderPhone: gifts.senderPhone,
+        senderEmail: gifts.senderEmail,
       })
       .from(gifts)
       .where(
@@ -217,7 +228,6 @@ async function nudgeStaleGifts() {
           eq(gifts.paid, true),
           isNull(gifts.openedAt),
           isNull(gifts.nudgeSentAt),
-          isNotNull(gifts.senderPhone),
           lte(gifts.createdAt, threeDaysAgo),
         ),
       );
@@ -226,15 +236,26 @@ async function nudgeStaleGifts() {
 
     for (const gift of stale) {
       try {
-        const giftUrl = `${appOrigin}/open/${gift.id}`;
-        const body = [
-          `gifted. 🎁 Your gift to ${gift.recipientName} hasn't been opened yet.`,
-          ``,
-          `If you haven't sent the link yet, here it is — forward it whenever you're ready:`,
-          giftUrl,
-        ].join("\n");
-
-        await smsSender(gift.senderPhone, body);
+        if (gift.senderPhone) {
+          const giftUrl = `${appOrigin}/open/${gift.id}`;
+          const body = [
+            `gifted. 🎁 Your gift to ${gift.recipientName} hasn't been opened yet.`,
+            ``,
+            `If you haven't sent the link yet, here it is — forward it whenever you're ready:`,
+            giftUrl,
+          ].join("\n");
+          await smsSender(gift.senderPhone, body);
+        } else if (gift.senderEmail) {
+          await sendSenderNudgeEmail({
+            to: gift.senderEmail,
+            senderName: gift.senderName,
+            recipientName: gift.recipientName,
+            giftId: gift.id,
+          });
+        } else {
+          // No contact info — stamp nudgeSentAt anyway to avoid infinite loop
+          console.warn(`[scheduler] Gift ${gift.id} has no phone or email — nudge skipped`);
+        }
 
         await db
           .update(gifts)

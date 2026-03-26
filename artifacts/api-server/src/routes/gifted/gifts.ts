@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { db, gifts } from "@workspace/db";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
 import twilio from "twilio";
+import { sendGiftOpenedNotice } from "../../lib/email";
 
 function normPhone(raw: string): string {
   const d = raw.replace(/\D/g, "");
@@ -216,15 +217,24 @@ router.patch("/gifted/gifts/:id/opened", async (req, res) => {
   try {
     const { id } = req.params;
     const [gift] = await db
-      .select({ id: gifts.id, openedAt: gifts.openedAt, senderPhone: gifts.senderPhone, recipientName: gifts.recipientName })
+      .select({ id: gifts.id, openedAt: gifts.openedAt, senderPhone: gifts.senderPhone, senderEmail: gifts.senderEmail, senderName: gifts.senderName, recipientName: gifts.recipientName })
       .from(gifts).where(eq(gifts.id, id)).limit(1);
     if (!gift) return res.status(404).json({ error: "Gift not found" });
     if (!gift.openedAt) {
       await db.update(gifts).set({ openedAt: new Date() }).where(eq(gifts.id, id));
-      smsSender(
-        gift.senderPhone,
-        `gifted. 🎁\n${gift.recipientName} just opened your gift! Head to your dashboard to see their reaction.`
-      );
+      if (gift.senderPhone) {
+        smsSender(
+          gift.senderPhone,
+          `gifted. 🎁\n${gift.recipientName} just opened your gift! Head to your dashboard to see their reaction.`
+        );
+      } else if (gift.senderEmail) {
+        sendGiftOpenedNotice({
+          to: gift.senderEmail,
+          senderName: gift.senderName,
+          recipientName: gift.recipientName,
+          giftId: gift.id,
+        }).catch(() => {});
+      }
     }
     return res.json({ ok: true });
   } catch (err) {
