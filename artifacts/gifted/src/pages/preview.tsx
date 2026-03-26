@@ -894,7 +894,7 @@ export default function PreviewPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-                        {isPaid ? "Payment received — gift ready!" : "Gift link sent!"}
+                        {isPaid ? "Payment received — gift ready!" : "Link copied — now send it!"}
                       </p>
                       <p className="text-xs text-green-700/70 dark:text-green-400/70 mt-0.5">
                         {recipientName} will see a beautiful reveal when they open it.
@@ -907,7 +907,7 @@ export default function PreviewPage() {
                     {[
                       {
                         icon: CheckCircle2,
-                        label: isPaid ? "Payment received" : "Link sent",
+                        label: isPaid ? "Payment received" : "Link copied",
                         sub: "Done",
                         done: true,
                         color: "#15803d",
