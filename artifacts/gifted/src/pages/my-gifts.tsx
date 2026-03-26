@@ -261,6 +261,13 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             </div>
           )}
 
+          {/* Prominent copy CTA for ready/sent gifts — shown above the timeline */}
+          {!confirmDelete && (status === "ready" || status === "sent") && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <CopyButton url={shareUrl} full />
+            </div>
+          )}
+
           <div className="flex items-center gap-0 text-xs">
             {(() => {
               const isScheduled = !!gift.scheduledFor;
@@ -279,27 +286,39 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
               const isLastStep = (i: number) => i === steps.length - 1;
               return steps.map((step, i) => {
                 const done = i <= statusIdx && status !== "draft" && status !== "ready";
+                const isActiveReady = status === "ready" && i === 0;
                 const isFinalCompleted = done && isLastStep(i);
-                const StepIcon = isFinalCompleted && !giftHasBalance && step === "opened"
-                  ? CheckCircle2
-                  : STATUS_META[step].Icon;
-                const stepColor = isFinalCompleted && !giftHasBalance && step === "opened"
-                  ? "#15803d"
-                  : STATUS_META[step].color;
-                const stepBg = isFinalCompleted && !giftHasBalance && step === "opened"
-                  ? "#dcfce7"
-                  : STATUS_META[step].bg;
-                const label = step === "scheduled" ? "Scheduled" : step === "sent" ? "Sent" : step === "opened" ? "Opened" : "Redeemed";
+                const StepIcon = isActiveReady
+                  ? Share2
+                  : isFinalCompleted && !giftHasBalance && step === "opened"
+                    ? CheckCircle2
+                    : STATUS_META[step].Icon;
+                const stepColor = isActiveReady
+                  ? "#b45309"
+                  : isFinalCompleted && !giftHasBalance && step === "opened"
+                    ? "#15803d"
+                    : STATUS_META[step].color;
+                const stepBg = isActiveReady
+                  ? "#fef3c7"
+                  : isFinalCompleted && !giftHasBalance && step === "opened"
+                    ? "#dcfce7"
+                    : STATUS_META[step].bg;
+                const label = isActiveReady
+                  ? "Share link"
+                  : step === "scheduled" ? "Scheduled"
+                  : step === "sent" ? "Sent"
+                  : step === "opened" ? "Opened"
+                  : "Redeemed";
                 return (
                   <React.Fragment key={step}>
                     <div className="flex flex-col items-center gap-0.5">
                       <div
                         className="w-6 h-6 rounded-full flex items-center justify-center transition-colors"
-                        style={{ background: done ? stepBg : "hsl(var(--secondary))", color: done ? stepColor : "hsl(var(--muted-foreground))" }}
+                        style={{ background: (done || isActiveReady) ? stepBg : "hsl(var(--secondary))", color: (done || isActiveReady) ? stepColor : "hsl(var(--muted-foreground))" }}
                       >
                         <StepIcon className="w-3 h-3" />
                       </div>
-                      <span className="text-[10px] leading-tight" style={{ color: done ? stepColor : "hsl(var(--muted-foreground)/0.5)" }}>
+                      <span className="text-[10px] leading-tight" style={{ color: (done || isActiveReady) ? stepColor : "hsl(var(--muted-foreground)/0.5)" }}>
                         {label}
                       </span>
                     </div>
@@ -355,52 +374,43 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
-                className="flex flex-col gap-2"
+                className="flex items-center justify-between gap-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                {(status === "ready" || status === "sent") && (
-                  <CopyButton url={shareUrl} full />
-                )}
-
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">
-                      {status === "redeemed" && gift.redeemedAt
-                        ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
-                        : status === "opened" && gift.openedAt
-                          ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
-                          : status === "sent"
-                            ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                          : status === "ready"
-                            ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                          : status === "scheduled" && gift.scheduledFor
-                            ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
-                            : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    {status !== "ready" && status !== "sent" && (
-                      <CopyButton url={shareUrl} />
-                    )}
-                    <a
-                      href={`${shareUrl}?preview=true`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="Preview gift"
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                    <button
-                      title="Remove from dashboard"
-                      onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                      className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted-foreground">
+                    {status === "redeemed" && gift.redeemedAt
+                      ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                      : status === "opened" && gift.openedAt
+                        ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                        : status === "sent"
+                          ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                        : status === "ready"
+                          ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                        : status === "scheduled" && gift.scheduledFor
+                          ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
+                          : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <CopyButton url={shareUrl} />
+                  <a
+                    href={`${shareUrl}?preview=true`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Preview gift"
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <button
+                    title="Remove from dashboard"
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                    className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </motion.div>
             )}
