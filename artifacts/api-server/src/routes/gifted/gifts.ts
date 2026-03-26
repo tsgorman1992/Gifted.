@@ -135,7 +135,8 @@ router.post("/gifted/gifts", async (req, res) => {
     }
 
     const id = nanoid(12);
-    const senderUserId = (req as any).user?.id ?? null;
+    const senderUserId  = (req as any).user?.id    ?? null;
+    const senderEmail   = (req as any).user?.email ?? null;
 
     const scheduledForRaw = req.body.scheduledFor as string | undefined;
     const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
@@ -143,6 +144,7 @@ router.post("/gifted/gifts", async (req, res) => {
     await db.insert(gifts).values({
       id,
       senderUserId,
+      senderEmail,
       recipientName,
       recipientPhone: recipientPhone || null,
       senderName,
