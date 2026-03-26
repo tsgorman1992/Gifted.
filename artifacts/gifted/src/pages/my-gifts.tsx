@@ -42,6 +42,7 @@ interface ReceivedGiftSummary {
   experience: string;
   amount: string | null;
   openedAt: string | null;
+  redeemedAt: string | null;
   createdAt: string;
 }
 
@@ -390,7 +391,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                       : status === "opened" && gift.openedAt
                         ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
                         : status === "sent"
-                          ? `Sent ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                          ? `Ready since ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
                         : status === "ready"
                           ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
                         : status === "scheduled" && gift.scheduledFor
@@ -537,22 +538,43 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
                 transition={{ duration: 0.15 }}
                 className="flex items-center justify-between gap-2"
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-                    style={{ background: "#dcfce7", color: "#15803d" }}
-                  >
-                    <Eye className="w-3 h-3" />
-                    {exp.label}
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {gift.redeemedAt ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
+                      style={{ background: "#dcfce7", color: "#15803d" }}
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      Redeemed
+                    </span>
+                  ) : gift.openedAt && gift.amount && parseFloat(gift.amount) > 0 ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setLocation(`/open/${gift.id}`); }}
+                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border transition-colors"
+                      style={{ background: "hsl(28,62%,36%,0.08)", color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.25)" }}
+                    >
+                      <DollarSign className="w-3 h-3" />
+                      Claim ${parseFloat(gift.amount).toFixed(0)}
+                    </button>
+                  ) : (
+                    <span
+                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
+                      style={{ background: "#dcfce7", color: "#15803d" }}
+                    >
+                      <Eye className="w-3 h-3" />
+                      {exp.label}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <span className="text-xs text-muted-foreground">
-                    {gift.openedAt
-                      ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
-                      : gift.createdAt
-                        ? `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                        : ""}
+                    {gift.redeemedAt
+                      ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                      : gift.openedAt
+                        ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                        : gift.createdAt
+                          ? `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                          : ""}
                   </span>
                   <button
                     title="Remove from received gifts"

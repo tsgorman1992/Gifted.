@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { db, gifts } from "@workspace/db";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
 import twilio from "twilio";
-import { sendGiftOpenedNotice } from "../../lib/email";
+import { sendGiftOpenedNotice, sendPackageDeliveredEmail } from "../../lib/email";
 
 function normPhone(raw: string): string {
   const d = raw.replace(/\D/g, "");
@@ -225,7 +225,7 @@ router.patch("/gifted/gifts/:id/opened", async (req, res) => {
       if (gift.senderPhone) {
         smsSender(
           gift.senderPhone,
-          `gifted. 🎁\n${gift.recipientName} just opened your gift! Head to your dashboard to see their reaction.`
+          `gifted. 🎁\n${gift.recipientName} just opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
         );
       } else if (gift.senderEmail) {
         sendGiftOpenedNotice({
@@ -459,6 +459,7 @@ router.get("/gifted/received-gifts", async (req, res) => {
         experience: g.experience,
         amount: (g.amount && parseFloat(g.amount) > 0) ? g.amount : null,
         openedAt: g.openedAt,
+        redeemedAt: g.redeemedAt,
         createdAt: g.createdAt,
       }))
     );
@@ -491,18 +492,8 @@ router.post("/gifted/send-gift", async (req, res) => {
   }
 
   if (isPhone) {
-    try {
-      const from = process.env.TWILIO_PHONE_NUMBER;
-      if (!from) throw new Error("No Twilio number");
-      const client = getTwilioClient();
-      const to = normalizePhone(contact);
-      const body = `Hey ${recipientName || "there"} 🎁\n\n${senderName || "Someone"} made something just for you.\n\nTap to open:\n${giftUrl}`;
-      await client.messages.create({ from, to, body });
-      res.json({ method: "sms", success: true });
-    } catch (err) {
-      console.error("Twilio send error:", err);
-      res.status(500).json({ error: "Could not send SMS. Please copy the link and send it manually." });
-    }
+    // SMS to unverified recipients is not permitted — return the gift URL for the sender to forward themselves
+    res.status(400).json({ error: "Please copy the link and send it directly from your own messages app." });
     return;
   }
 
@@ -715,14 +706,22 @@ router.post("/gifted/aftership-webhook", async (req, res) => {
         .update(gifts)
         .set({ trackingDeliveredAt: new Date() })
         .where(and(eq(gifts.id, giftId), isNull(gifts.trackingDeliveredAt)))
-        .returning({ senderPhone: gifts.senderPhone, recipientName: gifts.recipientName });
+        .returning({ senderPhone: gifts.senderPhone, senderEmail: gifts.senderEmail, senderName: gifts.senderName, recipientName: gifts.recipientName });
 
-      // Only send SMS if this was the first delivery event (row was actually updated)
-      if (gift?.senderPhone) {
-        smsSender(
-          gift.senderPhone,
-          `Your gift to ${gift.recipientName} just arrived 🎁`
-        );
+      // Only notify if this was the first delivery event (row was actually updated)
+      if (gift) {
+        if (gift.senderPhone) {
+          smsSender(
+            gift.senderPhone,
+            `gifted. 🎁 Your gift to ${gift.recipientName} just arrived!\n\nReply STOP to opt out.`
+          );
+        } else if (gift.senderEmail) {
+          sendPackageDeliveredEmail({
+            to: gift.senderEmail,
+            senderName: gift.senderName,
+            recipientName: gift.recipientName,
+          }).catch(() => {});
+        }
       }
     }
 

@@ -226,7 +226,7 @@ router.post("/gifted/redeem", async (req, res) => {
     // Notify sender via SMS
     smsTo(
       gift.senderPhone,
-      `gifted. 🎉\n${gift.recipientName} redeemed their ${amount} gift. Your generosity made their day!`
+      `gifted. 🎉\n${gift.recipientName} redeemed their ${amount} gift. Your generosity made their day!\n\nReply STOP to opt out.`
     );
 
     // Notify sender via email

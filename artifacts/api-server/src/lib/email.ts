@@ -98,7 +98,7 @@ export async function sendSenderReceipt(params: SenderReceiptParams): Promise<vo
   if (!client) return;
 
   const { to, senderName, recipientName, giftId, amount, occasion, giftTitle } = params;
-  const giftUrl = `${BASE_URL}/open/${giftId}`;
+  const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
   const amtStr = amount && parseFloat(amount) > 0
     ? `$${parseFloat(amount).toFixed(2)}`
     : null;
@@ -298,7 +298,7 @@ export async function sendSenderNudgeEmail(params: SenderNudgeParams): Promise<v
   if (!client) return;
 
   const { to, senderName, recipientName, giftId } = params;
-  const giftUrl = `${BASE_URL}/open/${giftId}`;
+  const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
 
   const body = `
     ${h1(`Your gift to ${recipientName} hasn't been opened yet`)}
@@ -339,7 +339,7 @@ export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams):
   if (!client) return;
 
   const { to, senderName, recipientName, giftId } = params;
-  const giftUrl = `${BASE_URL}/open/${giftId}`;
+  const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
 
   const body = `
     ${h1(`Your gift for ${recipientName} is live!`)}
@@ -363,5 +363,44 @@ export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams):
     else console.log(`[email] Scheduled ready email sent to ${to}`);
   } catch (err) {
     console.error("[email] sendScheduledGiftReadyEmail exception:", err);
+  }
+}
+
+// ─── 7. Package delivered notification (email fallback when no SMS) ────────────
+
+interface PackageDeliveredParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+}
+
+export async function sendPackageDeliveredEmail(params: PackageDeliveredParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName } = params;
+  const dashboardUrl = `${BASE_URL}/my-gifts`;
+
+  const body = `
+    ${h1(`Your gift to ${recipientName} has arrived! 🎁`)}
+    ${p(`Great news — the package you sent to <strong>${recipientName}</strong> has been delivered.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("View dashboard", dashboardUrl)}
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Your gift to ${recipientName} was delivered 📦`,
+      html: layout(`Package delivered — gifted.`, body),
+    });
+    if (error) console.error("[email] sendPackageDeliveredEmail error:", error);
+    else console.log(`[email] Package delivered email sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendPackageDeliveredEmail exception:", err);
   }
 }

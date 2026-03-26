@@ -974,6 +974,9 @@ export default function PreviewPage() {
                               {notifySaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Bell className="w-3 h-3 mr-1.5" /> Notify me</>}
                             </Button>
                           </form>
+                          <p className="text-[11px] text-green-700/50 dark:text-green-400/40 leading-relaxed">
+                            By adding your number, you agree to receive SMS updates about this gift from gifted. Msg &amp; data rates may apply. Reply STOP to opt out.
+                          </p>
                         </div>
                       ) : (
                         <p className="text-xs text-green-700/70 dark:text-green-400/70 text-center">

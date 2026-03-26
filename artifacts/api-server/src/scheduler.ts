@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { gifts } from "@workspace/db/schema";
 import { and, isNotNull, isNull, lte, eq } from "drizzle-orm";
 import twilio from "twilio";
-import { sendSenderNudgeEmail, sendScheduledGiftReadyEmail } from "./lib/email";
+import { sendSenderNudgeEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail } from "./lib/email";
 
 interface TrackingEvent {
   status: string;
@@ -60,6 +60,8 @@ async function sendScheduledGifts() {
           ``,
           `Copy this link and send it to them — when it comes from you, it lands differently:`,
           giftUrl,
+          ``,
+          `Reply STOP to opt out.`,
         ].join("\n");
 
         let smsSent = false;
@@ -126,6 +128,8 @@ async function pollAfterShipTrackings() {
         trackingCarrier: gifts.trackingCarrier,
         trackingNumber: gifts.trackingNumber,
         senderPhone: gifts.senderPhone,
+        senderEmail: gifts.senderEmail,
+        senderName: gifts.senderName,
         recipientName: gifts.recipientName,
         trackingDeliveredAt: gifts.trackingDeliveredAt,
       })
@@ -188,14 +192,25 @@ async function pollAfterShipTrackings() {
             .update(gifts)
             .set({ trackingDeliveredAt: new Date() })
             .where(and(eq(gifts.id, gift.id), isNull(gifts.trackingDeliveredAt)))
-            .returning({ senderPhone: gifts.senderPhone, recipientName: gifts.recipientName });
+            .returning({ senderPhone: gifts.senderPhone, senderEmail: gifts.senderEmail, senderName: gifts.senderName, recipientName: gifts.recipientName });
 
-          if (updated?.senderPhone) {
-            await smsSender(
-              updated.senderPhone,
-              `Your gift to ${updated.recipientName} just arrived 🎁`,
-            );
-            console.log(`[AfterShip poll] Gift ${gift.id} delivered — sender SMS sent.`);
+          if (updated) {
+            if (updated.senderPhone) {
+              await smsSender(
+                updated.senderPhone,
+                `gifted. 🎁 Your gift to ${updated.recipientName} just arrived!\n\nReply STOP to opt out.`,
+              );
+              console.log(`[AfterShip poll] Gift ${gift.id} delivered — sender SMS sent.`);
+            } else if (updated.senderEmail) {
+              await sendPackageDeliveredEmail({
+                to: updated.senderEmail,
+                senderName: updated.senderName,
+                recipientName: updated.recipientName,
+              }).catch(() => {});
+              console.log(`[AfterShip poll] Gift ${gift.id} delivered — sender email sent (no phone).`);
+            } else {
+              console.warn(`[AfterShip poll] Gift ${gift.id} delivered — no sender contact info.`);
+            }
           }
         } else {
           console.log(`[AfterShip poll] Gift ${gift.id}: tag="${tag}", ${events.length} checkpoint(s).`);
@@ -243,6 +258,8 @@ async function nudgeStaleGifts() {
             ``,
             `If you haven't sent the link yet, here it is — forward it whenever you're ready:`,
             giftUrl,
+            ``,
+            `Reply STOP to opt out.`,
           ].join("\n");
           await smsSender(gift.senderPhone, body);
         } else if (gift.senderEmail) {
