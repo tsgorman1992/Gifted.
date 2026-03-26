@@ -11,7 +11,7 @@ type Phase = "sealed" | "opening" | "revealed";
 const PHOTOS = [
   "https://images.unsplash.com/photo-1464349153735-7db50ed83c84?w=320&h=180&fit=crop&crop=center&auto=format",
   "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=320&h=180&fit=crop&crop=center&auto=format",
-  "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=320&h=180&fit=crop&crop=center&auto=format",
+  "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=320&h=180&fit=crop&crop=center&auto=format",
 ];
 
 const HOW_STEPS = [
