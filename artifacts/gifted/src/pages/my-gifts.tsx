@@ -94,7 +94,7 @@ const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string
   draft:     { label: "Draft",           color: "#92400e", bg: "#fef3c7", Icon: Clock },
   scheduled: { label: "Scheduled",       color: "#0369a1", bg: "#e0f2fe", Icon: CalendarClock },
   ready:     { label: "Ready to share",  color: "#92400e", bg: "#fef3c7", Icon: Share2 },
-  sent:      { label: "Waiting to open", color: "#7c3aed", bg: "#ede9fe", Icon: Clock },
+  sent:      { label: "Ready",           color: "#92400e", bg: "#fef3c7", Icon: Share2 },
   opened:    { label: "Opened",          color: "#6d28d9", bg: "#ede9fe", Icon: Eye },
   redeemed:  { label: "Redeemed",        color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
 };
@@ -285,29 +285,29 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
               const statusIdx = orderedStatuses.indexOf(effectiveStatus);
               const isLastStep = (i: number) => i === steps.length - 1;
               return steps.map((step, i) => {
-                const done = i <= statusIdx && status !== "draft" && status !== "ready";
-                const isActiveReady = status === "ready" && i === 0;
+                const isActiveCurrent = (status === "ready" || status === "sent") && i === 0;
+                const done = i <= statusIdx && status !== "draft" && status !== "ready" && !(status === "sent" && i === 0);
                 const isFinalCompleted = done && isLastStep(i);
-                const StepIcon = isActiveReady
+                const StepIcon = isActiveCurrent
                   ? Share2
                   : isFinalCompleted && !giftHasBalance && step === "opened"
                     ? CheckCircle2
                     : STATUS_META[step].Icon;
-                const stepColor = isActiveReady
+                const stepColor = isActiveCurrent
                   ? "#92400e"
                   : isFinalCompleted && !giftHasBalance && step === "opened"
                     ? "#15803d"
                     : STATUS_META[step].color;
-                const stepBg = isActiveReady
+                const stepBg = isActiveCurrent
                   ? "#fef3c7"
                   : isFinalCompleted && !giftHasBalance && step === "opened"
                     ? "#dcfce7"
                     : STATUS_META[step].bg;
-                const isNextPending = !done && !isActiveReady && i === statusIdx + 1 && (status === "sent" || status === "ready");
-                const label = isActiveReady
-                  ? "Share link"
+                const isNextPending = !done && !isActiveCurrent && i === statusIdx + 1 && (status === "sent" || status === "ready");
+                const label = isActiveCurrent
+                  ? "Ready"
                   : step === "scheduled" ? "Scheduled"
-                  : step === "sent" ? "Shared"
+                  : step === "sent" ? "Ready"
                   : step === "opened" ? "Opened"
                   : "Redeemed";
                 return (
@@ -319,12 +319,12 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                         )}
                         <div
                           className="w-6 h-6 rounded-full flex items-center justify-center transition-colors relative"
-                          style={{ background: (done || isActiveReady) ? stepBg : isNextPending ? stepBg : "hsl(var(--secondary))", color: (done || isActiveReady) ? stepColor : isNextPending ? stepColor : "hsl(var(--muted-foreground))" }}
+                          style={{ background: (done || isActiveCurrent) ? stepBg : isNextPending ? stepBg : "hsl(var(--secondary))", color: (done || isActiveCurrent) ? stepColor : isNextPending ? stepColor : "hsl(var(--muted-foreground))" }}
                         >
                           <StepIcon className="w-3 h-3" />
                         </div>
                       </div>
-                      <span className="text-[10px] leading-tight" style={{ color: (done || isActiveReady) ? stepColor : "hsl(var(--muted-foreground)/0.5)" }}>
+                      <span className="text-[10px] leading-tight" style={{ color: (done || isActiveCurrent) ? stepColor : "hsl(var(--muted-foreground)/0.5)" }}>
                         {label}
                       </span>
                     </div>
