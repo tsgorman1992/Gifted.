@@ -49,6 +49,7 @@ export const gifts = pgTable("gifts", {
   trackingNumber: text("tracking_number"),
   trackingStatus: jsonb("tracking_status").$type<TrackingEvent[]>(),
   trackingDeliveredAt: timestamp("tracking_delivered_at", { withTimezone: true }),
+  nudgeSentAt: timestamp("nudge_sent_at", { withTimezone: true }),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({

@@ -94,7 +94,7 @@ const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string
   draft:     { label: "Draft",           color: "#92400e", bg: "#fef3c7", Icon: Clock },
   scheduled: { label: "Scheduled",       color: "#0369a1", bg: "#e0f2fe", Icon: CalendarClock },
   ready:     { label: "Ready to share",  color: "#92400e", bg: "#fef3c7", Icon: Share2 },
-  sent:      { label: "Sent",            color: "#1d4ed8", bg: "#dbeafe", Icon: Package },
+  sent:      { label: "Waiting to open", color: "#7c3aed", bg: "#ede9fe", Icon: Clock },
   opened:    { label: "Opened",          color: "#6d28d9", bg: "#ede9fe", Icon: Eye },
   redeemed:  { label: "Redeemed",        color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
 };
@@ -303,20 +303,26 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                   : isFinalCompleted && !giftHasBalance && step === "opened"
                     ? "#dcfce7"
                     : STATUS_META[step].bg;
+                const isNextPending = !done && !isActiveReady && i === statusIdx + 1 && (status === "sent" || status === "ready");
                 const label = isActiveReady
                   ? "Share link"
                   : step === "scheduled" ? "Scheduled"
-                  : step === "sent" ? "Sent"
+                  : step === "sent" ? "Shared"
                   : step === "opened" ? "Opened"
                   : "Redeemed";
                 return (
                   <React.Fragment key={step}>
                     <div className="flex flex-col items-center gap-0.5">
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center transition-colors"
-                        style={{ background: (done || isActiveReady) ? stepBg : "hsl(var(--secondary))", color: (done || isActiveReady) ? stepColor : "hsl(var(--muted-foreground))" }}
-                      >
-                        <StepIcon className="w-3 h-3" />
+                      <div className="relative">
+                        {isNextPending && (
+                          <span className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ background: stepColor }} />
+                        )}
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center transition-colors relative"
+                          style={{ background: (done || isActiveReady) ? stepBg : isNextPending ? stepBg : "hsl(var(--secondary))", color: (done || isActiveReady) ? stepColor : isNextPending ? stepColor : "hsl(var(--muted-foreground))" }}
+                        >
+                          <StepIcon className="w-3 h-3" />
+                        </div>
                       </div>
                       <span className="text-[10px] leading-tight" style={{ color: (done || isActiveReady) ? stepColor : "hsl(var(--muted-foreground)/0.5)" }}>
                         {label}

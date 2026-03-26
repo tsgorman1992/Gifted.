@@ -200,13 +200,66 @@ async function pollAfterShipTrackings() {
   }
 }
 
+async function nudgeStaleGifts() {
+  try {
+    const appOrigin = process.env.APP_ORIGIN ?? "https://gifted.page";
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+    const stale = await db
+      .select({
+        id: gifts.id,
+        recipientName: gifts.recipientName,
+        senderPhone: gifts.senderPhone,
+      })
+      .from(gifts)
+      .where(
+        and(
+          eq(gifts.paid, true),
+          isNull(gifts.openedAt),
+          isNull(gifts.nudgeSentAt),
+          isNotNull(gifts.senderPhone),
+          lte(gifts.createdAt, threeDaysAgo),
+        ),
+      );
+
+    if (!stale.length) return;
+
+    for (const gift of stale) {
+      try {
+        const giftUrl = `${appOrigin}/open/${gift.id}`;
+        const body = [
+          `gifted. 🎁 Your gift to ${gift.recipientName} hasn't been opened yet.`,
+          ``,
+          `If you haven't sent the link yet, here it is — forward it whenever you're ready:`,
+          giftUrl,
+        ].join("\n");
+
+        await smsSender(gift.senderPhone, body);
+
+        await db
+          .update(gifts)
+          .set({ nudgeSentAt: new Date() })
+          .where(eq(gifts.id, gift.id));
+
+        console.log(`[scheduler] Nudge sent for stale gift ${gift.id}`);
+      } catch (err) {
+        console.error(`[scheduler] Nudge failed for gift ${gift.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] nudgeStaleGifts error:", err);
+  }
+}
+
 export function startScheduler() {
   const INTERVAL_MS = 10 * 60 * 1000;
-  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts and tracking updates.");
+  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, and stale gift nudges.");
   setInterval(async () => {
     await sendScheduledGifts();
     await pollAfterShipTrackings();
+    await nudgeStaleGifts();
   }, INTERVAL_MS);
   sendScheduledGifts();
   pollAfterShipTrackings();
+  nudgeStaleGifts();
 }
