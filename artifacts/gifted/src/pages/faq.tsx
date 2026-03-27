@@ -38,7 +38,7 @@ const FAQS = [
   {
     question: "What happens if my recipient can't access the link?",
     answer:
-      "If your recipient has trouble opening the link, the easiest fix is to re-send it to them directly. If the problem persists, email us at tsgorman1992@gmail.com and we'll make sure they can access their gift.",
+      "If your recipient has trouble opening the link, the easiest fix is to re-send it to them directly. If the problem persists, email us at help@gifted.page and we'll make sure they can access their gift.",
   },
   {
     question: "Can I send a gift without creating an account?",
@@ -58,7 +58,7 @@ const FAQS = [
   {
     question: "Can I cancel or refund a gift?",
     answer:
-      "If the gift hasn't been redeemed yet, contact us at tsgorman1992@gmail.com and we'll process a refund. Once a balance has been redeemed by the recipient, it cannot be reversed.",
+      "If the gift hasn't been redeemed yet, contact us at help@gifted.page and we'll process a refund. Once a balance has been redeemed by the recipient, it cannot be reversed.",
   },
   {
     question: "What is a spending intention?",
@@ -73,7 +73,7 @@ const FAQS = [
   {
     question: "Something went wrong — how do I get help?",
     answer:
-      "We're sorry to hear that! Head to our Contact page and send us a message, or email us directly at tsgorman1992@gmail.com. We respond within 24 hours and will do everything we can to make it right.",
+      "We're sorry to hear that! Head to our Contact page and send us a message, or email us directly at help@gifted.page. We respond within 24 hours and will do everything we can to make it right.",
   },
 ];
 

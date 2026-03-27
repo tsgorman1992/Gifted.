@@ -49,7 +49,7 @@ export default function TermsPage() {
 
           <Section title="3. Accounts">
             <p>
-              You are responsible for keeping your account credentials secure. You are responsible for all activity that occurs under your account. Notify us immediately at tsgorman1992@gmail.com if you believe your account has been compromised.
+              You are responsible for keeping your account credentials secure. You are responsible for all activity that occurs under your account. Notify us immediately at help@gifted.page if you believe your account has been compromised.
             </p>
             <p>
               We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or misuse the platform.
@@ -73,7 +73,7 @@ export default function TermsPage() {
 
           <Section title="5. Refunds">
             <p>
-              If a gift balance has not been redeemed, you may request a refund within 90 days of sending by emailing tsgorman1992@gmail.com. Refunds are processed to the original payment method within 5–10 business days. The 5% platform fee is not refundable.
+              If a gift balance has not been redeemed, you may request a refund within 90 days of sending by emailing help@gifted.page. Refunds are processed to the original payment method within 5–10 business days. The 5% platform fee is not refundable.
             </p>
             <p>
               Unredeemed gift balances are automatically refunded after 90 days. Once a recipient has redeemed a gift balance, the transaction is final and cannot be reversed.

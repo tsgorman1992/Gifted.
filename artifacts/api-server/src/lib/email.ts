@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 const FROM = "gifted. <hello@gifted.page>";
-const REPLY_TO = "tsgorman1992@gmail.com";
+const REPLY_TO = "help@gifted.page";
 const BASE_URL = "https://gifted.page";
 
 function getClient(): Resend | null {
@@ -201,7 +201,7 @@ export async function sendOperatorCashoutAlert(params: OperatorCashoutParams): P
   const client = getClient();
   if (!client) return;
 
-  const operatorEmail = process.env.OPERATOR_EMAIL ?? "tsgorman1992@gmail.com";
+  const operatorEmail = process.env.OPERATOR_EMAIL ?? "help@gifted.page";
 
   const { recipientName, senderName, giftId, amount, payoutMethod, payoutHandle, payoutName } = params;
   const amtStr = amount && parseFloat(amount) > 0

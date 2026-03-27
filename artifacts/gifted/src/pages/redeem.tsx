@@ -219,7 +219,7 @@ export default function RedeemPage() {
       });
       setScreen("success");
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again or contact tsgorman1992@gmail.com.");
+      setError(err.message || "Something went wrong. Please try again or contact help@gifted.page.");
     } finally {
       setIsProcessing(false);
     }
@@ -234,7 +234,7 @@ export default function RedeemPage() {
         <h1 className="font-serif text-4xl font-medium mb-3">Already redeemed</h1>
         <p className="text-muted-foreground max-w-sm mb-8">
           This gift has already been redeemed. If you think this is a mistake, please contact{" "}
-          <a href="mailto:tsgorman1992@gmail.com" className="underline hover:text-foreground">tsgorman1992@gmail.com</a>.
+          <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a>.
         </p>
         <Link href={giftId ? `/open/${giftId}` : "/"}>
           <Button variant="outline" className="rounded-full h-12 px-8">Back to gift</Button>
@@ -400,7 +400,7 @@ export default function RedeemPage() {
                     <div className="w-full border-t border-border pt-4 mt-1">
                       <div className="flex items-start gap-2 text-xs text-muted-foreground text-left">
                         <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span>We'll send your balance directly — usually within a few hours. Questions? <a href="mailto:tsgorman1992@gmail.com" className="underline hover:text-foreground">tsgorman1992@gmail.com</a></span>
+                        <span>We'll send your balance directly — usually within a few hours. Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a></span>
                       </div>
                     </div>
                   </div>
@@ -537,7 +537,7 @@ export default function RedeemPage() {
                 {" "}— usually within a few hours.
               </p>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-10">
-                Questions? Reach us at <a href="mailto:tsgorman1992@gmail.com" className="underline">tsgorman1992@gmail.com</a>
+                Questions? Reach us at <a href="mailto:help@gifted.page" className="underline">help@gifted.page</a>
               </p>
               <Button variant="outline" className="rounded-full h-12 px-8" onClick={() => setLocation("/")}>
                 Return to home
