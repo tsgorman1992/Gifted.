@@ -54,10 +54,11 @@ export default function SmsConsentPage() {
             </Button>
 
             {/* ← THIS IS THE CONSENT LANGUAGE shown to recipients before any SMS is sent */}
-            <p className="text-xs text-muted-foreground text-center leading-relaxed">
-              By tapping "Send verification code" you consent to receive a single SMS from gifted. (gifted.page)
-              to confirm your identity. Message &amp; data rates may apply. This is a one-time message — you will not be subscribed to any list.
-            </p>
+            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-center">
+              <p className="text-sm text-foreground leading-relaxed">
+                By tapping this button, I agree to receive a text message from <strong>gifted.</strong> (gifted.page) for identity verification. Msg &amp; data rates may apply. Reply <strong>STOP</strong> to opt out, <strong>HELP</strong> for info. 1 message per redemption.
+              </p>
+            </div>
           </div>
 
           <div className="bg-muted/50 rounded-2xl p-4 space-y-1">
