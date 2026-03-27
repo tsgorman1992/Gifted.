@@ -750,7 +750,6 @@ export default function CreatePage() {
   const [occasion, setOccasion] = useState("Birthday");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
-  const [smsConsent, setSmsConsent] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [phoneValidating, setPhoneValidating] = useState(false);
   const [senderName, setSenderName] = useState("");
@@ -1113,10 +1112,6 @@ export default function CreatePage() {
       const valid = await validatePhone(recipientPhone);
       if (!valid) {
         setStepError("The phone number doesn't appear to be valid. Please check it above.");
-        return;
-      }
-      if (!smsConsent) {
-        setStepError("Please confirm the recipient has agreed to receive a text notification.");
         return;
       }
     }
@@ -2037,7 +2032,6 @@ export default function CreatePage() {
                         value={recipientPhone}
                         onChange={(e) => {
                           setPhoneError(null);
-                          setSmsConsent(false);
                           setRecipientPhone(formatPhoneNumber(e.target.value));
                         }}
                         onBlur={handlePhoneBlur}
@@ -2050,19 +2044,6 @@ export default function CreatePage() {
                         <p className="text-xs text-muted-foreground">
                           Used to verify their identity when they redeem the balance. Never used for marketing.
                         </p>
-                      )}
-                      {recipientPhone.replace(/\D/g, "").length >= 10 && (
-                        <label className="flex items-start gap-2.5 cursor-pointer mt-3">
-                          <input
-                            type="checkbox"
-                            checked={smsConsent}
-                            onChange={(e) => setSmsConsent(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-[hsl(var(--primary))] cursor-pointer"
-                          />
-                          <span className="text-xs text-muted-foreground leading-relaxed">
-                            I confirm {recipientName.trim() || "the recipient"} has agreed to receive a one-time text notification about this gift. Msg &amp; data rates may apply. Reply STOP to opt out.
-                          </span>
-                        </label>
                       )}
                     </div>
                     )}
