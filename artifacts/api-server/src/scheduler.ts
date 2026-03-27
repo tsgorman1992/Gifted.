@@ -194,10 +194,12 @@ async function pollAfterShipTrackings() {
         }
 
         const json = (await res.json()) as {
-          data?: { tracking?: Record<string, unknown> };
+          data?: Record<string, unknown> & { tracking?: Record<string, unknown> };
         };
-        const tracking = json?.data?.tracking;
-        if (!tracking) continue;
+        // ID-based endpoint: { data: { id, tag, checkpoints, ... } }
+        // Slug/number endpoint: { data: { tracking: { id, tag, checkpoints, ... } } }
+        const tracking = json?.data?.tracking ?? json?.data;
+        if (!tracking || !tracking.tag) continue;
 
         const tag = (tracking.tag as string | undefined) ?? "";
         const checkpoints = (tracking.checkpoints as Array<Record<string, unknown>> | undefined) ?? [];
@@ -212,6 +214,7 @@ async function pollAfterShipTrackings() {
           .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
         const isDelivered = tag === "Delivered";
+        console.log(`[AfterShip poll] ${gift.id}: tag=${tag}, checkpoints=${events.length}`);
 
         await db
           .update(gifts)
