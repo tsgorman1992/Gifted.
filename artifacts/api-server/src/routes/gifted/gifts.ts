@@ -636,6 +636,56 @@ router.get("/gifted/gifts/:id/video/download", async (req, res) => {
   }
 });
 
+// GET /api/gifted/gifts/:id/template — return content-only fields for "Send again" pre-fill
+// Only the owner of the gift can access this. No status/payment fields returned.
+router.get("/gifted/gifts/:id/template", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  try {
+    const [gift] = await db
+      .select({
+        senderUserId: gifts.senderUserId,
+        recipientName: gifts.recipientName,
+        senderName: gifts.senderName,
+        experience: gifts.experience,
+        occasion: gifts.occasion,
+        giftTitle: gifts.giftTitle,
+        personalNote: gifts.personalNote,
+        videoPath: gifts.videoPath,
+        photoPaths: gifts.photoPaths,
+        playlistUrl: gifts.playlistUrl,
+        extraLinks: gifts.extraLinks,
+        amount: gifts.amount,
+        intent: gifts.intent,
+      })
+      .from(gifts)
+      .where(eq(gifts.id, req.params.id))
+      .limit(1);
+
+    if (!gift) { res.status(404).json({ error: "Gift not found" }); return; }
+    if (gift.senderUserId !== userId) { res.status(403).json({ error: "Not your gift" }); return; }
+
+    res.json({
+      recipientName: gift.recipientName,
+      senderName: gift.senderName,
+      experience: gift.experience,
+      occasion: gift.occasion,
+      giftTitle: gift.giftTitle,
+      personalNote: gift.personalNote,
+      videoPath: gift.videoPath,
+      photoPaths: gift.photoPaths,
+      playlistUrl: gift.playlistUrl,
+      extraLinks: gift.extraLinks,
+      amount: gift.amount,
+      intent: gift.intent,
+    });
+  } catch (err) {
+    console.error("Error fetching gift template:", err);
+    res.status(500).json({ error: "Failed to fetch template" });
+  }
+});
+
 // GET /api/gifted/gifts/:id/tracking — public, gated by knowing the gift ID
 router.get("/gifted/gifts/:id/tracking", async (req, res) => {
   try {

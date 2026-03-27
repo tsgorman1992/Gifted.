@@ -404,3 +404,57 @@ export async function sendPackageDeliveredEmail(params: PackageDeliveredParams):
     console.error("[email] sendPackageDeliveredEmail exception:", err);
   }
 }
+
+// ─── Occasion reminder ────────────────────────────────────────────────────────
+
+export async function sendOccasionReminderEmail({
+  to,
+  userName,
+  contactName,
+  occasionLabel,
+  daysAway,
+}: {
+  to: string;
+  userName: string;
+  contactName: string;
+  occasionLabel: string;
+  daysAway: number;
+}): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const greeting = userName ? `Hi ${userName},` : "Hi there,";
+  const urgency = daysAway === 0
+    ? "is today"
+    : daysAway === 1
+      ? "is tomorrow"
+      : `is in ${daysAway} day${daysAway > 1 ? "s" : ""}`;
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:24px;font-weight:500;color:#1a1108;font-family:Georgia,serif;">
+      ${contactName}'s ${occasionLabel} ${urgency} 🎁
+    </h2>
+    <p style="margin:0 0 24px;font-size:15px;color:#6b5744;line-height:1.6;">
+      ${greeting} Just a heads-up — ${contactName}'s ${occasionLabel} ${urgency}. It only takes a minute to build something they'll remember.
+    </p>
+    ${btn("Build a gift moment", `${BASE_URL}/create`)}
+    <p style="margin:20px 0 0;font-size:13px;color:#9e9087;line-height:1.6;">
+      You're receiving this because you saved this occasion in your gifted. dashboard. 
+      <a href="${BASE_URL}/my-gifts" style="color:#7c4a1e;text-decoration:underline;">Manage reminders</a>
+    </p>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `${contactName}'s ${occasionLabel} is ${daysAway === 0 ? "today" : daysAway === 1 ? "tomorrow" : `in ${daysAway} days`} 🎁`,
+      html: layout(`Occasion reminder — gifted.`, body),
+    });
+    if (error) console.error("[email] sendOccasionReminderEmail error:", error);
+    else console.log(`[email] Occasion reminder sent to ${to} for ${contactName}'s ${occasionLabel}`);
+  } catch (err) {
+    console.error("[email] sendOccasionReminderEmail exception:", err);
+  }
+}

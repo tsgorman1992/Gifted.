@@ -70,6 +70,43 @@ router.get("/auth/google/enabled", (_req: Request, res: Response) => {
   res.json({ enabled: googleEnabled });
 });
 
+router.patch("/auth/profile", async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id;
+  if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const { firstName, lastName } = req.body as { firstName?: string; lastName?: string };
+
+  try {
+    const [updated] = await db
+      .update(usersTable)
+      .set({
+        firstName: firstName?.trim() || null,
+        lastName: lastName?.trim() || null,
+      })
+      .where(eq(usersTable.id, userId))
+      .returning({
+        id: usersTable.id,
+        email: usersTable.email,
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+        profileImageUrl: usersTable.profileImageUrl,
+      });
+
+    if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+
+    // Update the session with new name data
+    if (req.user) {
+      (req.user as any).firstName = updated.firstName;
+      (req.user as any).lastName = updated.lastName;
+    }
+
+    res.json({ user: updated });
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
 if (googleEnabled) {
   router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 

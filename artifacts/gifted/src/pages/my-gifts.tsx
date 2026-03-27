@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
-  Inbox, Trash2, X, Share2, Send,
+  Inbox, Trash2, X, Share2, Send, RefreshCw, Users, Bell,
+  UserPlus, Cake, Pencil,
 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, differenceInDays } from "date-fns";
 import { clearGiftSession } from "@/lib/session";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -46,6 +48,28 @@ interface ReceivedGiftSummary {
   createdAt: string;
 }
 
+interface ContactOccasion {
+  id: string;
+  contactId: string;
+  userId: string;
+  label: string;
+  month: number;
+  day: number;
+  lastReminderSentYear: number | null;
+  createdAt: string;
+}
+
+interface Contact {
+  id: string;
+  userId: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  createdAt: string;
+  occasions: ContactOccasion[];
+}
+
 // ─── Experience config ────────────────────────────────────────────────────────
 
 const EXPERIENCE_META: Record<string, { label: string; color: string; bg: string; Icon: React.ComponentType<{ className?: string }> }> = {
@@ -56,6 +80,8 @@ const EXPERIENCE_META: Record<string, { label: string; color: string; bg: string
   "rose-petal":      { label: "Rose Petal",      color: "#e879a8", bg: "#fdf2f8", Icon: Heart },
   "snow-flurry":     { label: "Snow Flurry",     color: "#0ea5e9", bg: "#f0f9ff", Icon: Snowflake },
   "sunrise":         { label: "Sunrise",         color: "#ea580c", bg: "#fff7ed", Icon: Sun },
+  "mothers-day":     { label: "For Mom",         color: "#c77daa", bg: "#fdf2f8", Icon: Heart },
+  "fathers-day":     { label: "For Dad",         color: "#1e4d8c", bg: "#eff6ff", Icon: Star },
 };
 
 const DEFAULT_EXP = { label: "gifted.", color: "hsl(28,62%,36%)", bg: "hsl(28,62%,36%,0.08)", Icon: Gift };
@@ -73,6 +99,12 @@ async function fetchMyGifts(): Promise<GiftSummary[]> {
 async function fetchReceivedGifts(): Promise<ReceivedGiftSummary[]> {
   const res = await fetch(`${BASE}/api/gifted/received-gifts`, { credentials: "include" });
   if (!res.ok) throw new Error("Failed to load received gifts");
+  return res.json();
+}
+
+async function fetchContacts(): Promise<Contact[]> {
+  const res = await fetch(`${BASE}/api/gifted/contacts`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to load contacts");
   return res.json();
 }
 
@@ -100,11 +132,23 @@ const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string
   redeemed:  { label: "Redeemed",        color: "#15803d", bg: "#dcfce7", Icon: CheckCircle2 },
 };
 
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
 function greeting(firstName: string | null) {
   const h = new Date().getHours();
   const time = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   return firstName ? `${time}, ${firstName}` : time;
 }
+
+function daysUntilOccasion(month: number, day: number): number {
+  const today = new Date();
+  const thisYear = today.getFullYear();
+  let target = new Date(thisYear, month - 1, day);
+  if (target < today) target = new Date(thisYear + 1, month - 1, day);
+  return differenceInDays(target, today);
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, sub, Icon, delay }: {
   label: string; value: string | number; sub?: string;
@@ -128,6 +172,8 @@ function StatCard({ label, value, sub, Icon, delay }: {
     </motion.div>
   );
 }
+
+// ─── Copy Button ──────────────────────────────────────────────────────────────
 
 function CopyButton({ url, full = false }: { url: string; full?: boolean }) {
   const [copied, setCopied] = useState(false);
@@ -179,6 +225,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [hideError, setHideError] = useState<string | null>(null);
+  const [isSendingAgain, setIsSendingAgain] = useState(false);
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
   const statusMeta = STATUS_META[status];
@@ -188,6 +235,35 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   function handleCardClick() {
     if (confirmDelete) return;
     setLocation(`/open/${gift.id}?preview=true`);
+  }
+
+  async function handleSendAgain(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (isSendingAgain) return;
+    setIsSendingAgain(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/gifts/${gift.id}/template`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load template");
+      const tmpl = await res.json();
+
+      clearGiftSession();
+
+      if (tmpl.senderName) localStorage.setItem("gifted_sender_name", tmpl.senderName);
+      if (tmpl.occasion)   localStorage.setItem("gifted_occasion", tmpl.occasion);
+      if (tmpl.experience) localStorage.setItem("gifted_experience", tmpl.experience);
+      if (tmpl.giftTitle)  localStorage.setItem("gifted_gift_title", tmpl.giftTitle);
+      if (tmpl.personalNote) localStorage.setItem("gifted_personal_note", tmpl.personalNote);
+      if (tmpl.playlistUrl)  localStorage.setItem("gifted_playlist_url", tmpl.playlistUrl);
+      if (tmpl.extraLinks)   localStorage.setItem("gifted_extra_links", JSON.stringify(tmpl.extraLinks));
+      if (tmpl.intent)       localStorage.setItem("gifted_intent", tmpl.intent);
+      if (tmpl.amount)       localStorage.setItem("gifted_amount", tmpl.amount);
+      if (tmpl.photoPaths)   localStorage.setItem("gifted_photo_paths", JSON.stringify(tmpl.photoPaths));
+      if (tmpl.videoPath)    localStorage.setItem("gifted_video_path", tmpl.videoPath);
+
+      setLocation("/create");
+    } catch {
+      setIsSendingAgain(false);
+    }
   }
 
   const handleHide = useCallback(async (e: React.MouseEvent) => {
@@ -222,18 +298,12 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
       className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
     >
       <div className="flex items-stretch">
-        <div
-          className="w-1.5 shrink-0"
-          style={{ background: exp.color }}
-        />
+        <div className="w-1.5 shrink-0" style={{ background: exp.color }} />
 
         <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: exp.bg }}
-              >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: exp.bg }}>
                 <ExpIcon className="w-4 h-4" style={{ color: exp.color }} />
               </div>
               <div className="min-w-0">
@@ -262,7 +332,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
             </div>
           )}
 
-          {/* Prominent copy CTA for ready/sent gifts — shown above the timeline */}
           {!confirmDelete && (status === "ready" || status === "sent") && (
             <div onClick={(e) => e.stopPropagation()}>
               <CopyButton url={shareUrl} full />
@@ -289,24 +358,17 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 const isActiveCurrent = (status === "ready" || status === "sent") && i === 0;
                 const done = i <= statusIdx && status !== "draft" && status !== "ready" && !(status === "sent" && i === 0);
                 const isFinalCompleted = done && isLastStep(i);
-                const StepIcon = isActiveCurrent
-                  ? Share2
-                  : isFinalCompleted && !giftHasBalance && step === "opened"
-                    ? CheckCircle2
-                    : STATUS_META[step].Icon;
-                const stepColor = isActiveCurrent
-                  ? "#92400e"
-                  : isFinalCompleted && !giftHasBalance && step === "opened"
-                    ? "#15803d"
-                    : STATUS_META[step].color;
-                const stepBg = isActiveCurrent
-                  ? "#fef3c7"
-                  : isFinalCompleted && !giftHasBalance && step === "opened"
-                    ? "#dcfce7"
-                    : STATUS_META[step].bg;
+                const StepIcon = isActiveCurrent ? Share2
+                  : isFinalCompleted && !giftHasBalance && step === "opened" ? CheckCircle2
+                  : STATUS_META[step].Icon;
+                const stepColor = isActiveCurrent ? "#92400e"
+                  : isFinalCompleted && !giftHasBalance && step === "opened" ? "#15803d"
+                  : STATUS_META[step].color;
+                const stepBg = isActiveCurrent ? "#fef3c7"
+                  : isFinalCompleted && !giftHasBalance && step === "opened" ? "#dcfce7"
+                  : STATUS_META[step].bg;
                 const isNextPending = !done && !isActiveCurrent && i === statusIdx + 1 && (status === "sent" || status === "ready");
-                const label = isActiveCurrent
-                  ? "Ready"
+                const label = isActiveCurrent ? "Ready"
                   : step === "scheduled" ? "Scheduled"
                   : step === "sent" ? "Ready"
                   : step === "opened" ? "Opened"
@@ -385,6 +447,19 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center gap-2 flex-wrap">
+                  {(status === "opened" || status === "redeemed") && (
+                    <button
+                      onClick={handleSendAgain}
+                      disabled={isSendingAgain}
+                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border transition-colors hover:bg-primary/10"
+                      style={{ color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.3)", background: "hsl(28,62%,36%,0.06)" }}
+                    >
+                      {isSendingAgain
+                        ? <><RefreshCw className="w-3 h-3 animate-spin" />Loading…</>
+                        : <><RefreshCw className="w-3 h-3" />Send again</>
+                      }
+                    </button>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {status === "redeemed" && gift.redeemedAt
                       ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
@@ -470,18 +545,12 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
       className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
     >
       <div className="flex items-stretch">
-        <div
-          className="w-1.5 shrink-0"
-          style={{ background: exp.color }}
-        />
+        <div className="w-1.5 shrink-0" style={{ background: exp.color }} />
 
         <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: exp.bg }}
-              >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: exp.bg }}>
                 <ExpIcon className="w-4 h-4" style={{ color: exp.color }} />
               </div>
               <div className="min-w-0">
@@ -509,10 +578,9 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.15 }}
                 className="flex items-center justify-between gap-2"
-                onClick={(e) => e.stopPropagation()}
               >
-                <span className="text-xs text-muted-foreground">Remove from your received gifts? Gift data is kept.</span>
-                <div className="flex items-center gap-1 shrink-0">
+                <span className="text-xs text-muted-foreground">Remove from received gifts?</span>
+                <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
                     className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
@@ -540,10 +608,7 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
               >
                 <div className="flex items-center gap-2 flex-wrap">
                   {gift.redeemedAt ? (
-                    <span
-                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-                      style={{ background: "#dcfce7", color: "#15803d" }}
-                    >
+                    <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "#dcfce7", color: "#15803d" }}>
                       <CheckCircle2 className="w-3 h-3" />
                       Redeemed
                     </span>
@@ -557,10 +622,7 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
                       Claim ${parseFloat(gift.amount).toFixed(0)}
                     </button>
                   ) : (
-                    <span
-                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium"
-                      style={{ background: "#dcfce7", color: "#15803d" }}
-                    >
+                    <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "#dcfce7", color: "#15803d" }}>
                       <Eye className="w-3 h-3" />
                       {exp.label}
                     </span>
@@ -593,9 +655,397 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
   );
 }
 
+// ─── Profile Edit Modal ───────────────────────────────────────────────────────
+
+function ProfileEditModal({ user, onClose, onSaved }: {
+  user: { firstName?: string | null; lastName?: string | null };
+  onClose: () => void;
+  onSaved: (firstName: string, lastName: string) => void;
+}) {
+  const [firstName, setFirstName] = useState(user.firstName ?? "");
+  const [lastName, setLastName] = useState(user.lastName ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!firstName.trim()) { setError("First name is required"); return; }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`${BASE}/api/auth/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      onSaved(firstName.trim(), lastName.trim());
+      onClose();
+    } catch {
+      setError("Couldn't save — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 40, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 40, scale: 0.97 }}
+        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        className="bg-card border border-border rounded-3xl p-7 w-full max-w-sm shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-serif text-xl font-medium">Edit your name</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-secondary transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+        </div>
+        <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-foreground">First name</label>
+            <Input
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="First name"
+              className="rounded-xl h-11"
+              autoFocus
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-foreground">Last name</label>
+            <Input
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Last name (optional)"
+              className="rounded-xl h-11"
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <div className="flex gap-3 mt-1">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-full">Cancel</Button>
+            <Button type="submit" disabled={saving} className="flex-1 rounded-full">
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Add Contact Form ─────────────────────────────────────────────────────────
+
+function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) { setError("Name is required"); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, phone, email }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      onSaved();
+    } catch {
+      setError("Couldn't save — please try again.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      className="bg-card border border-primary/20 rounded-2xl p-5"
+    >
+      <form onSubmit={handleSave} className="flex flex-col gap-3">
+        <h3 className="font-medium text-base">New contact</h3>
+        <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name*" className="rounded-xl h-10" autoFocus />
+        <div className="grid grid-cols-2 gap-3">
+          <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-10" />
+          <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-10" type="email" />
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onCancel} className="rounded-full">Cancel</Button>
+          <Button type="submit" size="sm" disabled={saving} className="rounded-full">
+            {saving ? "Saving…" : "Add contact"}
+          </Button>
+        </div>
+      </form>
+    </motion.div>
+  );
+}
+
+// ─── Add Occasion Form ────────────────────────────────────────────────────────
+
+const OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Valentine's Day", "Hanukkah", "Other"];
+
+function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; onSaved: () => void; onCancel: () => void }) {
+  const [label, setLabel] = useState("Birthday");
+  const [month, setMonth] = useState(1);
+  const [day, setDay] = useState(1);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/contacts/${contactId}/occasions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ label, month, day }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      onSaved();
+    } catch {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSave} className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-border">
+      <select
+        value={label}
+        onChange={e => setLabel(e.target.value)}
+        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+      >
+        {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+      </select>
+      <select
+        value={month}
+        onChange={e => setMonth(Number(e.target.value))}
+        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+      >
+        {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+      </select>
+      <select
+        value={day}
+        onChange={e => setDay(Number(e.target.value))}
+        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+      >
+        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+      </select>
+      <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+      <Button type="submit" size="sm" disabled={saving} className="rounded-full h-7 text-xs px-3">
+        {saving ? "Saving…" : "Save"}
+      </Button>
+    </form>
+  );
+}
+
+// ─── Contact Card ─────────────────────────────────────────────────────────────
+
+function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh: () => void; idx: number }) {
+  const [, setLocation] = useLocation();
+  const [showOccasionForm, setShowOccasionForm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function handleDeleteContact(e: React.MouseEvent) {
+    e.stopPropagation();
+    await fetch(`${BASE}/api/gifted/contacts/${contact.id}`, { method: "DELETE", credentials: "include" });
+    onRefresh();
+  }
+
+  async function handleDeleteOccasion(occasionId: string) {
+    await fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions/${occasionId}`, { method: "DELETE", credentials: "include" });
+    onRefresh();
+  }
+
+  function handleGiftContact() {
+    clearGiftSession();
+    localStorage.setItem("gifted_recipient_name", contact.name);
+    if (contact.phone) localStorage.setItem("gifted_recipient_phone", contact.phone);
+    setLocation("/create");
+  }
+
+  const nextOccasion = contact.occasions.length > 0
+    ? [...contact.occasions].sort((a, b) => daysUntilOccasion(a.month, a.day) - daysUntilOccasion(b.month, b.day))[0]
+    : null;
+  const daysUntil = nextOccasion ? daysUntilOccasion(nextOccasion.month, nextOccasion.day) : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 + idx * 0.06, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="bg-card border border-border rounded-2xl p-5"
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <span className="text-primary font-semibold text-sm">{contact.name[0]?.toUpperCase()}</span>
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-base leading-tight">{contact.name}</p>
+            {(contact.phone || contact.email) && (
+              <p className="text-xs text-muted-foreground truncate">{contact.phone || contact.email}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={handleGiftContact}
+            className="text-xs px-3 py-1.5 rounded-full font-medium border transition-colors hover:bg-primary/10"
+            style={{ color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.3)", background: "hsl(28,62%,36%,0.06)" }}
+          >
+            Gift them
+          </button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-1">
+              <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted-foreground hover:text-foreground px-2">Cancel</button>
+              <button onClick={handleDeleteContact} className="text-xs text-destructive hover:text-destructive/80 px-2">Delete</button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {nextOccasion && daysUntil !== null && daysUntil <= 30 && (
+        <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
+          <Bell className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+          <p className="text-xs text-amber-800">
+            <span className="font-medium">{nextOccasion.label}</span>
+            {" "}
+            {daysUntil === 0 ? "is today" : daysUntil === 1 ? "is tomorrow" : `in ${daysUntil} days`}
+            {" · "}{MONTH_NAMES[nextOccasion.month - 1]} {nextOccasion.day}
+          </p>
+        </div>
+      )}
+
+      {contact.occasions.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {contact.occasions.map(occ => {
+            const d = daysUntilOccasion(occ.month, occ.day);
+            return (
+              <div key={occ.id} className="flex items-center gap-1.5 text-xs bg-secondary rounded-lg px-2.5 py-1.5">
+                <Cake className="w-3 h-3 text-muted-foreground" />
+                <span className="font-medium">{occ.label}</span>
+                <span className="text-muted-foreground">{MONTH_NAMES[occ.month - 1]} {occ.day}</span>
+                {d <= 7 && (
+                  <span className="text-amber-600 font-medium">· {d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d}d`}</span>
+                )}
+                <button
+                  onClick={() => handleDeleteOccasion(occ.id)}
+                  className="ml-1 text-muted-foreground/50 hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {showOccasionForm ? (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <AddOccasionForm
+              contactId={contact.id}
+              onSaved={() => { setShowOccasionForm(false); onRefresh(); }}
+              onCancel={() => setShowOccasionForm(false)}
+            />
+          </motion.div>
+        ) : (
+          <button
+            onClick={() => setShowOccasionForm(true)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Plus className="w-3 h-3" />
+            Add occasion
+          </button>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ─── Upcoming Occasions Banner ────────────────────────────────────────────────
+
+function UpcomingOccasionsBanner({ contacts, onGift }: { contacts: Contact[]; onGift: (name: string) => void }) {
+  const upcoming = contacts
+    .flatMap(c => c.occasions.map(o => ({ ...o, contactName: c.name, phone: c.phone })))
+    .filter(o => {
+      const d = daysUntilOccasion(o.month, o.day);
+      return d <= 14;
+    })
+    .sort((a, b) => daysUntilOccasion(a.month, a.day) - daysUntilOccasion(b.month, b.day))
+    .slice(0, 2);
+
+  if (upcoming.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3"
+    >
+      <div className="flex items-start gap-3">
+        <Bell className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-amber-900 mb-1.5">Upcoming occasions</p>
+          <div className="flex flex-col gap-1.5">
+            {upcoming.map(o => {
+              const d = daysUntilOccasion(o.month, o.day);
+              return (
+                <div key={o.id} className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-amber-800">
+                    <span className="font-medium">{o.contactName}</span>'s {o.label}
+                    {" · "}
+                    {d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`}
+                  </p>
+                  <button
+                    onClick={() => onGift(o.contactName)}
+                    className="text-xs font-medium text-amber-700 hover:text-amber-900 underline underline-offset-2 shrink-0 transition-colors"
+                  >
+                    Gift them
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Tab = "sent" | "received";
+type Tab = "sent" | "received" | "people";
 
 export default function MyGiftsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -603,11 +1053,10 @@ export default function MyGiftsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("sent");
   const queryClient = useQueryClient();
   const [senderBlockedNotice, setSenderBlockedNotice] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [localName, setLocalName] = useState<{ first: string; last: string } | null>(null);
+  const [showAddContact, setShowAddContact] = useState(false);
 
-  // Handle return from auth — read gifted_auth_return from localStorage
-  // Format A: "/preview"                         → navigate there (paid gate return)
-  // Format B: "/my-gifts?claim={giftId}"        → claim the gift, then stay
-  // Format C: "/open/{id}?save-received={id}"   → save as received gift, then stay here
   useEffect(() => {
     const authReturn = localStorage.getItem("gifted_auth_return");
     if (!authReturn) return;
@@ -650,6 +1099,12 @@ export default function MyGiftsPage() {
     setLocation("/create");
   }
 
+  function handleGiftContact(contactName: string) {
+    clearGiftSession();
+    localStorage.setItem("gifted_recipient_name", contactName);
+    setLocation("/create");
+  }
+
   const { data: myGifts, isLoading: giftsLoading } = useQuery({
     queryKey: ["my-gifts"],
     queryFn: fetchMyGifts,
@@ -666,7 +1121,13 @@ export default function MyGiftsPage() {
     refetchInterval: 30_000,
   });
 
-  // ── Loading skeleton
+  const { data: contactsData, isLoading: contactsLoading, refetch: refetchContacts } = useQuery({
+    queryKey: ["contacts"],
+    queryFn: fetchContacts,
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -675,7 +1136,6 @@ export default function MyGiftsPage() {
     );
   }
 
-  // ── Not signed in
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 pb-24 text-center gap-6">
@@ -714,18 +1174,28 @@ export default function MyGiftsPage() {
     );
   }
 
-  // ── Stats (sent tab)
-  const totalSent    = myGifts?.length ?? 0;
-  const totalValue   = myGifts?.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0) ?? 0;
-  const openedCount  = myGifts?.filter(g => !!g.openedAt && !g.redeemedAt).length ?? 0;
-  const redeemed     = myGifts?.filter(g => !!g.redeemedAt && hasBalance(g)).length ?? 0;
+  // ── Stats
+  const totalSent     = myGifts?.length ?? 0;
+  const totalValue    = myGifts?.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0) ?? 0;
+  const openedCount   = myGifts?.filter(g => !!g.openedAt && !g.redeemedAt).length ?? 0;
+  const redeemed      = myGifts?.filter(g => !!g.redeemedAt && hasBalance(g)).length ?? 0;
   const totalReceived = receivedGifts?.length ?? 0;
 
-  const initials = [user?.firstName, user?.lastName]
+  // Most gifted recipient
+  const recipientCounts: Record<string, number> = {};
+  myGifts?.forEach(g => { recipientCounts[g.recipientName] = (recipientCounts[g.recipientName] ?? 0) + 1; });
+  const mostGifted = Object.entries(recipientCounts).sort((a, b) => b[1] - a[1])[0];
+
+  const displayFirstName = localName?.first ?? user?.firstName ?? null;
+  const displayLastName  = localName?.last ?? user?.lastName ?? null;
+
+  const initials = [displayFirstName, displayLastName]
     .filter(Boolean)
     .map(n => n![0])
     .join("")
     .toUpperCase() || (user?.email?.[0]?.toUpperCase() ?? "?");
+
+  const upcomingContactsData = contactsData ?? [];
 
   return (
     <div className="min-h-screen w-full pb-28">
@@ -740,19 +1210,24 @@ export default function MyGiftsPage() {
         >
           <div className="flex items-center gap-4">
             {user?.profileImageUrl ? (
-              <img
-                src={user.profileImageUrl}
-                alt=""
-                className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20"
-              />
+              <img src={user.profileImageUrl} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20" />
             ) : (
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20">
                 <span className="text-primary font-bold text-base">{initials}</span>
               </div>
             )}
             <div>
-              <p className="text-sm text-muted-foreground font-medium">{greeting(user?.firstName ?? null)}</p>
-              <h1 className="font-serif text-2xl md:text-3xl font-medium leading-tight">Your gifts</h1>
+              <p className="text-sm text-muted-foreground font-medium">{greeting(displayFirstName)}</p>
+              <div className="flex items-center gap-2">
+                <h1 className="font-serif text-2xl md:text-3xl font-medium leading-tight">Your gifts</h1>
+                <button
+                  onClick={() => setShowProfileEdit(true)}
+                  className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                  title="Edit name"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
           <Button onClick={handleNewGift} className="rounded-full px-5 gap-2 hidden sm:flex shadow-md hover:-translate-y-0.5 transition-transform">
@@ -776,50 +1251,62 @@ export default function MyGiftsPage() {
               <p className="text-sm text-amber-800 flex-1">
                 You can't save your own gift as received. It's already in your Sent tab.
               </p>
-              <button
-                onClick={() => setSenderBlockedNotice(false)}
-                className="text-amber-500 hover:text-amber-700 transition-colors shrink-0"
-                aria-label="Dismiss"
-              >
+              <button onClick={() => setSenderBlockedNotice(false)} className="text-amber-500 hover:text-amber-700 transition-colors shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* ── Upcoming occasions banner (sent tab only) ── */}
+        {activeTab === "sent" && upcomingContactsData.length > 0 && (
+          <UpcomingOccasionsBanner contacts={upcomingContactsData} onGift={handleGiftContact} />
+        )}
+
         {/* ── Stats row (only on Sent tab) ── */}
         {activeTab === "sent" && !giftsLoading && totalSent > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
             <StatCard label="Sent" value={totalSent} Icon={Package} delay={0.05} />
-            <StatCard label="Total gifted" value={totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"} Icon={DollarSign} delay={0.1} />
-            <StatCard label="Opened" value={openedCount} sub={openedCount === 1 ? "awaiting redemption" : "awaiting redemption"} Icon={Eye} delay={0.15} />
+            <StatCard
+              label="Total gifted"
+              value={totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"}
+              sub={mostGifted && mostGifted[1] > 1 ? `${mostGifted[0]} most gifted` : undefined}
+              Icon={DollarSign}
+              delay={0.1}
+            />
+            <StatCard label="Opened" value={openedCount} sub={openedCount === 1 ? "awaiting redemption" : openedCount > 0 ? "awaiting redemption" : undefined} Icon={Eye} delay={0.15} />
             <StatCard label="Redeemed" value={redeemed} Icon={CheckCircle2} delay={0.2} />
           </div>
         )}
 
         {/* ── Tabs ── */}
         <div className="flex items-center gap-1 mb-6 bg-secondary/50 rounded-2xl p-1 w-fit">
-          {(["sent", "received"] as Tab[]).map((tab) => (
+          {(["sent", "received", "people"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`relative px-5 py-2 rounded-xl text-sm font-medium transition-all ${
+              className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                 activeTab === tab
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab === "sent" ? "Sent" : "Received"}
+              {tab === "sent" ? "Sent" : tab === "received" ? "Received" : "People"}
               {tab === "received" && totalReceived > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
                   {totalReceived}
+                </span>
+              )}
+              {tab === "people" && (contactsData?.length ?? 0) > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
+                  {contactsData!.length}
                 </span>
               )}
             </button>
           ))}
         </div>
 
-        {/* ── Sent tab content ── */}
+        {/* ── Sent tab ── */}
         {activeTab === "sent" && (
           giftsLoading ? (
             <div className="space-y-3">
@@ -862,7 +1349,6 @@ export default function MyGiftsPage() {
                   Most recent first
                 </div>
               </motion.div>
-
               {myGifts.map((gift, i) => (
                 <GiftCard key={gift.id} gift={gift} idx={i} />
               ))}
@@ -870,7 +1356,7 @@ export default function MyGiftsPage() {
           )
         )}
 
-        {/* ── Received tab content ── */}
+        {/* ── Received tab ── */}
         {activeTab === "received" && (
           receivedLoading ? (
             <div className="space-y-3">
@@ -909,12 +1395,77 @@ export default function MyGiftsPage() {
                   Most recent first
                 </div>
               </motion.div>
-
               {receivedGifts.map((gift, i) => (
                 <ReceivedGiftCard key={gift.id} gift={gift} idx={i} />
               ))}
             </div>
           )
+        )}
+
+        {/* ── People tab ── */}
+        {activeTab === "people" && (
+          <div className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-center justify-between"
+            >
+              <div>
+                <p className="text-sm text-muted-foreground">Save contacts and occasion dates.</p>
+                <p className="text-xs text-muted-foreground/70">We'll remind you 7 days before each occasion.</p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setShowAddContact(true)}
+                className="rounded-full gap-1.5"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                Add
+              </Button>
+            </motion.div>
+
+            <AnimatePresence>
+              {showAddContact && (
+                <AddContactForm
+                  onSaved={() => { setShowAddContact(false); refetchContacts(); }}
+                  onCancel={() => setShowAddContact(false)}
+                />
+              )}
+            </AnimatePresence>
+
+            {contactsLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map(i => (
+                  <div key={i} className="h-24 rounded-2xl bg-muted/40 animate-pulse" />
+                ))}
+              </div>
+            ) : !contactsData || contactsData.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-16 bg-card border border-border rounded-3xl px-6"
+              >
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-7 h-7 text-primary" />
+                </div>
+                <h2 className="font-serif text-xl font-medium mb-2">No people saved yet</h2>
+                <p className="text-muted-foreground mb-6 max-w-xs mx-auto text-sm">
+                  Add the people you gift regularly and save their birthdays and anniversaries. We'll remind you when something special is coming up.
+                </p>
+                <Button onClick={() => setShowAddContact(true)} className="rounded-full px-6 h-11 gap-2">
+                  <UserPlus className="w-4 h-4" />
+                  Add your first contact
+                </Button>
+              </motion.div>
+            ) : (
+              <div className="space-y-3">
+                {contactsData.map((c, i) => (
+                  <ContactCard key={c.id} contact={c} idx={i} onRefresh={() => refetchContacts()} />
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -928,6 +1479,17 @@ export default function MyGiftsPage() {
       >
         <Plus className="w-6 h-6" />
       </motion.button>
+
+      {/* ── Profile edit modal ── */}
+      <AnimatePresence>
+        {showProfileEdit && (
+          <ProfileEditModal
+            user={{ firstName: displayFirstName, lastName: displayLastName }}
+            onClose={() => setShowProfileEdit(false)}
+            onSaved={(first, last) => setLocalName({ first, last })}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { db } from "@workspace/db";
-import { gifts } from "@workspace/db/schema";
-import { and, isNotNull, isNull, lte, eq } from "drizzle-orm";
+import { gifts, contactOccasions, contacts, usersTable } from "@workspace/db/schema";
+import { and, isNotNull, isNull, lte, eq, sql } from "drizzle-orm";
 import twilio from "twilio";
-import { sendSenderNudgeEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail } from "./lib/email";
+import { sendSenderNudgeEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail } from "./lib/email";
 
 interface TrackingEvent {
   status: string;
@@ -323,15 +323,77 @@ async function nudgeStaleGifts() {
   }
 }
 
+async function sendOccasionReminders() {
+  try {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    // Check for occasions 7 days from now AND today (day-of reminder)
+    const REMINDER_DAYS = [0, 7];
+
+    for (const daysAway of REMINDER_DAYS) {
+      const target = new Date(now);
+      target.setDate(target.getDate() + daysAway);
+      const targetMonth = target.getMonth() + 1;
+      const targetDay = target.getDate();
+
+      const upcoming = await db
+        .select({
+          occasionId: contactOccasions.id,
+          occasionLabel: contactOccasions.label,
+          lastReminderSentYear: contactOccasions.lastReminderSentYear,
+          contactName: contacts.name,
+          userEmail: usersTable.email,
+          userFirstName: usersTable.firstName,
+        })
+        .from(contactOccasions)
+        .innerJoin(contacts, eq(contactOccasions.contactId, contacts.id))
+        .innerJoin(usersTable, eq(contactOccasions.userId, usersTable.id))
+        .where(
+          and(
+            eq(contactOccasions.month, targetMonth),
+            eq(contactOccasions.day, targetDay),
+          )
+        );
+
+      for (const occ of upcoming) {
+        if (!occ.userEmail) continue;
+        if (occ.lastReminderSentYear === currentYear) continue;
+
+        try {
+          await sendOccasionReminderEmail({
+            to: occ.userEmail,
+            userName: occ.userFirstName ?? "",
+            contactName: occ.contactName,
+            occasionLabel: occ.occasionLabel,
+            daysAway,
+          });
+
+          await db
+            .update(contactOccasions)
+            .set({ lastReminderSentYear: currentYear })
+            .where(eq(contactOccasions.id, occ.occasionId));
+        } catch (err) {
+          console.error(`[scheduler] Occasion reminder failed for occasion ${occ.occasionId}:`, err);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] sendOccasionReminders error:", err);
+  }
+}
+
 export function startScheduler() {
   const INTERVAL_MS = 10 * 60 * 1000;
-  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, and stale gift nudges.");
+  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, and occasion reminders.");
   setInterval(async () => {
     await sendScheduledGifts();
     await pollAfterShipTrackings();
     await nudgeStaleGifts();
+    await sendOccasionReminders();
   }, INTERVAL_MS);
   sendScheduledGifts();
   pollAfterShipTrackings();
   nudgeStaleGifts();
+  sendOccasionReminders();
 }
