@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 const FROM = "gifted. <hello@gifted.page>";
-const REPLY_TO = "help@gifted.page";
+const REPLY_TO = "tsgorman1992@gmail.com";
 const BASE_URL = "https://gifted.page";
 
 function getClient(): Resend | null {

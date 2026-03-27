@@ -16,7 +16,7 @@ export default function ContactPage() {
     e.preventDefault();
     const subject = encodeURIComponent(`Message from ${name}`);
     const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\n${message}`);
-    window.location.href = `mailto:help@gifted.page?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:tsgorman1992@gmail.com?subject=${subject}&body=${body}`;
   }
 
   return (
@@ -37,8 +37,8 @@ export default function ContactPage() {
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
             Or email us directly at{" "}
-            <a href="mailto:help@gifted.page" className="text-primary hover:underline">
-              help@gifted.page
+            <a href="mailto:tsgorman1992@gmail.com" className="text-primary hover:underline">
+              tsgorman1992@gmail.com
             </a>
           </p>
         </motion.div>
