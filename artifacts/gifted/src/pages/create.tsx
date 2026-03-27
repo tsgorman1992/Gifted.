@@ -47,7 +47,7 @@ const EXPERIENCE_ICONS: Record<ExperienceId, React.ComponentType<{ className?: s
   "rose-petal":     Heart,
   "snow-flurry":    Snowflake,
   "sunrise":        Sun,
-  "mothers-day":    Heart,
+  "mothers-day":    Flower2,
   "fathers-day":    Star,
 };
 

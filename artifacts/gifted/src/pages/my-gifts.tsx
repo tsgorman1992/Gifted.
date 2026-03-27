@@ -80,7 +80,7 @@ const EXPERIENCE_META: Record<string, { label: string; color: string; bg: string
   "rose-petal":      { label: "Rose Petal",      color: "#e879a8", bg: "#fdf2f8", Icon: Heart },
   "snow-flurry":     { label: "Snow Flurry",     color: "#0ea5e9", bg: "#f0f9ff", Icon: Snowflake },
   "sunrise":         { label: "Sunrise",         color: "#ea580c", bg: "#fff7ed", Icon: Sun },
-  "mothers-day":     { label: "For Mom",         color: "#c77daa", bg: "#fdf2f8", Icon: Heart },
+  "mothers-day":     { label: "For Mom",         color: "#c77daa", bg: "#fdf2f8", Icon: Flower2 },
   "fathers-day":     { label: "For Dad",         color: "#1e4d8c", bg: "#eff6ff", Icon: Star },
 };
 
