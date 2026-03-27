@@ -65,9 +65,9 @@ async function assertGiftIsDeletable(giftId: string): Promise<void> {
   }
 }
 
-async function registerAfterShipTracking(carrier: string, trackingNumber: string, giftId: string) {
+async function registerAfterShipTracking(carrier: string, trackingNumber: string, giftId: string): Promise<string | null> {
   const apiKey = process.env.AFTERSHIP_API_KEY;
-  if (!apiKey) return;
+  if (!apiKey) return null;
   try {
     const response = await fetch("https://api.aftership.com/tracking/2024-07/trackings", {
       method: "POST",
@@ -81,14 +81,24 @@ async function registerAfterShipTracking(carrier: string, trackingNumber: string
         custom_fields: { gift_id: giftId },
       }),
     });
-    if (!response.ok) {
-      const body = await response.text().catch(() => "(unreadable)");
-      console.error(`[AfterShip] Registration failed for gift ${giftId}: HTTP ${response.status} ${response.statusText} — ${body}`);
-    } else {
-      console.log(`[AfterShip] Registered tracking for gift ${giftId}: ${carrier} ${trackingNumber}`);
+    const json = await response.json().catch(() => null) as Record<string, unknown> | null;
+    if (response.ok) {
+      const id = (json?.data as Record<string, unknown> | undefined)?.tracking as Record<string, unknown> | undefined;
+      const aftershipId = (id?.id ?? (json?.data as Record<string, unknown> | undefined)?.id) as string | undefined;
+      console.log(`[AfterShip] Registered tracking for gift ${giftId}: ${carrier} ${trackingNumber} (id: ${aftershipId ?? "unknown"})`);
+      return aftershipId ?? null;
     }
+    const meta = json?.meta as Record<string, unknown> | undefined;
+    if (meta?.code === 4003) {
+      const aftershipId = (json?.data as Record<string, unknown> | undefined)?.id as string | undefined;
+      console.log(`[AfterShip] Tracking already exists for gift ${giftId}: ${carrier} ${trackingNumber} (id: ${aftershipId ?? "unknown"})`);
+      return aftershipId ?? null;
+    }
+    console.error(`[AfterShip] Registration failed for gift ${giftId}: HTTP ${response.status} ${response.statusText} — ${JSON.stringify(json)}`);
+    return null;
   } catch (err) {
     console.error("[AfterShip] Failed to register tracking:", err);
+    return null;
   }
 }
 
@@ -165,7 +175,13 @@ router.post("/gifted/gifts", async (req, res) => {
     });
 
     if (trackingCarrier && trackingNumber) {
-      registerAfterShipTracking(trackingCarrier, trackingNumber, id).catch(() => {});
+      registerAfterShipTracking(trackingCarrier, trackingNumber, id)
+        .then((aftershipId) => {
+          if (aftershipId) {
+            db.update(gifts).set({ aftershipTrackingId: aftershipId }).where(eq(gifts.id, id)).catch(() => {});
+          }
+        })
+        .catch(() => {});
     }
 
     res.json({ id });

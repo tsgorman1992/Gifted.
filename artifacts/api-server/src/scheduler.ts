@@ -127,6 +127,7 @@ async function pollAfterShipTrackings() {
         id: gifts.id,
         trackingCarrier: gifts.trackingCarrier,
         trackingNumber: gifts.trackingNumber,
+        aftershipTrackingId: gifts.aftershipTrackingId,
         senderPhone: gifts.senderPhone,
         senderEmail: gifts.senderEmail,
         senderName: gifts.senderName,
@@ -148,7 +149,13 @@ async function pollAfterShipTrackings() {
 
     for (const gift of activeGifts) {
       try {
-        const url = `https://api.aftership.com/tracking/2024-07/trackings/${gift.trackingCarrier}/${gift.trackingNumber}`;
+        // Prefer AfterShip's internal ID (ID-based endpoint is the correct 2024-07 format).
+        // Fall back to slug/number for legacy gifts that don't have an ID yet.
+        let aftershipId = gift.aftershipTrackingId;
+        const url = aftershipId
+          ? `https://api.aftership.com/tracking/2024-07/trackings/${aftershipId}`
+          : `https://api.aftership.com/tracking/2024-07/trackings/${gift.trackingCarrier}/${gift.trackingNumber}`;
+
         const res = await fetch(url, {
           headers: {
             "as-api-key": apiKey,
@@ -158,7 +165,31 @@ async function pollAfterShipTrackings() {
 
         if (!res.ok) {
           const errBody = await res.text().catch(() => "");
-          console.warn(`[AfterShip poll] ${gift.id}: HTTP ${res.status} — ${errBody}`);
+          // Auto-recover: if no AfterShip ID stored, re-register to obtain one for next poll
+          if (!aftershipId && gift.trackingCarrier && gift.trackingNumber) {
+            console.warn(`[AfterShip poll] ${gift.id}: HTTP ${res.status} — no ID stored, attempting re-register…`);
+            const regRes = await fetch("https://api.aftership.com/tracking/2024-07/trackings", {
+              method: "POST",
+              headers: { "as-api-key": apiKey, "Content-Type": "application/json" },
+              body: JSON.stringify({ tracking_number: gift.trackingNumber, slug: gift.trackingCarrier, custom_fields: { gift_id: gift.id } }),
+            });
+            const regJson = await regRes.json().catch(() => null) as Record<string, unknown> | null;
+            const regMeta = regJson?.meta as Record<string, unknown> | undefined;
+            const regData = regJson?.data as Record<string, unknown> | undefined;
+            // Extract ID from success (201) or "already exists" (4003)
+            const recoveredId = regRes.ok
+              ? (regData?.tracking as Record<string, unknown> | undefined)?.id as string | undefined ?? regData?.id as string | undefined
+              : regMeta?.code === 4003 ? regData?.id as string | undefined : undefined;
+            if (recoveredId) {
+              await db.update(gifts).set({ aftershipTrackingId: recoveredId }).where(eq(gifts.id, gift.id));
+              aftershipId = recoveredId;
+              console.log(`[AfterShip poll] ${gift.id}: recovered AfterShip ID ${recoveredId} — will use next tick`);
+            } else {
+              console.warn(`[AfterShip poll] ${gift.id}: HTTP ${res.status} — ${errBody}`);
+            }
+          } else {
+            console.warn(`[AfterShip poll] ${gift.id}: HTTP ${res.status} — ${errBody}`);
+          }
           continue;
         }
 

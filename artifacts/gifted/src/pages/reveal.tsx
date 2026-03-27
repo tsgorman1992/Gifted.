@@ -2267,7 +2267,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                           className={`flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-70 active:opacity-50 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}
                         >
                           <Download className="w-3 h-3" />
-                          Save video
+                          Download video
                         </a>
                       </div>
                     )}

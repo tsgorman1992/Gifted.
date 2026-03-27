@@ -47,6 +47,7 @@ export const gifts = pgTable("gifts", {
   recipientHidden: boolean("recipient_hidden").default(false),
   trackingCarrier: text("tracking_carrier"),
   trackingNumber: text("tracking_number"),
+  aftershipTrackingId: text("aftership_tracking_id"),
   trackingStatus: jsonb("tracking_status").$type<TrackingEvent[]>(),
   trackingDeliveredAt: timestamp("tracking_delivered_at", { withTimezone: true }),
   nudgeSentAt: timestamp("nudge_sent_at", { withTimezone: true }),
