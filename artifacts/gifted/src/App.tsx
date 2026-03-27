@@ -18,7 +18,8 @@ import PrivacyPage  from "@/pages/privacy";
 import ContactPage  from "@/pages/contact";
 import MyGiftsPage  from "@/pages/my-gifts";
 import SignInPage   from "@/pages/sign-in";
-import AdminPage    from "@/pages/admin";
+import AdminPage      from "@/pages/admin";
+import SmsConsentPage from "@/pages/sms-consent";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +40,8 @@ function Router() {
         <Route path="/contact"   component={ContactPage}  />
         <Route path="/my-gifts"  component={MyGiftsPage}  />
         <Route path="/sign-in"   component={SignInPage}   />
-        <Route path="/admin"     component={AdminPage}    />
+        <Route path="/admin"       component={AdminPage}      />
+        <Route path="/sms-consent" component={SmsConsentPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
