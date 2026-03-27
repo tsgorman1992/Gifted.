@@ -9,7 +9,7 @@ import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
-  Inbox, Trash2, X, Share2, Send, RefreshCw, Users, Bell,
+  Inbox, Trash2, X, Share2, Send, Users, Bell,
   UserPlus, Cake, Pencil,
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInDays } from "date-fns";
@@ -225,7 +225,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [hideError, setHideError] = useState<string | null>(null);
-  const [isSendingAgain, setIsSendingAgain] = useState(false);
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
   const statusMeta = STATUS_META[status];
@@ -235,35 +234,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   function handleCardClick() {
     if (confirmDelete) return;
     setLocation(`/open/${gift.id}?preview=true`);
-  }
-
-  async function handleSendAgain(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (isSendingAgain) return;
-    setIsSendingAgain(true);
-    try {
-      const res = await fetch(`${BASE}/api/gifted/gifts/${gift.id}/template`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load template");
-      const tmpl = await res.json();
-
-      clearGiftSession();
-
-      if (tmpl.senderName) localStorage.setItem("gifted_sender_name", tmpl.senderName);
-      if (tmpl.occasion)   localStorage.setItem("gifted_occasion", tmpl.occasion);
-      if (tmpl.experience) localStorage.setItem("gifted_experience", tmpl.experience);
-      if (tmpl.giftTitle)  localStorage.setItem("gifted_gift_title", tmpl.giftTitle);
-      if (tmpl.personalNote) localStorage.setItem("gifted_personal_note", tmpl.personalNote);
-      if (tmpl.playlistUrl)  localStorage.setItem("gifted_playlist_url", tmpl.playlistUrl);
-      if (tmpl.extraLinks)   localStorage.setItem("gifted_extra_links", JSON.stringify(tmpl.extraLinks));
-      if (tmpl.intent)       localStorage.setItem("gifted_intent", tmpl.intent);
-      if (tmpl.amount)       localStorage.setItem("gifted_amount", tmpl.amount);
-      if (tmpl.photoPaths)   localStorage.setItem("gifted_photo_paths", JSON.stringify(tmpl.photoPaths));
-      if (tmpl.videoPath)    localStorage.setItem("gifted_video_path", tmpl.videoPath);
-
-      setLocation("/create");
-    } catch {
-      setIsSendingAgain(false);
-    }
   }
 
   const handleHide = useCallback(async (e: React.MouseEvent) => {
@@ -447,19 +417,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  {(status === "opened" || status === "redeemed") && (
-                    <button
-                      onClick={handleSendAgain}
-                      disabled={isSendingAgain}
-                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border transition-colors hover:bg-primary/10"
-                      style={{ color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.3)", background: "hsl(28,62%,36%,0.06)" }}
-                    >
-                      {isSendingAgain
-                        ? <><RefreshCw className="w-3 h-3 animate-spin" />Loading…</>
-                        : <><RefreshCw className="w-3 h-3" />Send again</>
-                      }
-                    </button>
-                  )}
                   <span className="text-xs text-muted-foreground">
                     {status === "redeemed" && gift.redeemedAt
                       ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
