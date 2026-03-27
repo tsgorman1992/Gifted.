@@ -1,10 +1,12 @@
 import { Router } from "express";
+import { Readable } from "stream";
 import { nanoid } from "nanoid";
 import { createHmac, timingSafeEqual } from "crypto";
 import { db, gifts } from "@workspace/db";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
 import twilio from "twilio";
 import { sendGiftOpenedNotice, sendPackageDeliveredEmail } from "../../lib/email";
+import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
 
 function normPhone(raw: string): string {
   const d = raw.replace(/\D/g, "");
@@ -586,6 +588,51 @@ router.patch("/gifted/gifts/:id/hide", async (req, res) => {
     }
     console.error("Error hiding gift:", err);
     res.status(500).json({ error: "Failed to hide gift" });
+  }
+});
+
+// GET /api/gifted/gifts/:id/video/download — proxies the gift video through the server
+// so mobile browsers can save it locally (Content-Disposition: attachment).
+// Public endpoint — gated only by knowing the gift ID.
+const _objectStorageService = new ObjectStorageService();
+router.get("/gifted/gifts/:id/video/download", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [gift] = await db
+      .select({ videoPath: gifts.videoPath })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift || !gift.videoPath) {
+      res.status(404).json({ error: "Video not found" });
+      return;
+    }
+
+    const objectFile = await _objectStorageService.getObjectEntityFile(gift.videoPath);
+    const response = await _objectStorageService.downloadObject(objectFile, 3600);
+
+    res.setHeader("Content-Disposition", 'attachment; filename="gift-video.mp4"');
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() !== "content-disposition") {
+        res.setHeader(key, value);
+      }
+    });
+    res.status(response.status);
+
+    if (response.body) {
+      const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
+      nodeStream.pipe(res);
+    } else {
+      res.end();
+    }
+  } catch (err) {
+    if (err instanceof ObjectNotFoundError) {
+      res.status(404).json({ error: "Video not found" });
+      return;
+    }
+    console.error("Error downloading gift video:", err);
+    res.status(500).json({ error: "Failed to download video" });
   }
 });
 

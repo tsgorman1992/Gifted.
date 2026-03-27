@@ -2241,12 +2241,10 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                             <p className={`text-sm font-medium ${isDark ? "text-white/80" : "text-white"}`}>
                               Video couldn't play
                             </p>
-                            {videoUrl && (
+                            {giftId && (
                               <a
-                                href={videoUrl}
-                                download
-                                target="_blank"
-                                rel="noreferrer"
+                                href={`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/video/download`}
+                                download="gift-video.mp4"
                                 className="px-4 py-2 rounded-full text-xs font-semibold bg-white/90 text-gray-900 hover:bg-white transition-colors shadow"
                               >
                                 Download video instead
@@ -2256,14 +2254,12 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                         )}
                       </div>
                     </div>
-                    {/* Download link — always available, small and unobtrusive */}
-                    {!videoError && (
+                    {/* Download link — proxied through our server so mobile saves the file properly */}
+                    {!videoError && giftId && (
                       <div className="flex justify-end px-1">
                         <a
-                          href={videoUrl}
-                          download
-                          target="_blank"
-                          rel="noreferrer"
+                          href={`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/video/download`}
+                          download="gift-video.mp4"
                           className={`flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-70 active:opacity-50 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}
                         >
                           <Download className="w-3 h-3" />
