@@ -192,6 +192,49 @@ const CONFIGS: Record<string, RevealCfg> = {
       bg: "rgba(254,215,170,0.07)",
     },
   },
+  "mothers-day": {
+    titleStyle: "bloom",
+    sectionStyle: "bloom-scale",
+    amountStyle: "bloom-pop",
+    sectionStagger: 0.18,
+    sectionInitialDelay: 0.8,
+    heroDelay: 0.4,
+    heroDuration: 0.95,
+    senderText: "With love from",
+    isDark: false,
+    envelopeExit: { opacity: 0, scale: 1.1, filter: "blur(8px)" },
+    envelopeTransition: { duration: 0.65, ease: "easeOut" },
+    ambientEffect: "petals",
+    ambientIntensity: "high",
+    preIconAnim: "heartbeat",
+    preIconColorClass: "text-purple-400",
+    cardStyle: {
+      shadow: "0 8px 32px rgba(200,168,233,0.35)",
+      border: "rgba(200,168,233,0.4)",
+      bg: "rgba(200,168,233,0.08)",
+    },
+  },
+  "fathers-day": {
+    titleStyle: "blur-in",
+    sectionStyle: "fade-drift",
+    amountStyle: "glow-reveal",
+    sectionStagger: 0.28,
+    sectionInitialDelay: 1.0,
+    heroDelay: 0.5,
+    heroDuration: 1.1,
+    senderText: "From",
+    isDark: true,
+    envelopeExit: { opacity: 0, scale: 0.88 },
+    envelopeTransition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+    preIconAnim: "rise",
+    preIconColorClass: "text-amber-400",
+    ambientIntensity: "low",
+    cardStyle: {
+      shadow: "0 0 50px rgba(201,168,76,0.18), 0 20px 40px rgba(0,0,0,0.45)",
+      border: "rgba(201,168,76,0.25)",
+      bg: "rgba(255,255,255,0.05)",
+    },
+  },
 };
 
 // ─── Small helpers ───────────────────────────────────────────────────────────
@@ -1020,6 +1063,8 @@ const BOX_THEMES: Record<string, { box: string; lid: string; ribbon: string; bow
   "rose-petal":     { box: "#FFB7C5", lid: "#FF8FAB", ribbon: "#FFFFFF", bow: "#f9a8d4" },
   "snow-flurry":    { box: "#bfdbfe", lid: "#93c5fd", ribbon: "#FFFFFF", bow: "#e0f2fe" },
   "sunrise":        { box: "#fed7aa", lid: "#fb923c", ribbon: "#fca5a5", bow: "#f97316" },
+  "mothers-day":    { box: "#C8A8E9", lid: "#a78bca", ribbon: "#FFB7C5", bow: "#FFD700" },
+  "fathers-day":    { box: "#1A2E4A", lid: "#152540", ribbon: "#C9A84C", bow: "#FFD700" },
 };
 
 // phase: 0=idle 1=rising 2=shaking 3=lid-pops 4=flash

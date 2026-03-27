@@ -47,6 +47,8 @@ const EXPERIENCE_ICONS: Record<ExperienceId, React.ComponentType<{ className?: s
   "rose-petal":     Heart,
   "snow-flurry":    Snowflake,
   "sunrise":        Sun,
+  "mothers-day":    Heart,
+  "fathers-day":    Star,
 };
 
 const INTENT_MAP: Record<string, string[]> = {
@@ -58,12 +60,14 @@ const INTENT_MAP: Record<string, string[]> = {
   "Just Because": ["Coffee on me", "Treat yourself", "No reason needed", "Just a little something", "Because I could"],
   "Wedding":      ["Honeymoon fund", "First home together", "Date nights ahead", "Something special", "New adventure"],
   "Thank You":    ["Coffee on me", "Lunch on me", "A small thank you", "Treat yourself", "You deserve it"],
+  "Mother's Day": ["Flowers & brunch", "Spa day", "Something you love", "The best mom around", "Treat yourself"],
+  "Father's Day": ["Golf day", "Dinner on me", "Best dad ever", "Treat yourself", "Something special"],
   "Other":        ["Treat yourself", "Coffee on me", "Something special", "Your choice", "Take a break"],
 };
 const DEFAULT_INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Something special", "Take a break"];
 const ALL_PRESET_INTENTS = new Set(Object.values(INTENT_MAP).flat());
 const AMOUNTS = ["10", "25", "50", "100", "250"];
-const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Thank You", "Other"];
+const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Thank You", "Mother's Day", "Father's Day", "Other"];
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
@@ -239,7 +243,7 @@ function ProgressBar({ step, onStepClick }: { step: number; onStepClick: (s: num
 
 // ─── Ambient particle helpers (lightweight version for preview card) ──────────
 
-type AmbientParticleEffect = "petals" | "rose-petals" | "snow" | "confetti" | "stars" | "bokeh";
+type AmbientParticleEffect = "petals" | "rose-petals" | "snow" | "confetti" | "stars" | "bokeh" | "florals";
 
 function getAmbientEffect(experienceId: string): AmbientParticleEffect | null {
   switch (experienceId) {
@@ -250,6 +254,8 @@ function getAmbientEffect(experienceId: string): AmbientParticleEffect | null {
     case "midnight-stars": return "stars";
     case "golden-hour":    return "bokeh";
     case "sunrise":        return "bokeh";
+    case "mothers-day":    return "florals";
+    case "fathers-day":    return "bokeh";
     default:               return null;
   }
 }
@@ -268,6 +274,10 @@ function getPreIconMotion(experienceId: string) {
       return { animate: { scale: [1, 1.12, 1], opacity: [0.8, 1, 0.8] }, transition: { repeat: Infinity, duration: 2.4, ease: "easeInOut" } };
     case "sunrise":
       return { animate: { y: [0, -6, 0], scale: [1, 1.06, 1] }, transition: { repeat: Infinity, duration: 2.8, ease: "easeInOut" } };
+    case "mothers-day":
+      return { animate: { scale: [1, 1.18, 1, 1.1, 1] }, transition: { repeat: Infinity, duration: 1.4, ease: "easeInOut" } };
+    case "fathers-day":
+      return { animate: { scale: [1, 1.08, 1], opacity: [0.85, 1, 0.85] }, transition: { repeat: Infinity, duration: 2.6, ease: "easeInOut" } };
     case "confetti-burst":
     default:
       return { animate: { y: [0, -12, 0] }, transition: { repeat: Infinity, duration: 0.9, ease: "easeInOut" } };
@@ -457,17 +467,53 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
         }
         requestAnimationFrame(frame);
         return;
+      } else if (effect === "florals") {
+        const emojis = ["🌸", "🌺", "🌷", "💐", "🌸", "🌺"];
+        const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+        const size = 20 + Math.random() * 16;
+        const dur = 3500 + Math.random() * 3000;
+        const drift = (Math.random() - 0.5) * 55;
+        const spin = (Math.random() - 0.5) * 180;
+        const startY = -containerH * 0.08;
+        const totalFall = containerH * 1.16;
+        el.style.cssText = `
+          position:absolute; pointer-events:none; z-index:10;
+          left:${Math.random() * 100}%;
+          top:0;
+          font-size:${size}px;
+          line-height:1;
+          user-select:none;
+          opacity:0.85;
+        `;
+        el.textContent = emoji;
+        container.appendChild(el);
+        const startTime = Date.now();
+        function frame() {
+          if (!active) return;
+          const t = (Date.now() - startTime) / dur;
+          if (t >= 1) { el.remove(); return; }
+          const y = startY + t * totalFall;
+          const x = drift * Math.sin(t * Math.PI * 1.5);
+          const rot = spin * t;
+          el.style.transform = `translateY(${y}px) translateX(${x}px) rotate(${rot}deg)`;
+          el.style.opacity = String(t > 0.8 ? (1 - t) * 5 * 0.85 : 0.85);
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+        return;
       }
     }
 
     if (!effect) return;
 
     const interval = effect === "stars" || effect === "bokeh" ? 600 :
+                     effect === "florals" ? 500 :
                      effect === "snow" ? 200 :
                      effect === "confetti" ? 250 : 400;
 
     const batchSize = effect === "snow" ? 3 :
-                      effect === "stars" || effect === "bokeh" ? 1 : 2;
+                      effect === "stars" || effect === "bokeh" ? 1 :
+                      effect === "florals" ? 1 : 2;
 
     function spawnBatch() {
       for (let i = 0; i < batchSize; i++) {

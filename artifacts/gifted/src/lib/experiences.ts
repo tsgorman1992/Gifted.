@@ -5,7 +5,9 @@ export type ExperienceId =
   | "midnight-stars"
   | "rose-petal"
   | "snow-flurry"
-  | "sunrise";
+  | "sunrise"
+  | "mothers-day"
+  | "fathers-day";
 
 export const DEFAULT_EXPERIENCE: ExperienceId = "confetti-burst";
 
@@ -87,6 +89,24 @@ export const EXPERIENCE_LIST: ExperienceMeta[] = [
     suggestedFor: ["Just Because", "Thank You", "Congratulations"],
     palette: { from: "#FFCBA4", via: "#FF9A8B", to: "#FF6A88" },
     isDark: false,
+    premium: false,
+  },
+  {
+    id: "mothers-day",
+    name: "For Mom",
+    tagline: "Tender & blooming",
+    suggestedFor: ["Mother's Day"],
+    palette: { from: "#C8A8E9", via: "#FFB7C5", to: "#FFCBA4" },
+    isDark: false,
+    premium: false,
+  },
+  {
+    id: "fathers-day",
+    name: "For Dad",
+    tagline: "Steady & celebrated",
+    suggestedFor: ["Father's Day"],
+    palette: { from: "#1A2E4A", via: "#3A6B9E", to: "#C9A84C" },
+    isDark: true,
     premium: false,
   },
 ];
