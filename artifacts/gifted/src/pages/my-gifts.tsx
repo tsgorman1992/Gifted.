@@ -10,7 +10,7 @@ import {
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
   Inbox, Trash2, X, Share2, Send, Users, Bell,
-  UserPlus, Cake, Pencil,
+  UserPlus, Cake, Pencil, BookUser,
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInDays } from "date-fns";
 import { clearGiftSession } from "@/lib/session";
@@ -707,12 +707,32 @@ function ProfileEditModal({ user, onClose, onSaved }: {
 
 // ─── Add Contact Form ─────────────────────────────────────────────────────────
 
+const contactsApiSupported = typeof navigator !== "undefined" && "contacts" in navigator;
+
 function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [importing, setImporting] = useState(false);
+
+  async function handleImportFromContacts() {
+    setImporting(true);
+    try {
+      const contacts = await (navigator as any).contacts.select(["name", "tel", "email"], { multiple: false });
+      if (contacts && contacts.length > 0) {
+        const c = contacts[0];
+        if (c.name?.[0])  setName(c.name[0]);
+        if (c.tel?.[0])   setPhone(c.tel[0].replace(/\D/g, "").replace(/^1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") || c.tel[0]);
+        if (c.email?.[0]) setEmail(c.email[0]);
+      }
+    } catch {
+      // User cancelled — no action needed
+    } finally {
+      setImporting(false);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -741,7 +761,22 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
       className="bg-card border border-primary/20 rounded-2xl p-5"
     >
       <form onSubmit={handleSave} className="flex flex-col gap-3">
-        <h3 className="font-medium text-base">New contact</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium text-base">New contact</h3>
+          {contactsApiSupported && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleImportFromContacts}
+              disabled={importing}
+              className="rounded-full h-8 text-xs gap-1.5 border-primary/30 text-primary"
+            >
+              <BookUser className="w-3.5 h-3.5" />
+              {importing ? "Opening…" : "From contacts"}
+            </Button>
+          )}
+        </div>
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name*" className="rounded-xl h-10" autoFocus />
         <div className="grid grid-cols-2 gap-3">
           <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-10" />
