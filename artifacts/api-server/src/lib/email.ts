@@ -405,6 +405,90 @@ export async function sendPackageDeliveredEmail(params: PackageDeliveredParams):
   }
 }
 
+// ─── 8. Second sender nudge (7 days) ──────────────────────────────────────────
+
+interface SenderSecondNudgeParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+  giftId: string;
+}
+
+export async function sendSenderSecondNudgeEmail(params: SenderSecondNudgeParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName, giftId } = params;
+  const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
+
+  const body = `
+    ${h1(`Still waiting — ${recipientName} hasn't seen their gift yet`)}
+    ${p(`It's been a week since you built something for <strong>${recipientName}</strong>. The gift is still sitting here, ready to go — all it needs is you to pass along the link.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Get the gift link", giftUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Forward it however feels right — iMessage, WhatsApp, email. When it comes from you, it lands differently.</p>
+    </div>
+    <p style="margin:24px 0 0;font-size:12px;color:#9e9087;line-height:1.6;">
+      If this was a mistake or you no longer want to send this gift, just reply to this email and we'll take care of it.
+    </p>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `${recipientName} still hasn't opened their gift`,
+      html: layout(`Gift still waiting — gifted.`, body),
+    });
+    if (error) console.error("[email] sendSenderSecondNudgeEmail error:", error);
+    else console.log(`[email] Second nudge sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendSenderSecondNudgeEmail exception:", err);
+  }
+}
+
+// ─── 9. Unredeemed gift — sender final notice (60 days) ───────────────────────
+
+interface UnredeemedSenderParams {
+  to: string;
+  senderName: string;
+  recipientName: string;
+  amount: string;
+}
+
+export async function sendUnredeemedSenderEmail(params: UnredeemedSenderParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, senderName, recipientName, amount } = params;
+
+  const body = `
+    ${h1(`${recipientName}'s gift balance hasn't been claimed`)}
+    ${p(`Your gift of <strong>$${parseFloat(amount).toFixed(2)}</strong> for ${recipientName} has been sitting unclaimed for 60 days. We want to make sure that money doesn't go to waste.`)}
+    ${divider()}
+    ${p(`If you'd like a refund or have any questions, reply to this email or reach us at <a href="mailto:help@gifted.page" style="color:#7c4a1e;text-decoration:underline;">help@gifted.page</a> — we'll take care of it.`)}
+    <p style="margin:16px 0 0;font-size:13px;color:#6b6059;line-height:1.6;">
+      If you're still hoping ${recipientName} redeems it, no action is needed — the link stays active.
+    </p>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `${recipientName}'s gift balance is unclaimed — need a refund?`,
+      html: layout(`Unclaimed gift balance — gifted.`, body),
+    });
+    if (error) console.error("[email] sendUnredeemedSenderEmail error:", error);
+    else console.log(`[email] Unredeemed final notice sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendUnredeemedSenderEmail exception:", err);
+  }
+}
+
 // ─── Occasion reminder ────────────────────────────────────────────────────────
 
 export async function sendOccasionReminderEmail({

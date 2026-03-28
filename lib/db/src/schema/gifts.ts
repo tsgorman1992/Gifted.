@@ -51,6 +51,9 @@ export const gifts = pgTable("gifts", {
   trackingStatus: jsonb("tracking_status").$type<TrackingEvent[]>(),
   trackingDeliveredAt: timestamp("tracking_delivered_at", { withTimezone: true }),
   nudgeSentAt: timestamp("nudge_sent_at", { withTimezone: true }),
+  nudge2SentAt: timestamp("nudge2_sent_at", { withTimezone: true }),
+  unredeemedReminderSentAt: timestamp("unredeemed_reminder_sent_at", { withTimezone: true }),
+  unredeemedFinalReminderSentAt: timestamp("unredeemed_final_reminder_sent_at", { withTimezone: true }),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({

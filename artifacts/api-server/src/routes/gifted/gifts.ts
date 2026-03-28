@@ -110,6 +110,7 @@ router.post("/gifted/gifts", async (req, res) => {
       recipientName,
       recipientPhone,
       senderName,
+      senderPhone: senderPhoneRaw,
       experience,
       occasion,
       giftTitle,
@@ -149,6 +150,7 @@ router.post("/gifted/gifts", async (req, res) => {
     const id = nanoid(12);
     const senderUserId  = (req as any).user?.id    ?? null;
     const senderEmail   = (req as any).user?.email ?? null;
+    const senderPhone   = typeof senderPhoneRaw === "string" && senderPhoneRaw.trim() ? senderPhoneRaw.trim() : null;
 
     const scheduledForRaw = req.body.scheduledFor as string | undefined;
     const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
@@ -157,6 +159,7 @@ router.post("/gifted/gifts", async (req, res) => {
       id,
       senderUserId,
       senderEmail,
+      senderPhone,
       recipientName,
       recipientPhone: recipientPhone || null,
       senderName,

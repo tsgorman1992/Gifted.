@@ -337,6 +337,9 @@ export default function PreviewPage() {
       const rp = localStorage.getItem("gifted_recipient_phone");
       if (rp) payload.recipientPhone = rp;
 
+      const spRaw = localStorage.getItem("gifted_sender_phone");
+      if (spRaw) payload.senderPhone = spRaw.replace(/\D/g, "").replace(/^(\d{3})(\d{3})(\d{4})$/, "+1$1$2$3") || spRaw;
+
       const pn = localStorage.getItem("gifted_personal_note");
       if (pn) payload.personalNote = pn;
 

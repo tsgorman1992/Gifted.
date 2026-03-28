@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import { gifts, contactOccasions, contacts, usersTable } from "@workspace/db/schema";
 import { and, isNotNull, isNull, lte, eq, sql } from "drizzle-orm";
 import twilio from "twilio";
-import { sendSenderNudgeEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail } from "./lib/email";
+import { sendSenderNudgeEmail, sendSenderSecondNudgeEmail, sendUnredeemedSenderEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail } from "./lib/email";
 
 interface TrackingEvent {
   status: string;
@@ -261,9 +261,11 @@ async function pollAfterShipTrackings() {
 async function nudgeStaleGifts() {
   try {
     const appOrigin = process.env.APP_ORIGIN ?? "https://gifted.page";
-    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const oneDayAgo    = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const stale = await db
+    // ── First nudge: 24 hours after creation, not yet opened, no nudge yet ──
+    const firstNudge = await db
       .select({
         id: gifts.id,
         recipientName: gifts.recipientName,
@@ -277,13 +279,11 @@ async function nudgeStaleGifts() {
           eq(gifts.paid, true),
           isNull(gifts.openedAt),
           isNull(gifts.nudgeSentAt),
-          lte(gifts.createdAt, threeDaysAgo),
+          lte(gifts.createdAt, oneDayAgo),
         ),
       );
 
-    if (!stale.length) return;
-
-    for (const gift of stale) {
+    for (const gift of firstNudge) {
       try {
         if (gift.senderPhone) {
           const giftUrl = `${appOrigin}/open/${gift.id}`;
@@ -304,22 +304,132 @@ async function nudgeStaleGifts() {
             giftId: gift.id,
           });
         } else {
-          // No contact info — stamp nudgeSentAt anyway to avoid infinite loop
           console.warn(`[scheduler] Gift ${gift.id} has no phone or email — nudge skipped`);
         }
-
-        await db
-          .update(gifts)
-          .set({ nudgeSentAt: new Date() })
-          .where(eq(gifts.id, gift.id));
-
-        console.log(`[scheduler] Nudge sent for stale gift ${gift.id}`);
+        await db.update(gifts).set({ nudgeSentAt: new Date() }).where(eq(gifts.id, gift.id));
+        console.log(`[scheduler] First nudge sent for gift ${gift.id}`);
       } catch (err) {
-        console.error(`[scheduler] Nudge failed for gift ${gift.id}:`, err);
+        console.error(`[scheduler] First nudge failed for gift ${gift.id}:`, err);
+      }
+    }
+
+    // ── Second nudge: 7 days after creation, still not opened, first nudge already sent ──
+    const secondNudge = await db
+      .select({
+        id: gifts.id,
+        recipientName: gifts.recipientName,
+        senderName: gifts.senderName,
+        senderPhone: gifts.senderPhone,
+        senderEmail: gifts.senderEmail,
+      })
+      .from(gifts)
+      .where(
+        and(
+          eq(gifts.paid, true),
+          isNull(gifts.openedAt),
+          isNotNull(gifts.nudgeSentAt),
+          isNull(gifts.nudge2SentAt),
+          lte(gifts.createdAt, sevenDaysAgo),
+        ),
+      );
+
+    for (const gift of secondNudge) {
+      try {
+        if (gift.senderPhone) {
+          const giftUrl = `${appOrigin}/open/${gift.id}`;
+          const body = [
+            `gifted. 🎁 Still here — ${gift.recipientName}'s gift hasn't been opened yet.`,
+            ``,
+            `Here's the link if you're ready to send it:`,
+            giftUrl,
+            ``,
+            `Reply STOP to opt out.`,
+          ].join("\n");
+          await smsSender(gift.senderPhone, body);
+        } else if (gift.senderEmail) {
+          await sendSenderSecondNudgeEmail({
+            to: gift.senderEmail,
+            senderName: gift.senderName,
+            recipientName: gift.recipientName,
+            giftId: gift.id,
+          });
+        } else {
+          console.warn(`[scheduler] Gift ${gift.id} has no phone or email — second nudge skipped`);
+        }
+        await db.update(gifts).set({ nudge2SentAt: new Date() }).where(eq(gifts.id, gift.id));
+        console.log(`[scheduler] Second nudge sent for gift ${gift.id}`);
+      } catch (err) {
+        console.error(`[scheduler] Second nudge failed for gift ${gift.id}:`, err);
       }
     }
   } catch (err) {
     console.error("[scheduler] nudgeStaleGifts error:", err);
+  }
+}
+
+async function sendUnredeemedReminders() {
+  try {
+    const appOrigin  = process.env.APP_ORIGIN ?? "https://gifted.page";
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+
+    // ── 60-day: sender email if gift paid + has amount + never redeemed ──
+    const unredeemed = await db
+      .select({
+        id: gifts.id,
+        recipientName: gifts.recipientName,
+        senderName: gifts.senderName,
+        senderEmail: gifts.senderEmail,
+        amount: gifts.amount,
+        recipientPhone: gifts.recipientPhone,
+      })
+      .from(gifts)
+      .where(
+        and(
+          eq(gifts.paid, true),
+          isNull(gifts.redeemedAt),
+          isNotNull(gifts.amount),
+          isNull(gifts.unredeemedFinalReminderSentAt),
+          lte(gifts.createdAt, sixtyDaysAgo),
+        ),
+      );
+
+    for (const gift of unredeemed) {
+      try {
+        // SMS the recipient if we have their phone (7-day bump before the sender gets the 60-day email)
+        if (gift.recipientPhone) {
+          const giftUrl = `${appOrigin}/open/${gift.id}`;
+          const body = [
+            `gifted. 🎁 You have a gift waiting from ${gift.senderName}!`,
+            ``,
+            `Your gift includes a cash balance — tap the link to open and claim it:`,
+            giftUrl,
+            ``,
+            `Reply STOP to opt out.`,
+          ].join("\n");
+          await smsSender(gift.recipientPhone, body);
+          console.log(`[scheduler] Recipient nudge SMS sent for unredeemed gift ${gift.id}`);
+        }
+
+        // Email the sender
+        if (gift.senderEmail && gift.amount) {
+          await sendUnredeemedSenderEmail({
+            to: gift.senderEmail,
+            senderName: gift.senderName,
+            recipientName: gift.recipientName,
+            amount: gift.amount,
+          });
+          console.log(`[scheduler] Unredeemed final notice sent to sender for gift ${gift.id}`);
+        }
+
+        await db.update(gifts)
+          .set({ unredeemedFinalReminderSentAt: new Date() })
+          .where(eq(gifts.id, gift.id));
+      } catch (err) {
+        console.error(`[scheduler] Unredeemed reminder failed for gift ${gift.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] sendUnredeemedReminders error:", err);
   }
 }
 
@@ -385,15 +495,17 @@ async function sendOccasionReminders() {
 
 export function startScheduler() {
   const INTERVAL_MS = 10 * 60 * 1000;
-  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, and occasion reminders.");
+  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, and occasion reminders.");
   setInterval(async () => {
     await sendScheduledGifts();
     await pollAfterShipTrackings();
     await nudgeStaleGifts();
+    await sendUnredeemedReminders();
     await sendOccasionReminders();
   }, INTERVAL_MS);
   sendScheduledGifts();
   pollAfterShipTrackings();
   nudgeStaleGifts();
+  sendUnredeemedReminders();
   sendOccasionReminders();
 }
