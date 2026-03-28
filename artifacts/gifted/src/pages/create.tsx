@@ -799,7 +799,6 @@ export default function CreatePage() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [phoneValidating, setPhoneValidating] = useState(false);
   const [senderName, setSenderName] = useState("");
-  const [senderPhone, setSenderPhone] = useState("");
   const [giftTitle, setGiftTitle] = useState("");
   const [personalNote, setPersonalNote] = useState("");
   const [extraLinks, setExtraLinks] = useState<Array<{url: string; label: string}>>([{url: "", label: ""}]);
@@ -868,8 +867,6 @@ export default function CreatePage() {
     if (rn) setRecipientName(rn);
     const sn = localStorage.getItem("gifted_sender_name");
     if (sn) setSenderName(sn);
-    const sp = localStorage.getItem("gifted_sender_phone");
-    if (sp) setSenderPhone(formatPhoneNumber(sp));
     const rp = localStorage.getItem("gifted_recipient_phone");
     if (rp) setRecipientPhone(formatPhoneNumber(rp));
     const occ = localStorage.getItem("gifted_occasion");
@@ -1075,8 +1072,6 @@ export default function CreatePage() {
     if (recipientPhone) localStorage.setItem("gifted_recipient_phone", recipientPhone);
     else localStorage.removeItem("gifted_recipient_phone");
     if (senderName) localStorage.setItem("gifted_sender_name", senderName);
-    if (senderPhone && senderPhone.replace(/\D/g, "").length >= 10) localStorage.setItem("gifted_sender_phone", senderPhone);
-    else localStorage.removeItem("gifted_sender_phone");
     if (amount && parseFloat(amount) > 0) localStorage.setItem("gifted_amount", amount);
     else localStorage.removeItem("gifted_amount");
     if (intent) localStorage.setItem("gifted_intent", intent);
@@ -2100,30 +2095,6 @@ export default function CreatePage() {
                     )}
                   </div>
                 </div>
-              </div>
-
-              {/* Sender contact — optional, enables nudge SMS */}
-              <div className="rounded-3xl p-6 border space-y-4" style={{ background: "hsl(var(--card))" }}>
-                <div className="flex items-center justify-between border-b border-border pb-4">
-                  <div>
-                    <h2 className="text-base font-semibold">Your phone number</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      We'll remind you if the gift hasn't been opened after 24 hours.
-                    </p>
-                  </div>
-                  <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-full border border-border">Optional</span>
-                </div>
-                <Input
-                  type="tel"
-                  inputMode="numeric"
-                  placeholder="(555) 000-0000"
-                  value={senderPhone}
-                  onChange={(e) => setSenderPhone(formatPhoneNumber(e.target.value))}
-                  className="h-12 rounded-xl text-base"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Never shared. Only used to send you the gift link if it hasn't been opened.
-                </p>
               </div>
 
               {/* Physical gift tracking */}
