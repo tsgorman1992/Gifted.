@@ -542,6 +542,8 @@ const PRE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "rose-petal":     Heart,
   "snow-flurry":    Snowflake,
   "sunrise":        Sun,
+  "mothers-day":    Flower2,
+  "fathers-day":    Star,
 };
 
 // ─── Particle system ─────────────────────────────────────────────────────────

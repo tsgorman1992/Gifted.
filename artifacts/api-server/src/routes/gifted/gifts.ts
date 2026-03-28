@@ -240,10 +240,15 @@ router.get("/gifted/gifts/:id", async (req, res) => {
 router.patch("/gifted/gifts/:id/opened", async (req, res) => {
   try {
     const { id } = req.params;
+    const requestingUserId = (req as any).user?.id;
     const [gift] = await db
-      .select({ id: gifts.id, openedAt: gifts.openedAt, senderPhone: gifts.senderPhone, senderEmail: gifts.senderEmail, senderName: gifts.senderName, recipientName: gifts.recipientName })
+      .select({ id: gifts.id, openedAt: gifts.openedAt, senderUserId: gifts.senderUserId, senderPhone: gifts.senderPhone, senderEmail: gifts.senderEmail, senderName: gifts.senderName, recipientName: gifts.recipientName })
       .from(gifts).where(eq(gifts.id, id)).limit(1);
     if (!gift) return res.status(404).json({ error: "Gift not found" });
+    // If the sender is viewing their own gift, don't mark it as opened
+    if (requestingUserId && gift.senderUserId === requestingUserId) {
+      return res.json({ ok: true, skipped: true });
+    }
     if (!gift.openedAt) {
       await db.update(gifts).set({ openedAt: new Date() }).where(eq(gifts.id, id));
       if (gift.senderPhone) {
