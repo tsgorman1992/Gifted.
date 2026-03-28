@@ -352,7 +352,11 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                         )}
                         <div
                           className="w-6 h-6 rounded-full flex items-center justify-center transition-colors relative"
-                          style={{ background: (done || isActiveCurrent) ? stepBg : isNextPending ? stepBg : "hsl(var(--secondary))", color: (done || isActiveCurrent) ? stepColor : isNextPending ? stepColor : "hsl(var(--muted-foreground))" }}
+                          style={{
+                            background: (done || isActiveCurrent) ? stepBg : "hsl(var(--secondary))",
+                            color: (done || isActiveCurrent) ? stepColor : "hsl(var(--muted-foreground))",
+                            opacity: isNextPending ? 0.45 : 1,
+                          }}
                         >
                           <StepIcon className="w-3 h-3" />
                         </div>
