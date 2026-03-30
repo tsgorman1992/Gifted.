@@ -663,12 +663,13 @@ export default function PreviewPage() {
       });
       if (!contactRes.ok) throw new Error("contact failed");
       const contact = await contactRes.json() as { id: string };
-      await fetch(`${base}/api/gifted/contacts/${contact.id}/occasions`, {
+      const occasionRes = await fetch(`${base}/api/gifted/contacts/${contact.id}/occasions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ label: contactOccasion, month: contactMonth, day: contactDay }),
       });
+      if (!occasionRes.ok) throw new Error("occasion failed");
       localStorage.setItem(`gifted_contact_prompt_${giftId}`, "saved");
       setContactSaved(true);
     } catch {

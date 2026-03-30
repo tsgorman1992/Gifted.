@@ -175,13 +175,14 @@ function StatCard({ label, value, sub, Icon, delay }: {
 
 // ─── Resend Button ────────────────────────────────────────────────────────────
 
-function ResendButton({ url, recipientName }: { url: string; recipientName: string }) {
+function ResendButton({ url, recipientName, full = false }: { url: string; recipientName: string; full?: boolean }) {
   const [state, setState] = useState<"idle" | "shared" | "copied">("idle");
+  const canMobileShare = typeof navigator?.share === "function" && window.innerWidth < 768;
 
   const handle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof navigator?.share === "function") {
+    if (canMobileShare) {
       try {
         await navigator.share({ title: `A gift for ${recipientName}`, url });
         setState("shared");
@@ -195,6 +196,31 @@ function ResendButton({ url, recipientName }: { url: string; recipientName: stri
       setTimeout(() => setState("idle"), 2500);
     }
   };
+
+  if (full) {
+    return (
+      <button
+        onClick={handle}
+        className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-primary/10 border border-primary/20 text-primary font-medium text-sm hover:bg-primary/20 transition-all"
+      >
+        <AnimatePresence mode="wait">
+          {state === "copied" ? (
+            <motion.span key="copied" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+              <Check className="w-4 h-4 text-green-600" /><span className="text-green-700">Copied!</span>
+            </motion.span>
+          ) : state === "shared" ? (
+            <motion.span key="shared" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+              <Check className="w-4 h-4" />Shared
+            </motion.span>
+          ) : (
+            <motion.span key="idle" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+              <Send className="w-4 h-4" />Resend link
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </button>
+    );
+  }
 
   return (
     <button
@@ -352,7 +378,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
 
           {!confirmDelete && (status === "ready" || status === "sent") && (
             <div onClick={(e) => e.stopPropagation()}>
-              <CopyButton url={shareUrl} full />
+              <ResendButton url={shareUrl} recipientName={gift.recipientName} full />
             </div>
           )}
 
