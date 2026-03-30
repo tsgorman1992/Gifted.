@@ -150,21 +150,25 @@ function greeting(firstName: string | null) {
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, Icon, delay }: {
+function StatCard({ label, value, sub, Icon, delay, onClick, active }: {
   label: string; value: string | number; sub?: string;
   Icon: React.ComponentType<{ className?: string }>; delay: number;
+  onClick?: () => void; active?: boolean;
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-2"
+      onClick={onClick}
+      className={`bg-card border rounded-2xl p-5 flex flex-col gap-2 transition-all ${
+        onClick ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""
+      } ${active ? "border-primary ring-2 ring-primary/20" : "border-border"}`}
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-          <Icon className="w-4 h-4 text-primary" />
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${active ? "bg-primary" : "bg-primary/10"}`}>
+          <Icon className={`w-4 h-4 ${active ? "text-primary-foreground" : "text-primary"}`} />
         </div>
       </div>
       <p className="font-serif text-3xl font-medium text-foreground leading-none">{value}</p>
@@ -812,10 +816,17 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [importing, setImporting] = useState(false);
-  const [showOccasion, setShowOccasion] = useState(false);
-  const [occasionLabel, setOccasionLabel] = useState("Birthday");
-  const [occasionMonth, setOccasionMonth] = useState(1);
-  const [occasionDay, setOccasionDay] = useState(1);
+  const [pendingOccasions, setPendingOccasions] = useState<PendingOccasion[]>([]);
+
+  function addOccasionRow() {
+    setPendingOccasions(r => [...r, { label: "Birthday", month: 1, day: 1 }]);
+  }
+  function updateOccasionRow(i: number, patch: Partial<PendingOccasion>) {
+    setPendingOccasions(r => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
+  }
+  function removeOccasionRow(i: number) {
+    setPendingOccasions(r => r.filter((_, idx) => idx !== i));
+  }
 
   async function handleImportFromContacts() {
     setImporting(true);
@@ -847,13 +858,15 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
       });
       if (!res.ok) throw new Error("Failed to save");
       const contact = await res.json() as { id: string };
-      if (showOccasion) {
-        await fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(buildOccasionPayload(occasionLabel, occasionMonth, occasionDay)),
-        });
+      if (pendingOccasions.length > 0) {
+        await Promise.all(pendingOccasions.map(occ =>
+          fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(buildOccasionPayload(occ.label, occ.month, occ.day)),
+          })
+        ));
       }
       onSaved();
     } catch {
@@ -892,46 +905,39 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
           <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-10" type="email" />
         </div>
 
-        {/* Optional occasion */}
-        {!showOccasion ? (
-          <button
-            type="button"
-            onClick={() => setShowOccasion(true)}
-            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors self-start"
-          >
-            <Cake className="w-3.5 h-3.5" />
-            Add an occasion (optional)
-          </button>
-        ) : (
+        {/* Occasions */}
+        {pendingOccasions.length > 0 && (
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">Occasion</span>
-              <button
-                type="button"
-                onClick={() => setShowOccasion(false)}
-                className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-              >
-                Remove
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={occasionLabel}
-                onChange={e => setOccasionLabel(e.target.value)}
-                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground flex-1 min-w-[120px]"
-              >
-                {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
-              </select>
-              <OccasionDateFields
-                label={occasionLabel}
-                month={occasionMonth}
-                day={occasionDay}
-                onMonthChange={setOccasionMonth}
-                onDayChange={setOccasionDay}
-              />
-            </div>
+            <span className="text-xs font-medium text-muted-foreground">Occasions</span>
+            {pendingOccasions.map((occ, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-2">
+                <select
+                  value={occ.label}
+                  onChange={e => updateOccasionRow(i, { label: e.target.value })}
+                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground flex-1 min-w-[120px]"
+                >
+                  {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+                <OccasionDateFields
+                  label={occ.label} month={occ.month} day={occ.day}
+                  onMonthChange={m => updateOccasionRow(i, { month: m })}
+                  onDayChange={d => updateOccasionRow(i, { day: d })}
+                />
+                <button type="button" onClick={() => removeOccasionRow(i)} className="text-muted-foreground/60 hover:text-destructive transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
+        <button
+          type="button"
+          onClick={addOccasionRow}
+          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors self-start"
+        >
+          <Cake className="w-3.5 h-3.5" />
+          {pendingOccasions.length === 0 ? "Add an occasion (optional)" : "Add another occasion"}
+        </button>
 
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-2">
@@ -984,23 +990,34 @@ function OccasionDateFields({ label, month, day, onMonthChange, onDayChange }: {
 }
 
 
+type PendingOccasion = { label: string; month: number; day: number };
+
 function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; onSaved: () => void; onCancel: () => void }) {
-  const [label, setLabel] = useState("Birthday");
-  const [month, setMonth] = useState(1);
-  const [day, setDay] = useState(1);
+  const [rows, setRows] = useState<PendingOccasion[]>([{ label: "Birthday", month: 1, day: 1 }]);
   const [saving, setSaving] = useState(false);
+
+  function updateRow(i: number, patch: Partial<PendingOccasion>) {
+    setRows(r => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
+  }
+  function removeRow(i: number) {
+    setRows(r => r.length === 1 ? r : r.filter((_, idx) => idx !== i));
+  }
+  function addRow() {
+    setRows(r => [...r, { label: "Birthday", month: 1, day: 1 }]);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch(`${BASE}/api/gifted/contacts/${contactId}/occasions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(buildOccasionPayload(label, month, day)),
-      });
-      if (!res.ok) throw new Error("Failed");
+      await Promise.all(rows.map(row =>
+        fetch(`${BASE}/api/gifted/contacts/${contactId}/occasions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(buildOccasionPayload(row.label, row.month, row.day)),
+        })
+      ));
       onSaved();
     } catch {
       setSaving(false);
@@ -1008,19 +1025,38 @@ function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; 
   }
 
   return (
-    <form onSubmit={handleSave} className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-border">
-      <select
-        value={label}
-        onChange={e => setLabel(e.target.value)}
-        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-      >
-        {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
-      </select>
-      <OccasionDateFields label={label} month={month} day={day} onMonthChange={setMonth} onDayChange={setDay} />
-      <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
-      <Button type="submit" size="sm" disabled={saving} className="rounded-full h-7 text-xs px-3">
-        {saving ? "Saving…" : "Save"}
-      </Button>
+    <form onSubmit={handleSave} className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
+      {rows.map((row, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2">
+          <select
+            value={row.label}
+            onChange={e => updateRow(i, { label: e.target.value })}
+            className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+          >
+            {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <OccasionDateFields label={row.label} month={row.month} day={row.day}
+            onMonthChange={m => updateRow(i, { month: m })}
+            onDayChange={d => updateRow(i, { day: d })}
+          />
+          {rows.length > 1 && (
+            <button type="button" onClick={() => removeRow(i)} className="text-muted-foreground/60 hover:text-destructive transition-colors">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      ))}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button type="button" onClick={addRow} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+          <Plus className="w-3 h-3" /> Add another occasion
+        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+          <Button type="submit" size="sm" disabled={saving} className="rounded-full h-7 text-xs px-3">
+            {saving ? "Saving…" : `Save ${rows.length > 1 ? `${rows.length} occasions` : "occasion"}`}
+          </Button>
+        </div>
+      </div>
     </form>
   );
 }
@@ -1282,6 +1318,7 @@ export default function MyGiftsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("sent");
+  const [activeStatFilter, setActiveStatFilter] = useState<"opened" | "redeemed" | null>(null);
   const queryClient = useQueryClient();
   const [senderBlockedNotice, setSenderBlockedNotice] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -1463,7 +1500,7 @@ export default function MyGiftsPage() {
           </div>
           <Button onClick={handleNewGift} className="rounded-full px-5 gap-2 hidden sm:flex shadow-md hover:-translate-y-0.5 transition-transform">
             <Plus className="w-4 h-4" />
-            New gift
+            Build a moment
           </Button>
         </motion.div>
 
@@ -1505,8 +1542,24 @@ export default function MyGiftsPage() {
               Icon={DollarSign}
               delay={0.1}
             />
-            <StatCard label="Opened" value={openedCount} sub={openedCount === 1 ? "awaiting redemption" : openedCount > 0 ? "awaiting redemption" : undefined} Icon={Eye} delay={0.15} />
-            <StatCard label="Redeemed" value={redeemed} Icon={CheckCircle2} delay={0.2} />
+            <StatCard
+              label="Opened"
+              value={openedCount}
+              sub={activeStatFilter === "opened" ? "tap to clear filter" : openedCount > 0 ? "tap to view" : undefined}
+              Icon={Eye}
+              delay={0.15}
+              active={activeStatFilter === "opened"}
+              onClick={() => { setActiveStatFilter(f => f === "opened" ? null : "opened"); setActiveTab("sent"); }}
+            />
+            <StatCard
+              label="Redeemed"
+              value={redeemed}
+              sub={activeStatFilter === "redeemed" ? "tap to clear filter" : redeemed > 0 ? "tap to view" : undefined}
+              Icon={CheckCircle2}
+              delay={0.2}
+              active={activeStatFilter === "redeemed"}
+              onClick={() => { setActiveStatFilter(f => f === "redeemed" ? null : "redeemed"); setActiveTab("sent"); }}
+            />
           </div>
         )}
 
@@ -1572,15 +1625,36 @@ export default function MyGiftsPage() {
                 transition={{ delay: 0.2 }}
                 className="flex items-center justify-between mb-1"
               >
-                <p className="text-sm text-muted-foreground font-medium">
-                  {totalSent} gift{totalSent !== 1 ? "s" : ""} sent
-                </p>
+                {activeStatFilter ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground capitalize">
+                      {activeStatFilter === "opened" ? "Opened — awaiting redemption" : "Redeemed"}
+                    </span>
+                    <button
+                      onClick={() => setActiveStatFilter(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 border border-border rounded-full px-2 py-0.5 transition-colors"
+                    >
+                      <X className="w-3 h-3" /> Clear
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground font-medium">
+                    {totalSent} gift{totalSent !== 1 ? "s" : ""} sent
+                  </p>
+                )}
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <TrendingUp className="w-3.5 h-3.5" />
                   Most recent first
                 </div>
               </motion.div>
-              {myGifts.map((gift, i) => (
+              {(activeStatFilter
+                ? myGifts.filter(g =>
+                    activeStatFilter === "opened"
+                      ? !!g.openedAt && !g.redeemedAt
+                      : !!g.redeemedAt
+                  )
+                : myGifts
+              ).map((gift, i) => (
                 <GiftCard key={gift.id} gift={gift} idx={i} />
               ))}
             </div>
