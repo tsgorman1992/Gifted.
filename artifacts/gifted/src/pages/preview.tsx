@@ -1036,6 +1036,11 @@ export default function PreviewPage() {
                       Check your phone — copy the link and forward it to {recipientName}.
                     </p>
                   )}
+                  {selfSendStatus === "idle" && (
+                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                      By tapping "Send to me" I agree to receive a one-time text at this number from gifted. Reply STOP to unsubscribe, HELP for help. Msg&data rates may apply.
+                    </p>
+                  )}
                 </div>
 
                 {/* Divider */}
@@ -1077,12 +1082,16 @@ export default function PreviewPage() {
                           : <><Send className="w-4 h-4 mr-1.5" /> Send text</>}
                     </Button>
                   </div>
-                  {desktopSendStatus === "sent" && (
+                  {desktopSendStatus === "sent" ? (
                     <p className="text-xs text-green-600 flex items-center gap-1.5">
                       <Check className="w-3.5 h-3.5" />
                       {desktopSendError === "sms-fallback"
                         ? `Link copied — paste it in a message to ${recipientName}`
                         : `Text sent to ${desktopContact}`}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                      By tapping "Send text" I confirm {recipientName} has agreed to receive a one-time text from gifted. Reply STOP to unsubscribe, HELP for help. Msg&data rates may apply.
                     </p>
                   )}
                 </div>

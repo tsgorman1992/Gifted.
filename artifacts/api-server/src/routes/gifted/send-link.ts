@@ -43,8 +43,8 @@ router.post("/api/gifted/send-link", async (req, res) => {
     // selfSend: link is going to the sender's own phone so they can forward it.
     // Do NOT say "Tap to open" — they should copy and forward, not open the gift themselves.
     const body = selfSend
-      ? `Your gifted. link for ${toName} is ready.\n\nCopy this link and paste it into iMessage or WhatsApp — when it comes from your number, they'll open it:\n${giftUrl}`
-      : `Hey ${toName} 🎁\n\n${fromName} made something just for you.\n\nTap to open:\n${giftUrl}`;
+      ? `gifted.: Your gift link for ${toName} is ready.\n\nCopy this link and paste it into iMessage or WhatsApp — when it comes from your number, they'll open it:\n${giftUrl}\n\nReply STOP to unsubscribe, HELP for help. Msg&data rates may apply.`
+      : `gifted. 🎁 ${fromName} made something just for you.\n\nTap to open:\n${giftUrl}\n\nReply STOP to unsubscribe, HELP for help. Msg&data rates may apply.`;
 
     const client = getTwilioClient();
     const fromNumber = process.env.TWILIO_PHONE_NUMBER;

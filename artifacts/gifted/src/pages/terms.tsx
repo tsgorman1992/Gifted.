@@ -109,13 +109,33 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="9. Changes to These Terms">
+          <Section title="9. SMS Messaging">
+            <p>
+              gifted. may send you transactional text messages (SMS) when you provide your mobile phone number on our platform — for example, to deliver a gift link to your own phone so you can forward it.
+            </p>
+            <p>
+              By entering your phone number and tapping "Send to me" or "Send text," you consent to receive a one-time SMS from gifted. at the number provided. Your consent is not a condition of purchase.
+            </p>
+            <p>
+              <strong>Message frequency:</strong> Up to 2 messages per gift. <strong>Msg&amp;data rates may apply.</strong>
+            </p>
+            <p>
+              To opt out, reply <strong>STOP</strong> to any message from gifted. For help, reply <strong>HELP</strong> or contact{" "}
+              <a href="mailto:help@gifted.page" className="text-primary hover:underline">help@gifted.page</a>.
+            </p>
+            <p>
+              gifted. does not sell or share your phone number with third parties for marketing purposes. See our{" "}
+              <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a> for details.
+            </p>
+          </Section>
+
+          <Section title="10. Changes to These Terms">
             <p>
               We may update these terms from time to time. When we make material changes, we'll notify you by email or by posting a notice on the platform. Continued use of gifted. after changes take effect constitutes acceptance of the updated terms.
             </p>
           </Section>
 
-          <Section title="10. Contact">
+          <Section title="11. Contact">
             <p>
               Questions about these terms? Email us at{" "}
               <a href="mailto:legal@gifted.page" className="text-primary hover:underline">
