@@ -257,6 +257,13 @@ router.post("/gifted/redeem", async (req, res) => {
         payoutHandle,
         payoutName,
       }).catch(() => {});
+
+      // Confirmation SMS to recipient — silent if Twilio unavailable
+      const methodLabelSms = payoutMethod.charAt(0).toUpperCase() + payoutMethod.slice(1);
+      smsTo(
+        gift.recipientPhone,
+        `gifted. 🎁\nYour ${amount || "gift"} payout has been confirmed! We'll send it via ${methodLabelSms} today.\n\nQuestions? help@gifted.page — Reply STOP to opt out.`
+      );
     }
 
     res.json({ success: true });

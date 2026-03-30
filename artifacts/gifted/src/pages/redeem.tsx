@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw, Lock, Gift } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw, Lock, Gift, Sparkles, Clock } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 
@@ -540,25 +540,94 @@ export default function RedeemPage() {
           {screen === "success" && (
             <motion.div
               key="success"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="max-w-lg mx-auto text-center bg-card rounded-[2.5rem] p-12 border border-border shadow-xl flex flex-col items-center mt-8"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-lg mx-auto mt-4"
             >
-              <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center mb-8">
-                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              {/* Hero card */}
+              <div className="bg-card border border-border rounded-[2.5rem] p-10 shadow-xl flex flex-col items-center text-center gap-6">
+
+                {/* Animated checkmark */}
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.15, duration: 0.5, type: "spring", stiffness: 200, damping: 14 }}
+                  className="relative"
+                >
+                  <div className="w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                    <CheckCircle2 className="w-12 h-12 text-green-600" />
+                  </div>
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.45, duration: 0.3 }}
+                    className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"
+                  >
+                    <Sparkles className="w-4 h-4 text-primary" />
+                  </motion.div>
+                </motion.div>
+
+                {/* Amount + heading */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25, duration: 0.4 }}
+                  className="space-y-2"
+                >
+                  <p className="font-serif text-5xl font-medium text-foreground">
+                    ${displayAmount}
+                  </p>
+                  <h2 className="font-serif text-2xl font-medium text-foreground">
+                    Your payout is confirmed.
+                  </h2>
+                  {activeMethod && (
+                    <p className="text-base text-muted-foreground">
+                      Heading to your <span className="font-semibold text-foreground">{activeMethod.label}</span> — same day.
+                    </p>
+                  )}
+                </motion.div>
+
+                {/* Status rows */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  className="w-full space-y-3 pt-2 border-t border-border"
+                >
+                  <div className="flex items-center gap-3 py-1">
+                    <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-foreground">Payout request received</p>
+                      <p className="text-xs text-muted-foreground">The gifted. team has your details</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 py-1">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Clock className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-foreground">Transfer in progress</p>
+                      <p className="text-xs text-muted-foreground">Expected same day</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Support note */}
+                <p className="text-xs text-muted-foreground/70">
+                  Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground transition-colors">help@gifted.page</a>
+                </p>
+
+                <Button
+                  variant="outline"
+                  className="rounded-full h-11 px-8 w-full sm:w-auto"
+                  onClick={() => setLocation("/")}
+                >
+                  Back to home
+                </Button>
               </div>
-              <h2 className="font-serif text-4xl font-medium mb-4">You're all set!</h2>
-              <p className="text-lg text-muted-foreground max-w-md mx-auto mb-3">
-                We'll send your <span className="font-semibold text-foreground">${displayAmount}</span>
-                {activeMethod && <> to your {activeMethod.label}</>}
-                {" "}— usually within a few hours.
-              </p>
-              <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-10">
-                Questions? Reach us at <a href="mailto:help@gifted.page" className="underline">help@gifted.page</a>
-              </p>
-              <Button variant="outline" className="rounded-full h-12 px-8" onClick={() => setLocation("/")}>
-                Return to home
-              </Button>
             </motion.div>
           )}
 
