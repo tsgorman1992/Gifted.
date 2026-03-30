@@ -122,25 +122,34 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
       </header>
+
+      {/* Mobile-only Features tab — visible below header on small screens */}
+      <div className="sm:hidden w-full border-b border-border bg-background/95 px-4 py-2 flex gap-2">
+        <Link
+          href="/features"
+          className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            location === "/features"
+              ? "bg-primary text-white"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Features
+        </Link>
+      </div>
+
       <main className="flex-1 w-full">{children}</main>
       <footer className="w-full bg-secondary/50 py-12 mt-auto">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-start justify-between gap-8">
-          <div className="flex flex-col items-start gap-2">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col items-center md:items-start gap-2">
             <span className="font-serif text-2xl font-bold">gifted.</span>
             <span className="text-sm text-muted-foreground">Personal in the moment. Flexible in the end.</span>
           </div>
-          <div className="flex flex-col sm:flex-row gap-8">
-            <div className="flex flex-col gap-2.5">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Explore</p>
-              <Link href="/features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</Link>
-              <Link href="/faq"      className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</Link>
-              <Link href="/contact"  className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Legal</p>
-              <Link href="/terms"   className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
-              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
-            </div>
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
+            <Link href="/terms"    className="hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/privacy"  className="hover:text-foreground transition-colors">Privacy</Link>
+            <Link href="/faq"      className="hover:text-foreground transition-colors">FAQ</Link>
+            <Link href="/contact"  className="hover:text-foreground transition-colors">Contact</Link>
           </div>
         </div>
       </footer>
