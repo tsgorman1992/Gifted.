@@ -5,7 +5,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { db, gifts, usersTable } from "@workspace/db";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
 import twilio from "twilio";
-import { sendGiftOpenedNotice, sendPackageDeliveredEmail } from "../../lib/email";
+import { sendGiftOpenedNotice, sendPackageDeliveredEmail, sendGiftLinkEmail } from "../../lib/email";
 import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
 
 function normPhone(raw: string): string {
@@ -495,6 +495,41 @@ router.get("/gifted/received-gifts", async (req, res) => {
   } catch (err) {
     console.error("Error fetching received gifts:", err);
     res.status(500).json({ error: "Failed to fetch received gifts" });
+  }
+});
+
+// POST /api/gifted/email-link — email the sender a copy of their gift link
+router.post("/gifted/email-link", async (req, res) => {
+  try {
+    const { giftId, email } = req.body as { giftId?: string; email?: string };
+
+    if (!giftId || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      res.status(400).json({ error: "A valid giftId and email are required" });
+      return;
+    }
+
+    const [gift] = await db
+      .select({ id: gifts.id, recipientName: gifts.recipientName, senderName: gifts.senderName })
+      .from(gifts)
+      .where(eq(gifts.id, giftId))
+      .limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    sendGiftLinkEmail({
+      to: email.trim(),
+      recipientName: gift.recipientName,
+      senderName: gift.senderName,
+      giftId: gift.id,
+    }).catch(() => {});
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error sending gift link email:", err);
+    res.status(500).json({ error: "Failed to send email" });
   }
 });
 

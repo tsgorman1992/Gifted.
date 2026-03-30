@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Heart, Play, Music, Image as ImageIcon, CreditCard, Gift, Sparkles, ArrowRight, RotateCcw, ExternalLink, Link2 } from "lucide-react";
 
 import { clearGiftSession, isGiftSessionStale } from "@/lib/session";
+import { GiftRecoveryBanner } from "@/components/gift-recovery-banner";
 
 type Phase = "sealed" | "opening" | "revealed";
 
@@ -77,6 +78,7 @@ export default function LandingPage() {
 
   return (
     <div className="w-full flex flex-col items-center overflow-hidden">
+      <GiftRecoveryBanner />
 
       {/* ── Hero ── */}
       <section className="w-full relative py-12 md:py-24 px-6">

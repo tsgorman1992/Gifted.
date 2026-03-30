@@ -489,6 +489,47 @@ export async function sendUnredeemedSenderEmail(params: UnredeemedSenderParams):
   }
 }
 
+// ─── 10. Gift link recovery email ─────────────────────────────────────────────
+
+interface GiftLinkEmailParams {
+  to: string;
+  recipientName: string;
+  senderName: string;
+  giftId: string;
+}
+
+export async function sendGiftLinkEmail(params: GiftLinkEmailParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, recipientName, senderName, giftId } = params;
+  const previewUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
+
+  const body = `
+    ${h1("Here's your gift link")}
+    ${p(`You asked us to email your gift link for <strong>${recipientName}</strong>. Open the link below to get back to your gift — then copy and forward it when you're ready.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Get my gift link", previewUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Open this on the same browser where you built the gift for the best experience.</p>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Your gift for ${recipientName} — link inside 🎁`,
+      html: layout("Gift link — gifted.", body),
+    });
+    if (error) console.error("[email] sendGiftLinkEmail error:", error);
+    else console.log(`[email] Gift link email sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendGiftLinkEmail exception:", err);
+  }
+}
+
 // ─── Occasion reminder ────────────────────────────────────────────────────────
 
 export async function sendOccasionReminderEmail({

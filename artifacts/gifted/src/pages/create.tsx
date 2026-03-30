@@ -15,6 +15,7 @@ import {
 import QRCodeLib from "qrcode";
 import { useUpload } from "@workspace/object-storage-web";
 import { resetCompletedGiftState } from "@/lib/session";
+import { GiftRecoveryBanner } from "@/components/gift-recovery-banner";
 
 import {
   EXPERIENCE_LIST,
@@ -1268,6 +1269,7 @@ export default function CreatePage() {
 
   return (
     <div className="min-h-screen relative">
+      <GiftRecoveryBanner />
 
       {/* Background tint — cross-fades with experience */}
       <AnimatePresence mode="sync">

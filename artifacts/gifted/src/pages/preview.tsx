@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download,
+  CheckCircle2, Send, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download, Mail,
 } from "lucide-react";
 import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
@@ -234,6 +234,14 @@ export default function PreviewPage() {
     // Restore linkShared for free gifts (paid gifts use paymentStatus)
     if (localStorage.getItem("gifted_link_shared") && !savedPaidId) {
       setLinkShared(true);
+    }
+
+    // Handle gift_id URL param from emailed recovery link (no payment flow)
+    if (giftParam && !paidParam && !savedPaidId && !savedFreeId) {
+      setGiftId(giftParam);
+      const url = `${window.location.origin}${base}/api/share/${giftParam}`;
+      setShareUrl(url);
+      window.history.replaceState({}, "", window.location.pathname);
     }
 
     if (paidParam === "true" && giftParam && sessionId) {
@@ -598,6 +606,29 @@ export default function PreviewPage() {
     } catch {
       try { await navigator.clipboard.writeText(saved.url); } catch { /* ignore */ }
       setSelfSendStatus("sent");
+    }
+  };
+
+  // Email-me-this-link state (unauthenticated senders only)
+  const [emailMeOpen,    setEmailMeOpen]    = useState(false);
+  const [emailMeAddress, setEmailMeAddress] = useState("");
+  const [emailMeStatus,  setEmailMeStatus]  = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const handleEmailMe = async () => {
+    if (!emailMeAddress.trim()) return;
+    const saved = giftId ? { id: giftId } : await saveGift();
+    if (!saved) return;
+    setEmailMeStatus("sending");
+    try {
+      const res = await fetch(`${base}/api/gifted/email-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ giftId: saved.id, email: emailMeAddress.trim() }),
+      });
+      if (!res.ok) throw new Error("failed");
+      setEmailMeStatus("sent");
+    } catch {
+      setEmailMeStatus("error");
     }
   };
 
@@ -1017,6 +1048,69 @@ export default function PreviewPage() {
                   </div>
                 )}
 
+              </div>
+            )}
+
+            {/* ── Email me this link (unauthenticated senders) ── */}
+            {!isAuthenticated && !authLoading && (!hasBalance || isPaid) && (
+              <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                {emailMeStatus !== "sent" ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setEmailMeOpen(v => !v)}
+                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>{emailMeOpen ? "Hide" : "Email me this link"}</span>
+                    </button>
+                    <AnimatePresence>
+                      {emailMeOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="flex gap-2 pt-1">
+                            <input
+                              type="email"
+                              value={emailMeAddress}
+                              onChange={e => { setEmailMeAddress(e.target.value); setEmailMeStatus("idle"); }}
+                              placeholder="your@email.com"
+                              className="flex-1 h-9 px-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              onKeyDown={e => { if (e.key === "Enter") handleEmailMe(); }}
+                              disabled={emailMeStatus === "sending"}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleEmailMe}
+                              disabled={!emailMeAddress.trim() || emailMeStatus === "sending"}
+                              className="h-9 px-4 rounded-xl text-xs shrink-0"
+                            >
+                              {emailMeStatus === "sending"
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : "Send"}
+                            </Button>
+                          </div>
+                          {emailMeStatus === "error" && (
+                            <p className="text-xs text-destructive mt-1.5">Couldn't send — try again.</p>
+                          )}
+                          <p className="text-[11px] text-muted-foreground/60 mt-1.5 leading-relaxed">
+                            We'll email you the link so you can find and share it later.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <p className="text-xs text-green-700 dark:text-green-400 flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    Check your inbox — the link is on its way!
+                  </p>
+                )}
               </div>
             )}
 
