@@ -96,11 +96,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </DropdownMenu>
                 </>
               ) : (
-                <Link href="/sign-in"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Sign in
-                </Link>
+                <>
+                  <Link
+                    href="/features"
+                    className={`hidden sm:block text-sm font-medium transition-colors px-3 py-1.5 rounded-full hover:bg-secondary ${location === "/features" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
+                  >
+                    Features
+                  </Link>
+                  <Link href="/sign-in"
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </>
               )
             )}
             <Button onClick={handleSendGift} className="rounded-full px-6 shadow-md hover:-translate-y-0.5 transition-transform duration-300">
@@ -117,6 +125,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span className="text-sm text-muted-foreground">Personal in the moment. Flexible in the end.</span>
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
+            <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
             <Link href="/terms"    className="hover:text-foreground transition-colors">Terms</Link>
             <Link href="/privacy"  className="hover:text-foreground transition-colors">Privacy</Link>
             <Link href="/faq"      className="hover:text-foreground transition-colors">FAQ</Link>
