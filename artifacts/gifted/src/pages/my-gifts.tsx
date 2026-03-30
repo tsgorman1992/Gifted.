@@ -1063,6 +1063,26 @@ function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; 
 
 // ─── Contact Card ─────────────────────────────────────────────────────────────
 
+type OccasionEditRow = {
+  id: string | null;
+  label: string;
+  month: number;
+  day: number;
+  floatingKey: string | null;
+  deleted: boolean;
+};
+
+function initOccasionRows(occ: Contact["occasions"]): OccasionEditRow[] {
+  return occ.map(o => ({
+    id: o.id,
+    label: o.label,
+    month: o.month ?? 1,
+    day: o.day ?? 1,
+    floatingKey: o.floatingKey ?? null,
+    deleted: false,
+  }));
+}
+
 function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh: () => void; idx: number }) {
   const [, setLocation] = useLocation();
   const [showOccasionForm, setShowOccasionForm] = useState(false);
@@ -1071,6 +1091,7 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
   const [editName, setEditName] = useState(contact.name);
   const [editPhone, setEditPhone] = useState(contact.phone ?? "");
   const [editEmail, setEditEmail] = useState(contact.email ?? "");
+  const [editOccasions, setEditOccasions] = useState<OccasionEditRow[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -1092,19 +1113,66 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
     setLocation("/create");
   }
 
+  function openEdit() {
+    setEditName(contact.name);
+    setEditPhone(contact.phone ?? "");
+    setEditEmail(contact.email ?? "");
+    setEditOccasions(initOccasionRows(contact.occasions));
+    setEditError("");
+    setShowEdit(true);
+  }
+
+  function updateEditOccasion(i: number, patch: Partial<OccasionEditRow>) {
+    setEditOccasions(rows => rows.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  }
+
+  function addEditOccasionRow() {
+    setEditOccasions(rows => [...rows, { id: null, label: "Birthday", month: 1, day: 1, floatingKey: null, deleted: false }]);
+  }
+
   async function handleEditSave(e: React.FormEvent) {
     e.preventDefault();
     if (!editName.trim()) { setEditError("Name is required"); return; }
     setEditSaving(true);
     setEditError("");
     try {
-      const res = await fetch(`${BASE}/api/gifted/contacts/${contact.id}`, {
+      const contactRes = await fetch(`${BASE}/api/gifted/contacts/${contact.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ name: editName, phone: editPhone, email: editEmail, notes: contact.notes ?? undefined }),
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!contactRes.ok) throw new Error("Failed");
+
+      const originalById = Object.fromEntries(contact.occasions.map(o => [o.id, o]));
+
+      await Promise.all(editOccasions.map(row => {
+        const payload = buildOccasionPayload(row.label, row.month, row.day);
+        if (row.id) {
+          if (row.deleted) {
+            return fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions/${row.id}`, { method: "DELETE", credentials: "include" });
+          }
+          const orig = originalById[row.id];
+          const changed = !orig || orig.label !== row.label || orig.month !== row.month || orig.day !== row.day || orig.floatingKey !== row.floatingKey;
+          if (changed) {
+            return fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions/${row.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(payload),
+            });
+          }
+        } else if (!row.deleted) {
+          return fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(payload),
+          });
+        }
+        return Promise.resolve();
+      }));
+
       setShowEdit(false);
       onRefresh();
     } catch {
@@ -1115,9 +1183,6 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
   }
 
   function handleEditCancel() {
-    setEditName(contact.name);
-    setEditPhone(contact.phone ?? "");
-    setEditEmail(contact.email ?? "");
     setEditError("");
     setShowEdit(false);
   }
@@ -1145,6 +1210,47 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
             <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-9 text-sm" />
             <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-9 text-sm" type="email" />
           </div>
+
+          {/* Editable occasions */}
+          {editOccasions.filter(r => !r.deleted).length > 0 && (
+            <div className="flex flex-col gap-2 pt-2 border-t border-border">
+              <span className="text-xs font-medium text-muted-foreground">Occasions</span>
+              {editOccasions.map((row, i) => row.deleted ? null : (
+                <div key={i} className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={row.label}
+                    onChange={e => {
+                      const newLabel = e.target.value;
+                      const fk = FLOATING_OCCASION_KEYS[newLabel] ?? null;
+                      updateEditOccasion(i, { label: newLabel, floatingKey: fk });
+                    }}
+                    className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+                  >
+                    {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                  <OccasionDateFields
+                    label={row.label} month={row.month} day={row.day}
+                    onMonthChange={m => updateEditOccasion(i, { month: m })}
+                    onDayChange={d => updateEditOccasion(i, { day: d })}
+                  />
+                  <button type="button" onClick={() => {
+                    if (row.id) {
+                      updateEditOccasion(i, { deleted: true });
+                    } else {
+                      setEditOccasions(rows => rows.filter((_, idx) => idx !== i));
+                    }
+                  }} className="text-muted-foreground/50 hover:text-destructive transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" onClick={addEditOccasionRow} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors self-start">
+            <Cake className="w-3.5 h-3.5" />
+            {editOccasions.filter(r => !r.deleted).length === 0 ? "Add an occasion" : "Add another occasion"}
+          </button>
+
           {editError && <p className="text-xs text-destructive">{editError}</p>}
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={editSaving} className="rounded-full h-8 text-xs">
@@ -1181,7 +1287,7 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
             ) : (
               <>
                 <button
-                  onClick={() => setShowEdit(true)}
+                  onClick={openEdit}
                   className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
                 >
                   <Pencil className="w-3.5 h-3.5" />

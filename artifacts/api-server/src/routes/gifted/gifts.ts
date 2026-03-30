@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Readable } from "stream";
 import { nanoid } from "nanoid";
 import { createHmac, timingSafeEqual } from "crypto";
-import { db, gifts, usersTable } from "@workspace/db";
+import { db, gifts, usersTable, contacts as contactsTable, contactOccasions } from "@workspace/db";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
 import twilio from "twilio";
 import { sendGiftOpenedNotice, sendPackageDeliveredEmail, sendGiftLinkEmail } from "../../lib/email";
@@ -366,7 +366,8 @@ router.get("/gifted/notifications", async (req, res) => {
   }
 
   try {
-    const rows = await db
+    // ── Gift activity notifications ──────────────────────────────────────────
+    const giftRows = await db
       .select({
         id: gifts.id,
         recipientName: gifts.recipientName,
@@ -386,19 +387,21 @@ router.get("/gifted/notifications", async (req, res) => {
         )
       );
 
-    type NotifItem = {
+    type NotifBase = { at: Date };
+    type GiftNotif = NotifBase & {
       type: "opened" | "redeemed" | "reaction";
-      giftId: string;
-      recipientName: string;
-      giftTitle: string;
-      amount: string | null;
-      reaction?: string | null;
-      at: Date;
+      giftId: string; recipientName: string; giftTitle: string;
+      amount: string | null; reaction?: string | null;
     };
+    type OccasionNotif = NotifBase & {
+      type: "occasion";
+      contactName: string; occasionLabel: string; daysUntil: number;
+    };
+    type NotifItem = GiftNotif | OccasionNotif;
 
     const items: NotifItem[] = [];
 
-    for (const g of rows) {
+    for (const g of giftRows) {
       if (g.reactionAt && g.reaction) {
         items.push({ type: "reaction", giftId: g.id, recipientName: g.recipientName, giftTitle: g.giftTitle, amount: g.amount, reaction: g.reaction, at: g.reactionAt });
       }
@@ -410,9 +413,57 @@ router.get("/gifted/notifications", async (req, res) => {
       }
     }
 
+    // ── Occasion reminders (day-of and 3 days before) ────────────────────────
+    function nthWeekdayOfMonth(year: number, month: number, weekday: number, n: number): number {
+      const d = new Date(year, month - 1, 1);
+      while (d.getDay() !== weekday) d.setDate(d.getDate() + 1);
+      d.setDate(d.getDate() + (n - 1) * 7);
+      return d.getDate();
+    }
+    function computeFloating(key: string, year: number): { month: number; day: number } {
+      if (key === "mothers-day")  return { month: 5,  day: nthWeekdayOfMonth(year, 5,  0, 2) };
+      if (key === "fathers-day")  return { month: 6,  day: nthWeekdayOfMonth(year, 6,  0, 3) };
+      if (key === "thanksgiving") return { month: 11, day: nthWeekdayOfMonth(year, 11, 4, 4) };
+      return { month: 1, day: 1 };
+    }
+    function daysUntil(month: number, day: number): number {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const year = today.getFullYear();
+      let target = new Date(year, month - 1, day);
+      if (target < today) target = new Date(year + 1, month - 1, day);
+      return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+    }
+
+    const userContacts = await db.select({ id: contactsTable.id, name: contactsTable.name })
+      .from(contactsTable).where(eq(contactsTable.userId, userId));
+    const contactMap = Object.fromEntries(userContacts.map(c => [c.id, c.name]));
+
+    const occasionRows = await db.select()
+      .from(contactOccasions)
+      .where(eq(contactOccasions.userId, userId));
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const syntheticAt = new Date(today);
+
+    for (const occ of occasionRows) {
+      const contactName = contactMap[occ.contactId] ?? "Someone";
+      let month: number, day: number;
+      if (occ.floatingKey) {
+        const r = computeFloating(occ.floatingKey, today.getFullYear());
+        month = r.month; day = r.day;
+      } else if (occ.month && occ.day) {
+        month = occ.month; day = occ.day;
+      } else continue;
+
+      const d = daysUntil(month, day);
+      if (d === 0 || d === 3) {
+        items.push({ type: "occasion", contactName, occasionLabel: occ.label, daysUntil: d, at: syntheticAt });
+      }
+    }
+
     items.sort((a, b) => b.at.getTime() - a.at.getTime());
 
-    res.json(items.slice(0, 40));
+    res.json(items.slice(0, 50));
   } catch (err) {
     console.error("Error fetching notifications:", err);
     res.status(500).json({ error: "Failed to fetch notifications" });

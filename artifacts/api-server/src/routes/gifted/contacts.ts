@@ -155,6 +155,52 @@ router.post("/gifted/contacts/:id/occasions", async (req, res) => {
   }
 });
 
+// PUT /api/gifted/contacts/:contactId/occasions/:occasionId — update an existing occasion
+router.put("/gifted/contacts/:contactId/occasions/:occasionId", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+  const { label, month, day, floatingKey } = req.body as {
+    label?: string;
+    month?: number;
+    day?: number;
+    floatingKey?: string;
+  };
+
+  if (!label?.trim()) { res.status(400).json({ error: "label is required" }); return; }
+
+  if (floatingKey) {
+    if (!VALID_FLOATING_KEYS.has(floatingKey)) {
+      res.status(400).json({ error: "Invalid floatingKey" }); return;
+    }
+  } else {
+    if (!month || !day) { res.status(400).json({ error: "month and day are required" }); return; }
+    if (month < 1 || month > 12 || day < 1 || day > 31) { res.status(400).json({ error: "Invalid month or day" }); return; }
+  }
+
+  try {
+    const [updated] = await db
+      .update(contactOccasions)
+      .set({
+        label: label.trim(),
+        month: floatingKey ? null : (month ?? null),
+        day: floatingKey ? null : (day ?? null),
+        floatingKey: floatingKey || null,
+      })
+      .where(and(
+        eq(contactOccasions.id, req.params.occasionId),
+        eq(contactOccasions.userId, userId),
+      ))
+      .returning();
+
+    if (!updated) { res.status(404).json({ error: "Occasion not found" }); return; }
+    res.json(updated);
+  } catch (err) {
+    console.error("Error updating occasion:", err);
+    res.status(500).json({ error: "Failed to update occasion" });
+  }
+});
+
 // DELETE /api/gifted/contacts/:contactId/occasions/:occasionId — remove an occasion
 router.delete("/gifted/contacts/:contactId/occasions/:occasionId", async (req, res) => {
   const userId = (req as any).user?.id;
