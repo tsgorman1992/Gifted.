@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/auth-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -1423,6 +1423,7 @@ type Tab = "sent" | "received" | "people";
 export default function MyGiftsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const [activeTab, setActiveTab] = useState<Tab>("sent");
   const [activeStatFilter, setActiveStatFilter] = useState<"opened" | "redeemed" | null>(null);
   const queryClient = useQueryClient();
@@ -1430,6 +1431,14 @@ export default function MyGiftsPage() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [localName, setLocalName] = useState<{ first: string; last: string } | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const tab = params.get("tab");
+    if (tab === "contacts" || tab === "people") {
+      setActiveTab("people");
+    }
+  }, [search]);
 
   useEffect(() => {
     const authReturn = localStorage.getItem("gifted_auth_return");
