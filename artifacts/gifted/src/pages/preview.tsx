@@ -907,6 +907,119 @@ export default function PreviewPage() {
               </div>
             )}
 
+            {/* ── Desktop share section — shown first on desktop so action is unmissable ── */}
+            {(!hasBalance || isPaid) && (
+              <div className="hidden md:flex flex-col gap-3.5">
+
+                {/* Hero: text to my phone (recommended — comes from sender's own number) */}
+                <div className="rounded-2xl border-2 border-primary/25 bg-primary/5 p-4 space-y-2.5">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Text the link to my phone</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Forward it from your number — they'll actually open it
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={selfPhone}
+                      onChange={(e) => setSelfPhone(formatPhone(e.target.value))}
+                      placeholder="(555) 000-0000"
+                      className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      onKeyDown={(e) => { if (e.key === "Enter") handleSelfSend(); }}
+                      disabled={selfSendStatus !== "idle"}
+                    />
+                    <Button
+                      onClick={handleSelfSend}
+                      disabled={!selfPhone.trim() || selfSendStatus !== "idle" || saving}
+                      className="h-10 px-4 rounded-xl text-sm font-semibold shrink-0 shadow-md shadow-primary/20"
+                    >
+                      {selfSendStatus === "sending"
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : selfSendStatus === "sent"
+                          ? <><Check className="w-4 h-4 mr-1.5" /> Sent!</>
+                          : "Send to me"}
+                    </Button>
+                  </div>
+                  {selfSendStatus === "sent" && (
+                    <p className="text-xs text-green-600">
+                      Check your phone — copy the link and forward it to {recipientName}.
+                    </p>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-[11px] text-muted-foreground/60 font-medium">or send via gifted.</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                {/* Tertiary: platform SMS — clearly labeled as coming from gifted.'s number */}
+                <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-2.5">
+                  <p className="text-xs text-muted-foreground">
+                    We'll text it — arrives from gifted.'s number, not yours
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={desktopContact}
+                      onChange={(e) => {
+                        setDesktopContact(formatPhone(e.target.value));
+                        setDesktopSendStatus("idle");
+                        setDesktopSendError(null);
+                      }}
+                      placeholder="(555) 000-0000"
+                      className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      onKeyDown={(e) => { if (e.key === "Enter") handleDesktopSend(); }}
+                      disabled={desktopSendStatus === "sending" || desktopSendStatus === "sent"}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={handleDesktopSend}
+                      disabled={!desktopContact.trim() || desktopSendStatus === "sending" || desktopSendStatus === "sent" || saving}
+                      className="h-10 px-4 rounded-xl text-sm font-medium shrink-0"
+                    >
+                      {desktopSendStatus === "sending"
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : desktopSendStatus === "sent"
+                          ? <><Check className="w-4 h-4 mr-1" /> Sent</>
+                          : <><Send className="w-4 h-4 mr-1.5" /> Send text</>}
+                    </Button>
+                  </div>
+                  {desktopSendStatus === "sent" && (
+                    <p className="text-xs text-green-600 flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5" />
+                      {desktopSendError === "sms-fallback"
+                        ? `Link copied — paste it in a message to ${recipientName}`
+                        : `Text sent to ${desktopContact}`}
+                    </p>
+                  )}
+                </div>
+
+                {/* QR code — links to preview page so sender can share from their phone */}
+                {giftId && (
+                  <div className="flex flex-col items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowQr(v => !v)}
+                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                      {showQr ? "Hide QR code" : "Show QR code"}
+                    </button>
+                    {showQr && (
+                      <QRCodeDisplay
+                        url={`${window.location.origin}${base}/preview?gift_id=${giftId}`}
+                        label="Scan to send from your phone"
+                      />
+                    )}
+                  </div>
+                )}
+
+              </div>
+            )}
+
             {/* ── Post-send confirmation ── */}
             <AnimatePresence>
               {(isPaid || (linkShared && !hasBalance)) && (
@@ -1326,120 +1439,6 @@ export default function PreviewPage() {
                     <span>${displayAmt}{giftIntent ? ` — ${giftIntent}` : " to spend however they like"}</span>
                   </li>
                 </ul>
-              </div>
-            )}
-
-
-            {/* ── Desktop share section ── */}
-            {(!hasBalance || isPaid) && (
-              <div className="hidden md:flex flex-col gap-3.5">
-
-                {/* Hero: text to my phone (recommended — comes from sender's own number) */}
-                <div className="rounded-2xl border-2 border-primary/25 bg-primary/5 p-4 space-y-2.5">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Text the link to my phone</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Forward it from your number — they'll actually open it
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="tel"
-                      value={selfPhone}
-                      onChange={(e) => setSelfPhone(formatPhone(e.target.value))}
-                      placeholder="(555) 000-0000"
-                      className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                      onKeyDown={(e) => { if (e.key === "Enter") handleSelfSend(); }}
-                      disabled={selfSendStatus !== "idle"}
-                    />
-                    <Button
-                      onClick={handleSelfSend}
-                      disabled={!selfPhone.trim() || selfSendStatus !== "idle" || saving}
-                      className="h-10 px-4 rounded-xl text-sm font-semibold shrink-0 shadow-md shadow-primary/20"
-                    >
-                      {selfSendStatus === "sending"
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : selfSendStatus === "sent"
-                          ? <><Check className="w-4 h-4 mr-1.5" /> Sent!</>
-                          : "Send to me"}
-                    </Button>
-                  </div>
-                  {selfSendStatus === "sent" && (
-                    <p className="text-xs text-green-600">
-                      Check your phone — copy the link and forward it to {recipientName}.
-                    </p>
-                  )}
-                </div>
-
-                {/* Divider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-[11px] text-muted-foreground/60 font-medium">or send via gifted.</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                {/* Tertiary: platform SMS — clearly labeled as coming from gifted.'s number */}
-                <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-2.5">
-                  <p className="text-xs text-muted-foreground">
-                    We'll text it — arrives from gifted.'s number, not yours
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="tel"
-                      value={desktopContact}
-                      onChange={(e) => {
-                        setDesktopContact(formatPhone(e.target.value));
-                        setDesktopSendStatus("idle");
-                        setDesktopSendError(null);
-                      }}
-                      placeholder="(555) 000-0000"
-                      className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                      onKeyDown={(e) => { if (e.key === "Enter") handleDesktopSend(); }}
-                      disabled={desktopSendStatus === "sending" || desktopSendStatus === "sent"}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={handleDesktopSend}
-                      disabled={!desktopContact.trim() || desktopSendStatus === "sending" || desktopSendStatus === "sent" || saving}
-                      className="h-10 px-4 rounded-xl text-sm font-medium shrink-0"
-                    >
-                      {desktopSendStatus === "sending"
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : desktopSendStatus === "sent"
-                          ? <><Check className="w-4 h-4 mr-1" /> Sent</>
-                          : <><Send className="w-4 h-4 mr-1.5" /> Send text</>}
-                    </Button>
-                  </div>
-                  {desktopSendStatus === "sent" && (
-                    <p className="text-xs text-green-600 flex items-center gap-1.5">
-                      <Check className="w-3.5 h-3.5" />
-                      {desktopSendError === "sms-fallback"
-                        ? `Link copied — paste it in a message to ${recipientName}`
-                        : `Text sent to ${desktopContact}`}
-                    </p>
-                  )}
-                </div>
-
-                {/* QR code — links to preview page so sender can share from their phone */}
-                {giftId && (
-                  <div className="flex flex-col items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowQr(v => !v)}
-                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <QrCode className="w-3.5 h-3.5" />
-                      {showQr ? "Hide QR code" : "Show QR code"}
-                    </button>
-                    {showQr && (
-                      <QRCodeDisplay
-                        url={`${window.location.origin}${base}/preview?gift_id=${giftId}`}
-                        label="Scan to send from your phone"
-                      />
-                    )}
-                  </div>
-                )}
-
               </div>
             )}
 
