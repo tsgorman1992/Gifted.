@@ -173,6 +173,54 @@ function StatCard({ label, value, sub, Icon, delay }: {
   );
 }
 
+// ─── Resend Button ────────────────────────────────────────────────────────────
+
+function ResendButton({ url, recipientName }: { url: string; recipientName: string }) {
+  const [state, setState] = useState<"idle" | "shared" | "copied">("idle");
+
+  const handle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof navigator?.share === "function") {
+      try {
+        await navigator.share({ title: `A gift for ${recipientName}`, url });
+        setState("shared");
+        setTimeout(() => setState("idle"), 2500);
+      } catch {
+        // User cancelled — no-op
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      setState("copied");
+      setTimeout(() => setState("idle"), 2500);
+    }
+  };
+
+  return (
+    <button
+      onClick={handle}
+      className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium border transition-all hover:opacity-80"
+      style={{ background: "hsl(28,62%,36%,0.08)", color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.25)" }}
+    >
+      <AnimatePresence mode="wait">
+        {state === "copied" ? (
+          <motion.span key="copied" className="flex items-center gap-1.5" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+            <Check className="w-3 h-3 text-green-600" /><span className="text-green-700">Copied!</span>
+          </motion.span>
+        ) : state === "shared" ? (
+          <motion.span key="shared" className="flex items-center gap-1.5" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+            <Check className="w-3 h-3" />Shared
+          </motion.span>
+        ) : (
+          <motion.span key="idle" className="flex items-center gap-1.5" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+            <Send className="w-3 h-3" />Resend link
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </button>
+  );
+}
+
 // ─── Copy Button ──────────────────────────────────────────────────────────────
 
 function CopyButton({ url, full = false }: { url: string; full?: boolean }) {
@@ -225,6 +273,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [hideError, setHideError] = useState<string | null>(null);
+  const [activeBalanceBlocked, setActiveBalanceBlocked] = useState(false);
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
   const statusMeta = STATUS_META[status];
@@ -246,8 +295,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
         credentials: "include",
       });
       if (res.status === 409) {
-        const data = await res.json().catch(() => ({}));
-        setHideError(data.error ?? "This gift can't be removed right now.");
+        setActiveBalanceBlocked(true);
         setIsDeleting(false);
         return;
       }
@@ -388,27 +436,57 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 className="flex flex-col gap-1.5"
                 onClick={(e) => e.stopPropagation()}
               >
-                {hideError ? (
-                  <p className="text-xs text-destructive leading-snug">{hideError}</p>
+                {activeBalanceBlocked ? (
+                  <>
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      This gift has an active balance and can't be removed until it's redeemed.{" "}
+                      Need help?{" "}
+                      <a
+                        href="mailto:help@gifted.page"
+                        className="underline text-primary hover:opacity-70 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Contact us
+                      </a>
+                    </p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setActiveBalanceBlocked(false); }}
+                      className="self-start px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                    >
+                      Close
+                    </button>
+                  </>
+                ) : hideError ? (
+                  <>
+                    <p className="text-xs text-destructive leading-snug">{hideError}</p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setHideError(null); }}
+                      className="self-start px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                    >
+                      Close
+                    </button>
+                  </>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Remove from your dashboard? Gift data is kept.</span>
+                  <>
+                    <span className="text-xs text-muted-foreground">Remove from your dashboard? Gift data is kept.</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setHideError(null); }}
+                        className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                        disabled={isDeleting}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleHide}
+                        disabled={isDeleting}
+                        className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
+                      >
+                        {isDeleting ? "Removing…" : "Remove"}
+                      </button>
+                    </div>
+                  </>
                 )}
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setHideError(null); }}
-                    className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
-                    disabled={isDeleting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleHide}
-                    disabled={isDeleting}
-                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
-                  >
-                    {isDeleting ? "Removing…" : "Remove"}
-                  </button>
-                </div>
               </motion.div>
             ) : (
               <motion.div
@@ -421,11 +499,13 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground">
-                    {status === "redeemed" && gift.redeemedAt
-                      ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
-                      : status === "opened" && gift.openedAt
-                        ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                  {status === "opened" && !gift.redeemedAt && (
+                    <ResendButton url={shareUrl} recipientName={gift.recipientName} />
+                  )}
+                  {status !== "opened" && (
+                    <span className="text-xs text-muted-foreground">
+                      {status === "redeemed" && gift.redeemedAt
+                        ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
                         : status === "sent"
                           ? `Ready since ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
                         : status === "ready"
@@ -433,7 +513,8 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                         : status === "scheduled" && gift.scheduledFor
                           ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
                           : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
-                  </span>
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {status !== "ready" && status !== "sent" && (

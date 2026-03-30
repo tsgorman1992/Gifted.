@@ -635,6 +635,56 @@ export default function PreviewPage() {
     }
   };
 
+  // ── Contact save prompt ──────────────────────────────────────────────────────
+  const [contactPromptDismissed, setContactPromptDismissed] = useState(false);
+  const [contactOccasion, setContactOccasion] = useState("Birthday");
+  const [contactMonth,    setContactMonth]    = useState(1);
+  const [contactDay,      setContactDay]      = useState(1);
+  const [contactSaving,   setContactSaving]   = useState(false);
+  const [contactSaved,    setContactSaved]    = useState(false);
+
+  const CONTACT_OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Valentine's Day", "Hanukkah", "Other"];
+  const CONTACT_MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  const contactPromptSeen = () => {
+    if (!giftId) return false;
+    return !!localStorage.getItem(`gifted_contact_prompt_${giftId}`);
+  };
+
+  const handleContactSave = async () => {
+    if (!giftId) return;
+    setContactSaving(true);
+    try {
+      const contactRes = await fetch(`${base}/api/gifted/contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: recipientName }),
+      });
+      if (!contactRes.ok) throw new Error("contact failed");
+      const contact = await contactRes.json() as { id: string };
+      await fetch(`${base}/api/gifted/contacts/${contact.id}/occasions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ label: contactOccasion, month: contactMonth, day: contactDay }),
+      });
+      localStorage.setItem(`gifted_contact_prompt_${giftId}`, "saved");
+      setContactSaved(true);
+    } catch {
+      // non-critical — just dismiss
+      localStorage.setItem(`gifted_contact_prompt_${giftId}`, "seen");
+      setContactPromptDismissed(true);
+    } finally {
+      setContactSaving(false);
+    }
+  };
+
+  const handleContactSkip = () => {
+    if (giftId) localStorage.setItem(`gifted_contact_prompt_${giftId}`, "skipped");
+    setContactPromptDismissed(true);
+  };
+
   const [revealUrl, setRevealUrl] = useState<string | null>(null);
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
 
@@ -1116,6 +1166,83 @@ export default function PreviewPage() {
                 )}
               </div>
             )}
+
+            {/* ── Contact save prompt (authenticated senders only, once per gift) ── */}
+            <AnimatePresence>
+              {isAuthenticated && !authLoading && (linkShared || isPaid) && giftId && (contactSaved || (!contactPromptDismissed && !contactPromptSeen())) && (
+                <motion.div
+                  key="contact-prompt"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3"
+                >
+                  {contactSaved ? (
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-600 shrink-0" />
+                      <p className="text-sm text-green-700 dark:text-green-400 font-medium">
+                        {recipientName} saved to your contacts!
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-foreground">
+                          Remember {recipientName}'s birthday or a special occasion?
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleContactSkip}
+                          className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0"
+                          aria-label="Skip"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={contactOccasion}
+                          onChange={e => setContactOccasion(e.target.value)}
+                          className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        >
+                          {CONTACT_OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                        <select
+                          value={contactMonth}
+                          onChange={e => setContactMonth(Number(e.target.value))}
+                          className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        >
+                          {CONTACT_MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                        </select>
+                        <select
+                          value={contactDay}
+                          onChange={e => setContactDay(Number(e.target.value))}
+                          className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        >
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <Button
+                          size="sm"
+                          onClick={handleContactSave}
+                          disabled={contactSaving}
+                          className="rounded-xl h-9 px-4 text-xs shrink-0"
+                        >
+                          {contactSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
+                        </Button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleContactSkip}
+                        className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                      >
+                        Skip for now
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* ── Post-send confirmation + notification opt-in ── */}
             <AnimatePresence>
