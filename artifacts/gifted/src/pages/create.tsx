@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/lib/auth-context";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -777,6 +778,7 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
 
 export default function CreatePage() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
 
   // Step state
   const [step, setStep] = useState(1);
@@ -938,6 +940,20 @@ export default function CreatePage() {
     }
   }, []);
 
+
+  // Pre-fill sender name from saved profile (only when the field is still empty)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${apiBase}/api/gifted/profile`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { displayName: string | null } | null) => {
+        if (data?.displayName) {
+          setSenderName(prev => prev.trim() ? prev : data.displayName!);
+        }
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   // Revoke any blob URL when component unmounts to free memory
   useEffect(() => {

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { Readable } from "stream";
 import { nanoid } from "nanoid";
 import { createHmac, timingSafeEqual } from "crypto";
-import { db, gifts } from "@workspace/db";
+import { db, gifts, usersTable } from "@workspace/db";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
 import twilio from "twilio";
 import { sendGiftOpenedNotice, sendPackageDeliveredEmail } from "../../lib/email";
@@ -803,6 +803,41 @@ router.post("/gifted/aftership-webhook", async (req, res) => {
   } catch (err) {
     console.error("[AfterShip webhook] error:", err);
     res.status(500).json({ error: "Webhook processing failed" });
+  }
+});
+
+router.get("/gifted/profile", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    const [user] = await db
+      .select({ displayName: usersTable.displayName, payoutMethod: usersTable.payoutMethod, payoutHandle: usersTable.payoutHandle })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
+router.patch("/gifted/profile", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) return res.status(401).json({ error: "Not authenticated" });
+  const { displayName, payoutMethod, payoutHandle } = req.body as Record<string, string | undefined>;
+  const updates: Record<string, string | null> = {};
+  if (typeof displayName === "string") updates.displayName = displayName.trim() || null;
+  if (typeof payoutMethod === "string") updates.payoutMethod = payoutMethod || null;
+  if (typeof payoutHandle === "string") updates.payoutHandle = payoutHandle.trim() || null;
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: "No fields to update" });
+  try {
+    await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    res.status(500).json({ error: "Failed to update profile" });
   }
 });
 

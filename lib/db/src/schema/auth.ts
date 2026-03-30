@@ -20,6 +20,9 @@ export const usersTable = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"),
   googleId: varchar("google_id").unique(),
+  displayName: varchar("display_name"),
+  payoutMethod: varchar("payout_method"),
+  payoutHandle: varchar("payout_handle"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

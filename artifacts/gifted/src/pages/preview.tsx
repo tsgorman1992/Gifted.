@@ -514,7 +514,7 @@ export default function PreviewPage() {
     try {
       await navigator.share({
         title: `A gift for ${recipientName} 🎁`,
-        text: `Hey ${recipientName} — I made something for you 🎁`,
+        text: `Hey ${recipientName} — I got you a little something 🎁`,
         url: saved.url,
       });
       setLinkShared(true);
@@ -525,7 +525,7 @@ export default function PreviewPage() {
   const handleSMS = async () => {
     const saved = await saveGift();
     if (!saved) return;
-    const body = `Hey ${recipientName} — I made something for you 🎁\n${saved.url}`;
+    const body = `Hey ${recipientName} — I got you a little something 🎁\n${saved.url}`;
     // Use location.href (not window.open) so Android Chrome doesn't block the sms: scheme
     window.location.href = `sms:?body=${encodeURIComponent(body)}`;
     setLinkShared(true);
@@ -856,13 +856,13 @@ export default function PreviewPage() {
                     <CheckCircle2 className="w-5 h-5 text-green-600" />
                   </motion.div>
                   <h1 className="font-serif text-3xl md:text-4xl font-medium">
-                    {paymentStatus === "confirming" ? "Confirming…" : "Your gift is ready."}
+                    {paymentStatus === "confirming" ? "Confirming…" : `Now send it to ${recipientName}.`}
                   </h1>
                 </div>
                 <p className="text-muted-foreground mb-7 text-base">
                   {paymentStatus === "confirming"
                     ? "Just a moment while we confirm everything…"
-                    : `${recipientName}'s gift is ready. Share the link below and the experience begins the moment they tap it.`}
+                    : "The experience begins the moment they tap the link — share it now."}
                 </p>
               </>
             ) : (
@@ -880,6 +880,32 @@ export default function PreviewPage() {
           </motion.div>
 
           <motion.div {...fade(0.15)} className="space-y-3">
+
+            {/* ── Share / copy — mobile: native share + copy (shown first, above confirmation) ── */}
+            {(!hasBalance || isPaid) && (
+              <div className="flex gap-3 md:hidden">
+                <Button
+                  onClick={canShare ? handleShare : handleSMS}
+                  disabled={saving}
+                  className={`flex-1 rounded-xl text-sm font-semibold shadow-lg shadow-primary/20 ${isPaid ? "h-14" : "h-12"}`}
+                >
+                  {saving
+                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                    : canShare
+                      ? <><Share2 className="w-4 h-4 mr-2" />{isPaid ? `Send to ${recipientName}` : "Share"}</>
+                      : <><MessageCircle className="w-4 h-4 mr-2" />{isPaid ? `Text ${recipientName}` : "SMS"}</>
+                  }
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleCopy}
+                  disabled={saving || isRedirecting}
+                  className={`flex-1 rounded-xl text-sm font-medium ${isPaid ? "h-14" : "h-12"}`}
+                >
+                  {copied ? <><Check className="w-4 h-4 mr-2" /> Copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
+                </Button>
+              </div>
+            )}
 
             {/* ── Post-send confirmation ── */}
             <AnimatePresence>
@@ -1303,31 +1329,6 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* ── Share / copy — mobile: native share + copy ── */}
-            {(!hasBalance || isPaid) && (
-              <div className="flex gap-3 md:hidden">
-                <Button
-                  onClick={canShare ? handleShare : handleSMS}
-                  disabled={saving}
-                  className="flex-1 h-12 rounded-xl text-sm font-semibold shadow-lg shadow-primary/20"
-                >
-                  {saving
-                    ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
-                    : canShare
-                      ? <><Share2 className="w-4 h-4 mr-2" /> Share</>
-                      : <><MessageCircle className="w-4 h-4 mr-2" /> SMS</>
-                  }
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleCopy}
-                  disabled={saving || isRedirecting}
-                  className="flex-1 h-12 rounded-xl text-sm font-medium"
-                >
-                  {copied ? <><Check className="w-4 h-4 mr-2" /> Copied!</> : <><Copy className="w-4 h-4 mr-2" /> Copy link</>}
-                </Button>
-              </div>
-            )}
 
             {/* ── Desktop share section ── */}
             {(!hasBalance || isPaid) && (

@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Gift, LogOut, ChevronDown } from "lucide-react";
+import { User, Gift, LogOut, ChevronDown, Settings } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -58,11 +58,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 rounded-2xl">
+                  <DropdownMenuContent align="end" className="w-52 rounded-2xl">
                     <DropdownMenuItem asChild>
                       <Link href="/my-gifts" className="flex items-center gap-2 cursor-pointer">
                         <Gift className="w-4 h-4" />
                         My Gifts
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account" className="flex items-center gap-2 cursor-pointer">
+                        <Settings className="w-4 h-4" />
+                        Account settings
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
