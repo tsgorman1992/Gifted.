@@ -261,22 +261,22 @@ function ScheduledSection() {
         <div className="flex flex-col gap-6">
           <motion.div {...fadeUp(0)}>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-              <Clock className="w-3 h-3" /> Scheduled delivery
+              <Clock className="w-3 h-3" /> Build ahead, share when ready
             </div>
             <h2 className="font-serif text-3xl md:text-5xl font-medium leading-tight mb-4">
-              Send now. <span className="text-primary italic">Deliver exactly when it matters.</span>
+              Build it today. <span className="text-primary italic">Share it when the moment arrives.</span>
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed">
-              Pick a date and time and gifted. will hold your gift until the right moment — a birthday at midnight, an anniversary morning, a graduation day surprise.
+              Put the gift together on your own time — weeks in advance if you want. Set a reminder for the day, and gifted. will nudge you when it's time. You share the link directly from your phone, just like a text.
             </p>
           </motion.div>
 
           <div className="flex flex-col gap-3">
             {[
-              "Gift arrives at midnight on their birthday — even if you're in a different time zone",
-              "Set it weeks in advance so you never forget again",
-              "Still in transit? Schedule the digital gift to arrive before the physical one",
-              "Recipients get notified right when it's time — on your schedule",
+              "Build the gift whenever you have time — days or weeks before the occasion",
+              "Set a reminder and we'll alert you on the day so you don't forget to share",
+              "You send the link yourself, from your number — it feels personal because it is",
+              "They tap the link and the full gift experience opens instantly in their browser",
             ].map((t, i) => (
               <motion.div key={i} {...fadeUp(0.08 + i * 0.06)} className="flex items-start gap-2.5">
                 <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5">
@@ -321,11 +321,11 @@ function ScheduledSection() {
               </div>
               <div className="mt-4 p-3 rounded-2xl border border-primary/20 bg-primary/5 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0">
-                  <Calendar className="w-4 h-4 text-white" />
+                  <Bell className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold">Scheduled for Dec 25</p>
-                  <p className="text-[10px] text-muted-foreground">Delivers at 12:00 AM · Emma's gift</p>
+                  <p className="text-xs font-semibold">Reminder set · Dec 25</p>
+                  <p className="text-[10px] text-muted-foreground">We'll remind you to share · Emma's gift</p>
                 </div>
               </div>
               <div className="mt-2 p-3 rounded-2xl border border-border bg-secondary/40 flex items-center gap-3">
@@ -333,8 +333,8 @@ function ScheduledSection() {
                   <Clock className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground">Waiting to deliver · Dec 20</p>
-                  <p className="text-[10px] text-muted-foreground">Mike's Anniversary gift</p>
+                  <p className="text-xs font-medium text-muted-foreground">Ready to share · Dec 20</p>
+                  <p className="text-[10px] text-muted-foreground">Gift built & waiting · Mike's Anniversary</p>
                 </div>
               </div>
             </div>
