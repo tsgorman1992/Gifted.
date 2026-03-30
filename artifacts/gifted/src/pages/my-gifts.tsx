@@ -306,7 +306,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
   const statusMeta = STATUS_META[status];
-  const shareUrl = `${window.location.origin}${BASE}/open/${gift.id}`;
+  const shareUrl = `${window.location.origin}/api/share/${gift.id}`;
   const ExpIcon = exp.Icon;
 
   function handleCardClick() {
@@ -540,7 +540,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                     <CopyButton url={shareUrl} />
                   )}
                   <a
-                    href={`${shareUrl}?preview=true`}
+                    href={`${window.location.origin}${BASE}/open/${gift.id}?preview=true`}
                     target="_blank"
                     rel="noopener noreferrer"
                     title="Preview gift"
