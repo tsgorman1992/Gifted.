@@ -833,9 +833,9 @@ router.patch("/gifted/profile", async (req, res) => {
     return res.status(400).json({ error: "Invalid payoutMethod. Must be one of: venmo, cashapp, zelle" });
   }
   const updates: Record<string, string | null> = {};
-  if (typeof displayName === "string") updates.displayName = displayName.trim() || null;
-  if (typeof payoutMethod === "string") updates.payoutMethod = payoutMethod || null;
-  if (typeof payoutHandle === "string") updates.payoutHandle = payoutHandle.trim() || null;
+  if (displayName !== undefined) updates.displayName = typeof displayName === "string" ? displayName.trim() || null : null;
+  if (payoutMethod !== undefined) updates.payoutMethod = typeof payoutMethod === "string" ? payoutMethod || null : null;
+  if (payoutHandle !== undefined) updates.payoutHandle = typeof payoutHandle === "string" ? payoutHandle.trim() || null : null;
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: "No fields to update" });
   try {
     await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));

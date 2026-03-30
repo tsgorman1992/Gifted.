@@ -110,6 +110,23 @@ export default function RedeemPage() {
         })
         .catch(() => {});
     }
+
+    // Pre-fill payout method/handle from profile for authenticated users
+    fetch(`${BASE}/api/gifted/profile`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then((profile: { payoutMethod: string | null; payoutHandle: string | null } | null) => {
+        if (!profile) return;
+        if (profile.payoutMethod) {
+          const method = profile.payoutMethod as PayoutMethod;
+          if (METHODS.find(m => m.id === method)) {
+            setSelectedMethod(prev => prev ?? method);
+          }
+        }
+        if (profile.payoutHandle) {
+          setPayoutHandle(prev => prev || profile.payoutHandle!);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const displayAmount = parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : null;
