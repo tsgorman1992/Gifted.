@@ -390,6 +390,9 @@ export default function PreviewPage() {
       const url = `${window.location.origin}${base}/api/share/${id}`;
       setShareUrl(url);
 
+      // Always persist gift ID for recovery banner
+      localStorage.setItem("gifted_gift_id", id);
+
       // Persist for free gifts so giftId + shareUrl survive the OAuth redirect
       const amt2 = localStorage.getItem("gifted_amount");
       if (!amt2 || parseFloat(amt2) <= 0) {

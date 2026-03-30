@@ -498,6 +498,22 @@ router.get("/gifted/received-gifts", async (req, res) => {
   }
 });
 
+// Simple in-memory rate limit for email-link endpoint
+const _emailLinkBucket = new Map<string, { count: number; resetAt: number }>();
+const EMAIL_LINK_MAX = 5;
+const EMAIL_LINK_WINDOW_MS = 60 * 60 * 1000;
+function _checkEmailLinkRate(key: string): boolean {
+  const now = Date.now();
+  const entry = _emailLinkBucket.get(key);
+  if (!entry || now > entry.resetAt) {
+    _emailLinkBucket.set(key, { count: 1, resetAt: now + EMAIL_LINK_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= EMAIL_LINK_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 // POST /api/gifted/email-link — email the sender a copy of their gift link
 router.post("/gifted/email-link", async (req, res) => {
   try {
@@ -505,6 +521,12 @@ router.post("/gifted/email-link", async (req, res) => {
 
     if (!giftId || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       res.status(400).json({ error: "A valid giftId and email are required" });
+      return;
+    }
+
+    const rateKey = `${email.trim().toLowerCase()}:${giftId}`;
+    if (!_checkEmailLinkRate(rateKey)) {
+      res.status(429).json({ error: "Too many requests — try again later" });
       return;
     }
 

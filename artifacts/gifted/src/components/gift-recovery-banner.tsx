@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, X } from "lucide-react";
@@ -6,14 +6,16 @@ import { useAuth } from "@/lib/auth-context";
 import { isGiftSessionStale } from "@/lib/session";
 
 export function GiftRecoveryBanner() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [dismissed, setDismissed] = useState(false);
+  const [valid, setValid] = useState<boolean | null>(null);
 
   const [giftId] = useState<string | null>(() => {
     if (isGiftSessionStale()) return null;
     if (localStorage.getItem("gifted_link_shared")) return null;
     return (
+      localStorage.getItem("gifted_gift_id") ||
       localStorage.getItem("gifted_paid_id") ||
       localStorage.getItem("gifted_free_gift_id") ||
       null
@@ -24,7 +26,23 @@ export function GiftRecoveryBanner() {
     () => localStorage.getItem("gifted_recipient_name") || "your recipient"
   );
 
-  if (isLoading || isAuthenticated || !giftId || dismissed) return null;
+  const base = (import.meta.env.BASE_URL || "/").replace(/\/+$/, "");
+
+  useEffect(() => {
+    if (!giftId || authLoading || isAuthenticated) return;
+    fetch(`${base}/api/gifted/gifts/${giftId}`, { credentials: "include" })
+      .then(res => {
+        if (!res.ok) { setValid(false); return; }
+        return res.json();
+      })
+      .then((data: { redeemedAt?: string | null } | undefined) => {
+        if (!data) return;
+        setValid(!data.redeemedAt);
+      })
+      .catch(() => setValid(false));
+  }, [giftId, base, authLoading, isAuthenticated]);
+
+  if (authLoading || isAuthenticated || !giftId || dismissed || valid !== true) return null;
 
   return (
     <AnimatePresence>
@@ -38,7 +56,7 @@ export function GiftRecoveryBanner() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
           <button
             type="button"
-            onClick={() => setLocation("/preview")}
+            onClick={() => setLocation(`/preview?gift_id=${giftId}`)}
             className="flex items-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity text-left"
           >
             <span>
