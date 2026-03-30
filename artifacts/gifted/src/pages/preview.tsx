@@ -642,6 +642,7 @@ export default function PreviewPage() {
   const [contactDay,      setContactDay]      = useState(1);
   const [contactSaving,   setContactSaving]   = useState(false);
   const [contactSaved,    setContactSaved]    = useState(false);
+  const [contactSaveError, setContactSaveError] = useState(false);
 
   const CONTACT_OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Valentine's Day", "Hanukkah", "Other"];
   const CONTACT_MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -673,9 +674,7 @@ export default function PreviewPage() {
       localStorage.setItem(`gifted_contact_prompt_${giftId}`, "saved");
       setContactSaved(true);
     } catch {
-      // non-critical — just dismiss
-      localStorage.setItem(`gifted_contact_prompt_${giftId}`, "seen");
-      setContactPromptDismissed(true);
+      setContactSaveError(true);
     } finally {
       setContactSaving(false);
     }
@@ -1225,13 +1224,16 @@ export default function PreviewPage() {
                         </select>
                         <Button
                           size="sm"
-                          onClick={handleContactSave}
+                          onClick={() => { setContactSaveError(false); handleContactSave(); }}
                           disabled={contactSaving}
                           className="rounded-xl h-9 px-4 text-xs shrink-0"
                         >
                           {contactSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
                         </Button>
                       </div>
+                      {contactSaveError && (
+                        <p className="text-[11px] text-destructive">Couldn't save — please try again.</p>
+                      )}
                       <button
                         type="button"
                         onClick={handleContactSkip}

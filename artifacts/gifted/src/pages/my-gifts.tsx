@@ -298,7 +298,6 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [hideError, setHideError] = useState<string | null>(null);
   const [activeBalanceBlocked, setActiveBalanceBlocked] = useState(false);
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
@@ -482,22 +481,12 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                       Close
                     </button>
                   </>
-                ) : hideError ? (
-                  <>
-                    <p className="text-xs text-destructive leading-snug">{hideError}</p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setHideError(null); }}
-                      className="self-start px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
-                    >
-                      Close
-                    </button>
-                  </>
                 ) : (
                   <>
                     <span className="text-xs text-muted-foreground">Remove from your dashboard? Gift data is kept.</span>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setHideError(null); }}
+                        onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
                         className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
                         disabled={isDeleting}
                       >
