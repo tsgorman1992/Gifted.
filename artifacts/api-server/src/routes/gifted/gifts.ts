@@ -498,18 +498,19 @@ router.get("/gifted/received-gifts", async (req, res) => {
   }
 });
 
-// Simple in-memory rate limit for email-link endpoint
+// Simple in-memory rate limit for email-link endpoint (per email:giftId AND per IP)
 const _emailLinkBucket = new Map<string, { count: number; resetAt: number }>();
-const EMAIL_LINK_MAX = 5;
+const EMAIL_LINK_MAX     = 5;
+const EMAIL_LINK_IP_MAX  = 20;
 const EMAIL_LINK_WINDOW_MS = 60 * 60 * 1000;
-function _checkEmailLinkRate(key: string): boolean {
+function _checkEmailLinkRate(key: string, max: number): boolean {
   const now = Date.now();
   const entry = _emailLinkBucket.get(key);
   if (!entry || now > entry.resetAt) {
     _emailLinkBucket.set(key, { count: 1, resetAt: now + EMAIL_LINK_WINDOW_MS });
     return true;
   }
-  if (entry.count >= EMAIL_LINK_MAX) return false;
+  if (entry.count >= max) return false;
   entry.count++;
   return true;
 }
@@ -525,13 +526,14 @@ router.post("/gifted/email-link", async (req, res) => {
     }
 
     const rateKey = `${email.trim().toLowerCase()}:${giftId}`;
-    if (!_checkEmailLinkRate(rateKey)) {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+    if (!_checkEmailLinkRate(rateKey, EMAIL_LINK_MAX) || !_checkEmailLinkRate(`ip:${ip}`, EMAIL_LINK_IP_MAX)) {
       res.status(429).json({ error: "Too many requests — try again later" });
       return;
     }
 
     const [gift] = await db
-      .select({ id: gifts.id, recipientName: gifts.recipientName, senderName: gifts.senderName })
+      .select({ id: gifts.id, recipientName: gifts.recipientName })
       .from(gifts)
       .where(eq(gifts.id, giftId))
       .limit(1);
@@ -544,7 +546,6 @@ router.post("/gifted/email-link", async (req, res) => {
     sendGiftLinkEmail({
       to: email.trim(),
       recipientName: gift.recipientName,
-      senderName: gift.senderName,
       giftId: gift.id,
     }).catch(() => {});
 

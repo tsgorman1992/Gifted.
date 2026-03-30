@@ -494,7 +494,6 @@ export async function sendUnredeemedSenderEmail(params: UnredeemedSenderParams):
 interface GiftLinkEmailParams {
   to: string;
   recipientName: string;
-  senderName: string;
   giftId: string;
 }
 
@@ -502,7 +501,7 @@ export async function sendGiftLinkEmail(params: GiftLinkEmailParams): Promise<vo
   const client = getClient();
   if (!client) return;
 
-  const { to, recipientName, senderName, giftId } = params;
+  const { to, recipientName, giftId } = params;
   const previewUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
 
   const body = `
