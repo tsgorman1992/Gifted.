@@ -108,8 +108,8 @@ export default function SmsConsentPage() {
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Reply <strong>STOP</strong> to any message to opt out immediately. Reply <strong>HELP</strong> for assistance.
-            Msg &amp; data rates may apply. For questions, contact us at{" "}
-            <a href="/contact" className="underline underline-offset-2">gifted.page/contact</a>.
+            Msg &amp; data rates may apply. For questions, email{" "}
+            <a href="mailto:help@gifted.page" className="underline underline-offset-2">help@gifted.page</a>.
           </p>
         </section>
 
