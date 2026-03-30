@@ -12,7 +12,14 @@ import {
   Inbox, Trash2, X, Share2, Send, Users, Bell,
   UserPlus, Cake, Pencil, BookUser,
 } from "lucide-react";
-import { formatDistanceToNow, format, differenceInDays } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
+import {
+  FLOATING_OCCASION_KEYS,
+  computeFloatingDate,
+  resolveOccasionDate,
+  daysUntilOccasion,
+  buildOccasionPayload,
+} from "@/lib/occasions";
 import { clearGiftSession } from "@/lib/session";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -139,50 +146,6 @@ function greeting(firstName: string | null) {
   const h = new Date().getHours();
   const time = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   return firstName ? `${time}, ${firstName}` : time;
-}
-
-// ─── Floating occasion helpers ────────────────────────────────────────────────
-
-const FLOATING_OCCASION_KEYS: Record<string, string> = {
-  "Mother's Day":  "mothers-day",
-  "Father's Day":  "fathers-day",
-  "Thanksgiving":  "thanksgiving",
-};
-
-function nthWeekdayOfMonth(year: number, month: number, weekday: number, n: number): number {
-  let d = new Date(year, month - 1, 1);
-  while (d.getDay() !== weekday) d.setDate(d.getDate() + 1);
-  d.setDate(d.getDate() + (n - 1) * 7);
-  return d.getDate();
-}
-
-function computeFloatingDate(floatingKey: string, year: number): { month: number; day: number } {
-  switch (floatingKey) {
-    case "mothers-day":  return { month: 5,  day: nthWeekdayOfMonth(year, 5,  0, 2) };
-    case "fathers-day":  return { month: 6,  day: nthWeekdayOfMonth(year, 6,  0, 3) };
-    case "thanksgiving": return { month: 11, day: nthWeekdayOfMonth(year, 11, 4, 4) };
-    default:             return { month: 1,  day: 1 };
-  }
-}
-
-function resolveOccasionDate(occ: Pick<ContactOccasion, "month" | "day" | "floatingKey">): { month: number; day: number } {
-  if (occ.floatingKey) {
-    const today = new Date();
-    return computeFloatingDate(occ.floatingKey, today.getFullYear());
-  }
-  return { month: occ.month!, day: occ.day! };
-}
-
-function daysUntilOccasion(occ: Pick<ContactOccasion, "month" | "day" | "floatingKey">): number {
-  const today = new Date();
-  const year  = today.getFullYear();
-  const resolved = occ.floatingKey ? computeFloatingDate(occ.floatingKey, year) : { month: occ.month!, day: occ.day! };
-  let target = new Date(year, resolved.month - 1, resolved.day);
-  if (target < today) {
-    const nextResolved = occ.floatingKey ? computeFloatingDate(occ.floatingKey, year + 1) : resolved;
-    target = new Date(year + 1, nextResolved.month - 1, nextResolved.day);
-  }
-  return differenceInDays(target, today);
 }
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
@@ -1020,10 +983,6 @@ function OccasionDateFields({ label, month, day, onMonthChange, onDayChange }: {
   );
 }
 
-function buildOccasionPayload(label: string, month: number, day: number) {
-  const floatingKey = FLOATING_OCCASION_KEYS[label];
-  return floatingKey ? { label, floatingKey } : { label, month, day };
-}
 
 function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; onSaved: () => void; onCancel: () => void }) {
   const [label, setLabel] = useState("Birthday");
@@ -1107,7 +1066,7 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: editName, phone: editPhone, email: editEmail }),
+        body: JSON.stringify({ name: editName, phone: editPhone, email: editEmail, notes: contact.notes ?? undefined }),
       });
       if (!res.ok) throw new Error("Failed");
       setShowEdit(false);

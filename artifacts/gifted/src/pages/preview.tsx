@@ -12,6 +12,7 @@ import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { useAuth } from "@/lib/auth-context";
 import QRCodeLib from "qrcode";
 import { trackEvent } from "@/lib/analytics";
+import { FLOATING_OCCASION_KEYS, buildOccasionPayload } from "@/lib/occasions";
 
 // ─── QR Code component ────────────────────────────────────────────────────────
 
@@ -650,12 +651,7 @@ export default function PreviewPage() {
 
   const CONTACT_OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Thanksgiving", "Valentine's Day", "Hanukkah", "Other"];
   const CONTACT_MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const CONTACT_FLOATING_KEYS: Record<string, string> = {
-    "Mother's Day": "mothers-day",
-    "Father's Day": "fathers-day",
-    "Thanksgiving": "thanksgiving",
-  };
-  const contactIsFloating = contactOccasion in CONTACT_FLOATING_KEYS;
+  const contactIsFloating = contactOccasion in FLOATING_OCCASION_KEYS;
 
   const contactPromptSeen = () => {
     if (!giftId) return false;
@@ -678,11 +674,7 @@ export default function PreviewPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(
-          CONTACT_FLOATING_KEYS[contactOccasion]
-            ? { label: contactOccasion, floatingKey: CONTACT_FLOATING_KEYS[contactOccasion] }
-            : { label: contactOccasion, month: contactMonth, day: contactDay }
-        ),
+        body: JSON.stringify(buildOccasionPayload(contactOccasion, contactMonth, contactDay)),
       });
       if (!occasionRes.ok) throw new Error("occasion failed");
       localStorage.setItem(`gifted_contact_prompt_${giftId}`, "saved");
