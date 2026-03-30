@@ -812,6 +812,10 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [importing, setImporting] = useState(false);
+  const [showOccasion, setShowOccasion] = useState(false);
+  const [occasionLabel, setOccasionLabel] = useState("Birthday");
+  const [occasionMonth, setOccasionMonth] = useState(1);
+  const [occasionDay, setOccasionDay] = useState(1);
 
   async function handleImportFromContacts() {
     setImporting(true);
@@ -842,6 +846,15 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
         body: JSON.stringify({ name, phone, email }),
       });
       if (!res.ok) throw new Error("Failed to save");
+      const contact = await res.json() as { id: string };
+      if (showOccasion) {
+        await fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ label: occasionLabel, month: occasionMonth, day: occasionDay }),
+        });
+      }
       onSaved();
     } catch {
       setError("Couldn't save — please try again.");
@@ -878,6 +891,55 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
           <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-10" />
           <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-10" type="email" />
         </div>
+
+        {/* Optional occasion */}
+        {!showOccasion ? (
+          <button
+            type="button"
+            onClick={() => setShowOccasion(true)}
+            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors self-start"
+          >
+            <Cake className="w-3.5 h-3.5" />
+            Add an occasion (optional)
+          </button>
+        ) : (
+          <div className="flex flex-col gap-2 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Occasion</span>
+              <button
+                type="button"
+                onClick={() => setShowOccasion(false)}
+                className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={occasionLabel}
+                onChange={e => setOccasionLabel(e.target.value)}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground flex-1 min-w-[120px]"
+              >
+                {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+              <select
+                value={occasionMonth}
+                onChange={e => setOccasionMonth(Number(e.target.value))}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+              >
+                {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+              </select>
+              <select
+                value={occasionDay}
+                onChange={e => setOccasionDay(Number(e.target.value))}
+                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+              >
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onCancel} className="rounded-full">Cancel</Button>

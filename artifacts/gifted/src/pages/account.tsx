@@ -104,18 +104,17 @@ export default function AccountPage() {
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="space-y-8"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-1">
           <button
             type="button"
             onClick={() => setLocation("/my-gifts")}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors self-start"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
+            My Gifts
           </button>
-          <div>
-            <h1 className="font-serif text-3xl font-medium">Account settings</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">{user?.email}</p>
-          </div>
+          <h1 className="font-serif text-3xl font-medium mt-2">Account settings</h1>
+          <p className="text-muted-foreground text-sm">{user?.email}</p>
         </div>
 
         <form onSubmit={handleSave} className="space-y-8">

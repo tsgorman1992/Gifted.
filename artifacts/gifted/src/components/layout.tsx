@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Gift, LogOut, ChevronDown, Settings } from "lucide-react";
+import { User, Gift, LogOut, ChevronDown, Settings, Bell } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -41,43 +41,58 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <a href="/" onClick={handleLogoClick} className="font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-80 transition-opacity cursor-pointer">
             gifted.
           </a>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-3">
             {!isLoading && (
               isAuthenticated && user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-full">
-                      {user.profileImageUrl ? (
-                        <img src={user.profileImageUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="w-4 h-4 text-primary" />
-                        </div>
-                      )}
-                      <span className="hidden sm:block">{displayName}</span>
-                      <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52 rounded-2xl">
-                    <DropdownMenuItem asChild>
-                      <Link href="/my-gifts" className="flex items-center gap-2 cursor-pointer">
-                        <Gift className="w-4 h-4" />
-                        My Gifts
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/account" className="flex items-center gap-2 cursor-pointer">
-                        <Settings className="w-4 h-4" />
-                        Account settings
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout} className="flex items-center gap-2 cursor-pointer text-muted-foreground">
-                      <LogOut className="w-4 h-4" />
-                      Sign out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <>
+                  <Link
+                    href="/my-gifts"
+                    className={`hidden sm:flex items-center gap-1.5 text-sm font-medium transition-colors px-3 py-1.5 rounded-full hover:bg-secondary ${location === "/my-gifts" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
+                  >
+                    <Gift className="w-3.5 h-3.5" />
+                    My Gifts
+                  </Link>
+                  <Link
+                    href="/my-gifts"
+                    aria-label="Notifications"
+                    className="relative flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                  >
+                    <Bell className="w-4 h-4" />
+                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-full">
+                        {user.profileImageUrl ? (
+                          <img src={user.profileImageUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="w-4 h-4 text-primary" />
+                          </div>
+                        )}
+                        <ChevronDown className="w-3 h-3 opacity-60" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52 rounded-2xl">
+                      <DropdownMenuItem asChild>
+                        <Link href="/my-gifts" className="flex items-center gap-2 cursor-pointer sm:hidden">
+                          <Gift className="w-4 h-4" />
+                          My Gifts
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/account" className="flex items-center gap-2 cursor-pointer">
+                          <Settings className="w-4 h-4" />
+                          Account settings
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={logout} className="flex items-center gap-2 cursor-pointer text-muted-foreground">
+                        <LogOut className="w-4 h-4" />
+                        Sign out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
               ) : (
                 <Link href="/sign-in"
                   className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
