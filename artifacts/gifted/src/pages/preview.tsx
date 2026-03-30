@@ -147,6 +147,10 @@ export default function PreviewPage() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, []);
+
+  useEffect(() => {
     const exp = localStorage.getItem("gifted_experience");
     if (exp && EXPERIENCE_MAP[exp as keyof typeof EXPERIENCE_MAP]) setExperience(exp);
 
