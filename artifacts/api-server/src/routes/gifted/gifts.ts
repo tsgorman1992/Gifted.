@@ -823,10 +823,15 @@ router.get("/gifted/profile", async (req, res) => {
   }
 });
 
+const VALID_PAYOUT_METHODS = new Set(["venmo", "cashapp", "zelle"]);
+
 router.patch("/gifted/profile", async (req, res) => {
   const userId = (req as any).user?.id;
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   const { displayName, payoutMethod, payoutHandle } = req.body as Record<string, string | undefined>;
+  if (payoutMethod !== undefined && payoutMethod !== "" && !VALID_PAYOUT_METHODS.has(payoutMethod)) {
+    return res.status(400).json({ error: "Invalid payoutMethod. Must be one of: venmo, cashapp, zelle" });
+  }
   const updates: Record<string, string | null> = {};
   if (typeof displayName === "string") updates.displayName = displayName.trim() || null;
   if (typeof payoutMethod === "string") updates.payoutMethod = payoutMethod || null;

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
-import { Loader2, CheckCircle2, User, Wallet, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle2, User, Wallet, ArrowLeft, LogOut } from "lucide-react";
 
 type PayoutMethod = "venmo" | "cashapp" | "zelle" | "";
 
@@ -25,7 +25,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function AccountPage() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
 
   const [profile, setProfile] = useState<Profile>({ displayName: null, payoutMethod: null, payoutHandle: null });
   const [loading, setLoading] = useState(true);
@@ -219,6 +219,17 @@ export default function AccountPage() {
             }
           </Button>
         </form>
+
+        <div className="pt-4 border-t border-border">
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign out
+          </button>
+        </div>
       </motion.div>
     </div>
   );
