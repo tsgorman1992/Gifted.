@@ -17,8 +17,9 @@ export const contactOccasions = pgTable("contact_occasions", {
   contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   label: varchar("label", { length: 100 }).notNull(),
-  month: integer("month").notNull(),
-  day: integer("day").notNull(),
+  month: integer("month"),
+  day: integer("day"),
+  floatingKey: varchar("floating_key", { length: 50 }),
   lastReminderSentYear: integer("last_reminder_sent_year"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

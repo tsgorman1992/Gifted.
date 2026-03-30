@@ -4,6 +4,8 @@ import { eq, and, asc } from "drizzle-orm";
 
 const router = Router();
 
+const VALID_FLOATING_KEYS = new Set(["mothers-day", "fathers-day", "thanksgiving"]);
+
 // GET /api/gifted/contacts — list all contacts for the authenticated user
 router.get("/gifted/contacts", async (req, res) => {
   const userId = (req as any).user?.id;
@@ -111,9 +113,23 @@ router.post("/gifted/contacts/:id/occasions", async (req, res) => {
   const userId = (req as any).user?.id;
   if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
 
-  const { label, month, day } = req.body as { label?: string; month?: number; day?: number };
-  if (!label?.trim() || !month || !day) { res.status(400).json({ error: "label, month, and day are required" }); return; }
-  if (month < 1 || month > 12 || day < 1 || day > 31) { res.status(400).json({ error: "Invalid month or day" }); return; }
+  const { label, month, day, floatingKey } = req.body as {
+    label?: string;
+    month?: number;
+    day?: number;
+    floatingKey?: string;
+  };
+
+  if (!label?.trim()) { res.status(400).json({ error: "label is required" }); return; }
+
+  if (floatingKey) {
+    if (!VALID_FLOATING_KEYS.has(floatingKey)) {
+      res.status(400).json({ error: "Invalid floatingKey" }); return;
+    }
+  } else {
+    if (!month || !day) { res.status(400).json({ error: "month and day are required for non-floating occasions" }); return; }
+    if (month < 1 || month > 12 || day < 1 || day > 31) { res.status(400).json({ error: "Invalid month or day" }); return; }
+  }
 
   try {
     const [contact] = await db
@@ -127,8 +143,9 @@ router.post("/gifted/contacts/:id/occasions", async (req, res) => {
       contactId: req.params.id,
       userId,
       label: label.trim(),
-      month,
-      day,
+      month: floatingKey ? null : (month ?? null),
+      day: floatingKey ? null : (day ?? null),
+      floatingKey: floatingKey || null,
     }).returning();
 
     res.json(occasion);

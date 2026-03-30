@@ -648,8 +648,14 @@ export default function PreviewPage() {
   const [contactSaved,    setContactSaved]    = useState(false);
   const [contactSaveError, setContactSaveError] = useState(false);
 
-  const CONTACT_OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Valentine's Day", "Hanukkah", "Other"];
+  const CONTACT_OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Thanksgiving", "Valentine's Day", "Hanukkah", "Other"];
   const CONTACT_MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const CONTACT_FLOATING_KEYS: Record<string, string> = {
+    "Mother's Day": "mothers-day",
+    "Father's Day": "fathers-day",
+    "Thanksgiving": "thanksgiving",
+  };
+  const contactIsFloating = contactOccasion in CONTACT_FLOATING_KEYS;
 
   const contactPromptSeen = () => {
     if (!giftId) return false;
@@ -672,7 +678,11 @@ export default function PreviewPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ label: contactOccasion, month: contactMonth, day: contactDay }),
+        body: JSON.stringify(
+          CONTACT_FLOATING_KEYS[contactOccasion]
+            ? { label: contactOccasion, floatingKey: CONTACT_FLOATING_KEYS[contactOccasion] }
+            : { label: contactOccasion, month: contactMonth, day: contactDay }
+        ),
       });
       if (!occasionRes.ok) throw new Error("occasion failed");
       localStorage.setItem(`gifted_contact_prompt_${giftId}`, "saved");
@@ -1212,20 +1222,26 @@ export default function PreviewPage() {
                         >
                           {CONTACT_OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
-                        <select
-                          value={contactMonth}
-                          onChange={e => setContactMonth(Number(e.target.value))}
-                          className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                        >
-                          {CONTACT_MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-                        </select>
-                        <select
-                          value={contactDay}
-                          onChange={e => setContactDay(Number(e.target.value))}
-                          className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                        >
-                          {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
+                        {contactIsFloating ? (
+                          <span className="text-xs text-muted-foreground italic">Date computed each year</span>
+                        ) : (
+                          <>
+                            <select
+                              value={contactMonth}
+                              onChange={e => setContactMonth(Number(e.target.value))}
+                              className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                            >
+                              {CONTACT_MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                            </select>
+                            <select
+                              value={contactDay}
+                              onChange={e => setContactDay(Number(e.target.value))}
+                              className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                            >
+                              {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                          </>
+                        )}
                         <Button
                           size="sm"
                           onClick={() => { setContactSaveError(false); handleContactSave(); }}

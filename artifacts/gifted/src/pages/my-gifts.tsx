@@ -53,8 +53,9 @@ interface ContactOccasion {
   contactId: string;
   userId: string;
   label: string;
-  month: number;
-  day: number;
+  month: number | null;
+  day: number | null;
+  floatingKey: string | null;
   lastReminderSentYear: number | null;
   createdAt: string;
 }
@@ -140,11 +141,47 @@ function greeting(firstName: string | null) {
   return firstName ? `${time}, ${firstName}` : time;
 }
 
-function daysUntilOccasion(month: number, day: number): number {
+// ─── Floating occasion helpers ────────────────────────────────────────────────
+
+const FLOATING_OCCASION_KEYS: Record<string, string> = {
+  "Mother's Day":  "mothers-day",
+  "Father's Day":  "fathers-day",
+  "Thanksgiving":  "thanksgiving",
+};
+
+function nthWeekdayOfMonth(year: number, month: number, weekday: number, n: number): number {
+  let d = new Date(year, month - 1, 1);
+  while (d.getDay() !== weekday) d.setDate(d.getDate() + 1);
+  d.setDate(d.getDate() + (n - 1) * 7);
+  return d.getDate();
+}
+
+function computeFloatingDate(floatingKey: string, year: number): { month: number; day: number } {
+  switch (floatingKey) {
+    case "mothers-day":  return { month: 5,  day: nthWeekdayOfMonth(year, 5,  0, 2) };
+    case "fathers-day":  return { month: 6,  day: nthWeekdayOfMonth(year, 6,  0, 3) };
+    case "thanksgiving": return { month: 11, day: nthWeekdayOfMonth(year, 11, 4, 4) };
+    default:             return { month: 1,  day: 1 };
+  }
+}
+
+function resolveOccasionDate(occ: Pick<ContactOccasion, "month" | "day" | "floatingKey">): { month: number; day: number } {
+  if (occ.floatingKey) {
+    const today = new Date();
+    return computeFloatingDate(occ.floatingKey, today.getFullYear());
+  }
+  return { month: occ.month!, day: occ.day! };
+}
+
+function daysUntilOccasion(occ: Pick<ContactOccasion, "month" | "day" | "floatingKey">): number {
   const today = new Date();
-  const thisYear = today.getFullYear();
-  let target = new Date(thisYear, month - 1, day);
-  if (target < today) target = new Date(thisYear + 1, month - 1, day);
+  const year  = today.getFullYear();
+  const resolved = occ.floatingKey ? computeFloatingDate(occ.floatingKey, year) : { month: occ.month!, day: occ.day! };
+  let target = new Date(year, resolved.month - 1, resolved.day);
+  if (target < today) {
+    const nextResolved = occ.floatingKey ? computeFloatingDate(occ.floatingKey, year + 1) : resolved;
+    target = new Date(year + 1, nextResolved.month - 1, nextResolved.day);
+  }
   return differenceInDays(target, today);
 }
 
@@ -852,7 +889,7 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ label: occasionLabel, month: occasionMonth, day: occasionDay }),
+          body: JSON.stringify(buildOccasionPayload(occasionLabel, occasionMonth, occasionDay)),
         });
       }
       onSaved();
@@ -914,7 +951,7 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
                 Remove
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <select
                 value={occasionLabel}
                 onChange={e => setOccasionLabel(e.target.value)}
@@ -922,20 +959,13 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
               >
                 {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
-              <select
-                value={occasionMonth}
-                onChange={e => setOccasionMonth(Number(e.target.value))}
-                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-              >
-                {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-              </select>
-              <select
-                value={occasionDay}
-                onChange={e => setOccasionDay(Number(e.target.value))}
-                className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-              >
-                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+              <OccasionDateFields
+                label={occasionLabel}
+                month={occasionMonth}
+                day={occasionDay}
+                onMonthChange={setOccasionMonth}
+                onDayChange={setOccasionDay}
+              />
             </div>
           </div>
         )}
@@ -954,7 +984,46 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
 
 // ─── Add Occasion Form ────────────────────────────────────────────────────────
 
-const OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Valentine's Day", "Hanukkah", "Other"];
+const OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Thanksgiving", "Valentine's Day", "Hanukkah", "Other"];
+
+function OccasionDateFields({ label, month, day, onMonthChange, onDayChange }: {
+  label: string; month: number; day: number;
+  onMonthChange: (m: number) => void; onDayChange: (d: number) => void;
+}) {
+  const isFloating = label in FLOATING_OCCASION_KEYS;
+  if (isFloating) {
+    const floatingKey = FLOATING_OCCASION_KEYS[label];
+    const { month: fm, day: fd } = computeFloatingDate(floatingKey, new Date().getFullYear());
+    return (
+      <span className="text-xs text-muted-foreground italic">
+        Date computed each year · {MONTH_NAMES[fm - 1]} {fd} this year
+      </span>
+    );
+  }
+  return (
+    <>
+      <select
+        value={month}
+        onChange={e => onMonthChange(Number(e.target.value))}
+        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+      >
+        {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+      </select>
+      <select
+        value={day}
+        onChange={e => onDayChange(Number(e.target.value))}
+        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+      >
+        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+      </select>
+    </>
+  );
+}
+
+function buildOccasionPayload(label: string, month: number, day: number) {
+  const floatingKey = FLOATING_OCCASION_KEYS[label];
+  return floatingKey ? { label, floatingKey } : { label, month, day };
+}
 
 function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; onSaved: () => void; onCancel: () => void }) {
   const [label, setLabel] = useState("Birthday");
@@ -970,7 +1039,7 @@ function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ label, month, day }),
+        body: JSON.stringify(buildOccasionPayload(label, month, day)),
       });
       if (!res.ok) throw new Error("Failed");
       onSaved();
@@ -988,20 +1057,7 @@ function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; 
       >
         {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
       </select>
-      <select
-        value={month}
-        onChange={e => setMonth(Number(e.target.value))}
-        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-      >
-        {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-      </select>
-      <select
-        value={day}
-        onChange={e => setDay(Number(e.target.value))}
-        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-      >
-        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
-      </select>
+      <OccasionDateFields label={label} month={month} day={day} onMonthChange={setMonth} onDayChange={setDay} />
       <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
       <Button type="submit" size="sm" disabled={saving} className="rounded-full h-7 text-xs px-3">
         {saving ? "Saving…" : "Save"}
@@ -1016,6 +1072,12 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
   const [, setLocation] = useLocation();
   const [showOccasionForm, setShowOccasionForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editName, setEditName] = useState(contact.name);
+  const [editPhone, setEditPhone] = useState(contact.phone ?? "");
+  const [editEmail, setEditEmail] = useState(contact.email ?? "");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
 
   async function handleDeleteContact(e: React.MouseEvent) {
     e.stopPropagation();
@@ -1035,10 +1097,40 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
     setLocation("/create");
   }
 
+  async function handleEditSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editName.trim()) { setEditError("Name is required"); return; }
+    setEditSaving(true);
+    setEditError("");
+    try {
+      const res = await fetch(`${BASE}/api/gifted/contacts/${contact.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: editName, phone: editPhone, email: editEmail }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setShowEdit(false);
+      onRefresh();
+    } catch {
+      setEditError("Couldn't save — please try again.");
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  function handleEditCancel() {
+    setEditName(contact.name);
+    setEditPhone(contact.phone ?? "");
+    setEditEmail(contact.email ?? "");
+    setEditError("");
+    setShowEdit(false);
+  }
+
   const nextOccasion = contact.occasions.length > 0
-    ? [...contact.occasions].sort((a, b) => daysUntilOccasion(a.month, a.day) - daysUntilOccasion(b.month, b.day))[0]
+    ? [...contact.occasions].sort((a, b) => daysUntilOccasion(a) - daysUntilOccasion(b))[0]
     : null;
-  const daysUntil = nextOccasion ? daysUntilOccasion(nextOccasion.month, nextOccasion.day) : null;
+  const daysUntil = nextOccasion ? daysUntilOccasion(nextOccasion) : null;
 
   return (
     <motion.div
@@ -1047,63 +1139,92 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
       transition={{ delay: 0.1 + idx * 0.06, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       className="bg-card border border-border rounded-2xl p-5"
     >
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <span className="text-primary font-semibold text-sm">{contact.name[0]?.toUpperCase()}</span>
+      {showEdit ? (
+        <form onSubmit={handleEditSave} className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-sm">Edit contact</h3>
+            <button type="button" onClick={handleEditCancel} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">Cancel</button>
           </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-base leading-tight">{contact.name}</p>
-            {(contact.phone || contact.email) && (
-              <p className="text-xs text-muted-foreground truncate">{contact.phone || contact.email}</p>
+          <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Name*" className="rounded-xl h-9 text-sm" autoFocus />
+          <div className="grid grid-cols-2 gap-2">
+            <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-9 text-sm" />
+            <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-9 text-sm" type="email" />
+          </div>
+          {editError && <p className="text-xs text-destructive">{editError}</p>}
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={editSaving} className="rounded-full h-8 text-xs">
+              {editSaving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span className="text-primary font-semibold text-sm">{contact.name[0]?.toUpperCase()}</span>
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-base leading-tight">{contact.name}</p>
+              {(contact.phone || contact.email) && (
+                <p className="text-xs text-muted-foreground truncate">{contact.phone || contact.email}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={handleGiftContact}
+              className="text-xs px-3 py-1.5 rounded-full font-medium border transition-colors hover:bg-primary/10"
+              style={{ color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.3)", background: "hsl(28,62%,36%,0.06)" }}
+            >
+              Gift them
+            </button>
+            {confirmDelete ? (
+              <div className="flex items-center gap-1">
+                <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted-foreground hover:text-foreground px-2">Cancel</button>
+                <button onClick={handleDeleteContact} className="text-xs text-destructive hover:text-destructive/80 px-2">Delete</button>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowEdit(true)}
+                  className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={handleGiftContact}
-            className="text-xs px-3 py-1.5 rounded-full font-medium border transition-colors hover:bg-primary/10"
-            style={{ color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.3)", background: "hsl(28,62%,36%,0.06)" }}
-          >
-            Gift them
-          </button>
-          {confirmDelete ? (
-            <div className="flex items-center gap-1">
-              <button onClick={() => setConfirmDelete(false)} className="text-xs text-muted-foreground hover:text-foreground px-2">Cancel</button>
-              <button onClick={handleDeleteContact} className="text-xs text-destructive hover:text-destructive/80 px-2">Delete</button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
-      {nextOccasion && daysUntil !== null && daysUntil <= 30 && (
+      {!showEdit && nextOccasion && daysUntil !== null && daysUntil <= 30 && (
         <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
           <Bell className="w-3.5 h-3.5 text-amber-600 shrink-0" />
           <p className="text-xs text-amber-800">
             <span className="font-medium">{nextOccasion.label}</span>
             {" "}
             {daysUntil === 0 ? "is today" : daysUntil === 1 ? "is tomorrow" : `in ${daysUntil} days`}
-            {" · "}{MONTH_NAMES[nextOccasion.month - 1]} {nextOccasion.day}
+            {" · "}{(() => { const r = resolveOccasionDate(nextOccasion); return `${MONTH_NAMES[r.month - 1]} ${r.day}`; })()}
           </p>
         </div>
       )}
 
-      {contact.occasions.length > 0 && (
+      {!showEdit && contact.occasions.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
           {contact.occasions.map(occ => {
-            const d = daysUntilOccasion(occ.month, occ.day);
+            const d = daysUntilOccasion(occ);
+            const r = resolveOccasionDate(occ);
             return (
               <div key={occ.id} className="flex items-center gap-1.5 text-xs bg-secondary rounded-lg px-2.5 py-1.5">
                 <Cake className="w-3 h-3 text-muted-foreground" />
                 <span className="font-medium">{occ.label}</span>
-                <span className="text-muted-foreground">{MONTH_NAMES[occ.month - 1]} {occ.day}</span>
+                <span className="text-muted-foreground">{MONTH_NAMES[r.month - 1]} {r.day}</span>
                 {d <= 7 && (
                   <span className="text-amber-600 font-medium">· {d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d}d`}</span>
                 )}
@@ -1152,11 +1273,8 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
 function UpcomingOccasionsBanner({ contacts, onGift }: { contacts: Contact[]; onGift: (name: string) => void }) {
   const upcoming = contacts
     .flatMap(c => c.occasions.map(o => ({ ...o, contactName: c.name, phone: c.phone })))
-    .filter(o => {
-      const d = daysUntilOccasion(o.month, o.day);
-      return d <= 14;
-    })
-    .sort((a, b) => daysUntilOccasion(a.month, a.day) - daysUntilOccasion(b.month, b.day))
+    .filter(o => daysUntilOccasion(o) <= 14)
+    .sort((a, b) => daysUntilOccasion(a) - daysUntilOccasion(b))
     .slice(0, 2);
 
   if (upcoming.length === 0) return null;
@@ -1173,7 +1291,7 @@ function UpcomingOccasionsBanner({ contacts, onGift }: { contacts: Contact[]; on
           <p className="text-sm font-medium text-amber-900 mb-1.5">Upcoming occasions</p>
           <div className="flex flex-col gap-1.5">
             {upcoming.map(o => {
-              const d = daysUntilOccasion(o.month, o.day);
+              const d = daysUntilOccasion(o);
               return (
                 <div key={o.id} className="flex items-center justify-between gap-3">
                   <p className="text-xs text-amber-800">
