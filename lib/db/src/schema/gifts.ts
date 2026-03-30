@@ -1,4 +1,5 @@
 import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -62,3 +63,22 @@ export const insertGiftSchema = createInsertSchema(gifts).omit({
 
 export type Gift = typeof gifts.$inferSelect;
 export type InsertGift = z.infer<typeof insertGiftSchema>;
+
+export const physicalGifts = pgTable("physical_gifts", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  label: text("label").notNull(),
+  recipientName: text("recipient_name"),
+  senderName: text("sender_name"),
+  direction: text("direction").notNull().default("sent"),
+  carrier: text("carrier"),
+  trackingNumber: text("tracking_number"),
+  aftershipTrackingId: text("aftership_tracking_id"),
+  trackingStatus: jsonb("tracking_status").$type<TrackingEvent[]>(),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  giftId: text("gift_id"),
+  hidden: boolean("hidden").default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type PhysicalGift = typeof physicalGifts.$inferSelect;

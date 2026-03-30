@@ -10,7 +10,7 @@ import {
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
   Inbox, Trash2, X, Share2, Send, Users, Bell,
-  UserPlus, Cake, Pencil, BookUser,
+  UserPlus, Cake, Pencil, BookUser, Truck, RefreshCw, ChevronRight,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import {
@@ -52,6 +52,30 @@ interface ReceivedGiftSummary {
   amount: string | null;
   openedAt: string | null;
   redeemedAt: string | null;
+  createdAt: string;
+}
+
+interface TrackingEvent {
+  status: string;
+  message: string;
+  location?: string;
+  timestamp: string;
+}
+
+interface PhysicalGift {
+  id: string;
+  userId: string;
+  label: string;
+  recipientName: string | null;
+  senderName: string | null;
+  direction: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  aftershipTrackingId: string | null;
+  trackingStatus: TrackingEvent[] | null;
+  deliveredAt: string | null;
+  giftId: string | null;
+  hidden: boolean | null;
   createdAt: string;
 }
 
@@ -116,6 +140,12 @@ async function fetchContacts(): Promise<Contact[]> {
   return res.json();
 }
 
+async function fetchPhysicalGifts(): Promise<PhysicalGift[]> {
+  const res = await fetch(`${BASE}/api/gifted/physical-gifts`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to load physical gifts");
+  return res.json();
+}
+
 type GiftStatus = "draft" | "scheduled" | "ready" | "sent" | "opened" | "redeemed";
 
 function hasBalance(gift: GiftSummary): boolean {
@@ -141,40 +171,15 @@ const STATUS_META: Record<GiftStatus, { label: string; color: string; bg: string
 };
 
 const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const CARRIER_LABELS: Record<string, string> = {
+  usps: "USPS", ups: "UPS", fedex: "FedEx", dhl: "DHL",
+  amazon: "Amazon", lasership: "LaserShip", ontrac: "OnTrac", "canada-post": "Canada Post",
+};
 
 function greeting(firstName: string | null) {
   const h = new Date().getHours();
   const time = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   return firstName ? `${time}, ${firstName}` : time;
-}
-
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, sub, Icon, delay, onClick, active }: {
-  label: string; value: string | number; sub?: string;
-  Icon: React.ComponentType<{ className?: string }>; delay: number;
-  onClick?: () => void; active?: boolean;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      onClick={onClick}
-      className={`bg-card border rounded-2xl p-5 flex flex-col gap-2 transition-all ${
-        onClick ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""
-      } ${active ? "border-primary ring-2 ring-primary/20" : "border-border"}`}
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${active ? "bg-primary" : "bg-primary/10"}`}>
-          <Icon className={`w-4 h-4 ${active ? "text-primary-foreground" : "text-primary"}`} />
-        </div>
-      </div>
-      <p className="font-serif text-3xl font-medium text-foreground leading-none">{value}</p>
-      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
-    </motion.div>
-  );
 }
 
 // ─── Resend Button ────────────────────────────────────────────────────────────
@@ -191,9 +196,7 @@ function ResendButton({ url, recipientName, full = false }: { url: string; recip
         await navigator.share({ title: `A gift for ${recipientName}`, url });
         setState("shared");
         setTimeout(() => setState("idle"), 2500);
-      } catch {
-        // User cancelled — no-op
-      }
+      } catch { /* User cancelled */ }
     } else {
       await navigator.clipboard.writeText(url);
       setState("copied");
@@ -205,7 +208,7 @@ function ResendButton({ url, recipientName, full = false }: { url: string; recip
     return (
       <button
         onClick={handle}
-        className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-primary/10 border border-primary/20 text-primary font-medium text-sm hover:bg-primary/20 transition-all"
+        className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-primary/8 border border-primary/20 text-primary font-medium text-sm hover:bg-primary/15 transition-all"
       >
         <AnimatePresence mode="wait">
           {state === "copied" ? (
@@ -230,7 +233,7 @@ function ResendButton({ url, recipientName, full = false }: { url: string; recip
     <button
       onClick={handle}
       className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium border transition-all hover:opacity-80"
-      style={{ background: "hsl(28,62%,36%,0.08)", color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.25)" }}
+      style={{ background: "hsl(28,62%,36%,0.07)", color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.2)" }}
     >
       <AnimatePresence mode="wait">
         {state === "copied" ? (
@@ -253,7 +256,7 @@ function ResendButton({ url, recipientName, full = false }: { url: string; recip
 
 // ─── Copy Button ──────────────────────────────────────────────────────────────
 
-function CopyButton({ url, full = false }: { url: string; full?: boolean }) {
+function CopyButton({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -262,23 +265,6 @@ function CopyButton({ url, full = false }: { url: string; full?: boolean }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  if (full) {
-    return (
-      <button
-        onClick={handleCopy}
-        className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-primary/10 border border-primary/20 text-primary font-medium text-sm hover:bg-primary/20 transition-all"
-      >
-        <AnimatePresence mode="wait">
-          {copied
-            ? <motion.span key="check" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><Check className="w-4 h-4 text-green-600" /><span className="text-green-700">Copied!</span></motion.span>
-            : <motion.span key="copy" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}><Copy className="w-4 h-4" />Copy gift link</motion.span>
-          }
-        </AnimatePresence>
-      </button>
-    );
-  }
-
   return (
     <button
       onClick={handleCopy}
@@ -303,11 +289,11 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeBalanceBlocked, setActiveBalanceBlocked] = useState(false);
+  const [, setHideError] = useState<string | null>(null);
   const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
   const status = getStatus(gift);
   const statusMeta = STATUS_META[status];
   const shareUrl = `${window.location.origin}/api/share/${gift.id}`;
-  const ExpIcon = exp.Icon;
 
   function handleCardClick() {
     if (confirmDelete) return;
@@ -336,232 +322,187 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
     }
   }, [gift.id, queryClient]);
 
+  // Simple text timeline
+  const isScheduled = !!gift.scheduledFor;
+  const giftHasBalance = hasBalance(gift);
+  type TimelineStep = "scheduled" | "sent" | "opened" | "redeemed";
+  const steps: TimelineStep[] = isScheduled
+    ? (giftHasBalance ? ["scheduled", "sent", "opened", "redeemed"] : ["scheduled", "sent", "opened"])
+    : (giftHasBalance ? ["sent", "opened", "redeemed"] : ["sent", "opened"]);
+  const orderedStatuses: GiftStatus[] = isScheduled
+    ? (giftHasBalance ? ["scheduled", "sent", "opened", "redeemed"] : ["scheduled", "sent", "opened"])
+    : (giftHasBalance ? ["sent", "opened", "redeemed"] : ["sent", "opened"]);
+  const effectiveStatus: GiftStatus = (status === "draft" || status === "scheduled" || status === "ready")
+    ? (isScheduled ? "scheduled" : "sent")
+    : status;
+  const statusIdx = orderedStatuses.indexOf(effectiveStatus);
+  const stepLabels: Record<TimelineStep, string> = {
+    scheduled: "Scheduled", sent: "Sent", opened: "Opened", redeemed: "Redeemed",
+  };
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.25 + idx * 0.07, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ delay: 0.15 + idx * 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       onClick={handleCardClick}
-      className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
+      className="border-b border-border/40 last:border-0 px-5 py-4 hover:bg-secondary/20 transition-colors cursor-pointer"
     >
-      <div className="flex items-stretch">
-        <div className="w-1.5 shrink-0" style={{ background: exp.color }} />
+      {/* Title + amount */}
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <p className="font-medium text-sm leading-snug">{gift.giftTitle || `Gift for ${gift.recipientName}`}</p>
+        {giftHasBalance && (
+          <p className="text-sm font-semibold text-foreground shrink-0">${parseFloat(gift.amount!).toFixed(0)}</p>
+        )}
+      </div>
 
-        <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: exp.bg }}>
-                <ExpIcon className="w-4 h-4" style={{ color: exp.color }} />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-base leading-tight truncate">{gift.giftTitle || `Gift for ${gift.recipientName}`}</p>
-                <p className="text-sm text-muted-foreground">
-                  For <span className="font-medium text-foreground">{gift.recipientName}</span>
-                  {" · "}{gift.occasion}
-                </p>
-              </div>
-            </div>
+      {/* Meta: recipient · occasion · status dot */}
+      <p className="text-xs text-muted-foreground mb-2.5">
+        For <span className="text-foreground font-medium">{gift.recipientName}</span>
+        {" · "}{gift.occasion}
+        {" · "}<span style={{ color: statusMeta.color }}>●</span>
+        {" "}<span className="font-medium" style={{ color: statusMeta.color }}>{statusMeta.label}</span>
+      </p>
 
-            {gift.amount && parseFloat(gift.amount) > 0 && (
-              <div className="shrink-0 bg-primary/10 text-primary font-semibold text-sm px-3 py-1 rounded-full border border-primary/20">
-                ${parseFloat(gift.amount).toFixed(0)}
-              </div>
-            )}
-          </div>
+      {/* Reaction */}
+      {gift.reaction && (
+        <p className="text-xs text-muted-foreground mb-2.5">
+          {gift.reaction} {gift.recipientName} reacted{gift.reactionAt ? ` ${formatDistanceToNow(new Date(gift.reactionAt), { addSuffix: true })}` : ""}
+        </p>
+      )}
 
-          {gift.reaction && (
-            <div className="flex items-center gap-2">
-              <span className="text-lg leading-none">{gift.reaction}</span>
-              <span className="text-xs text-muted-foreground">
-                {gift.recipientName} reacted
-                {gift.reactionAt ? ` ${formatDistanceToNow(new Date(gift.reactionAt), { addSuffix: true })}` : ""}
+      {/* Resend full-width button (ready / sent states) */}
+      {!confirmDelete && (status === "ready" || status === "sent") && (
+        <div onClick={(e) => e.stopPropagation()} className="mb-3">
+          <ResendButton url={shareUrl} recipientName={gift.recipientName} full />
+        </div>
+      )}
+
+      {/* Simple text timeline */}
+      <div className="flex items-center gap-1.5 text-[10px] mb-3">
+        {steps.map((step, i) => {
+          const isActiveCurrent = (status === "ready" || status === "sent") && i === 0;
+          const done = i <= statusIdx && status !== "draft" && status !== "ready" && !(status === "sent" && i === 0);
+          return (
+            <React.Fragment key={step}>
+              {i > 0 && <span className="text-border/60">·</span>}
+              <span
+                className="font-medium"
+                style={{
+                  color: (done || isActiveCurrent)
+                    ? STATUS_META[step]?.color ?? "hsl(var(--foreground))"
+                    : "hsl(var(--muted-foreground)/0.4)",
+                }}
+              >
+                {stepLabels[step]}
               </span>
-            </div>
-          )}
+            </React.Fragment>
+          );
+        })}
+      </div>
 
-          {!confirmDelete && (status === "ready" || status === "sent") && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <ResendButton url={shareUrl} recipientName={gift.recipientName} full />
-            </div>
-          )}
-
-          <div className="flex items-center gap-0 text-xs">
-            {(() => {
-              const isScheduled = !!gift.scheduledFor;
-              const giftHasBalance = hasBalance(gift);
-              type TimelineStep = "scheduled" | "sent" | "opened" | "redeemed";
-              const steps: TimelineStep[] = isScheduled
-                ? (giftHasBalance ? ["scheduled", "sent", "opened", "redeemed"] : ["scheduled", "sent", "opened"])
-                : (giftHasBalance ? ["sent", "opened", "redeemed"] : ["sent", "opened"]);
-              const orderedStatuses: GiftStatus[] = isScheduled
-                ? (giftHasBalance ? ["scheduled", "sent", "opened", "redeemed"] : ["scheduled", "sent", "opened"])
-                : (giftHasBalance ? ["sent", "opened", "redeemed"] : ["sent", "opened"]);
-              const effectiveStatus: GiftStatus = (status === "draft" || status === "scheduled" || status === "ready")
-                ? (isScheduled ? "scheduled" : "sent")
-                : status;
-              const statusIdx = orderedStatuses.indexOf(effectiveStatus);
-              const isLastStep = (i: number) => i === steps.length - 1;
-              return steps.map((step, i) => {
-                const isActiveCurrent = (status === "ready" || status === "sent") && i === 0;
-                const done = i <= statusIdx && status !== "draft" && status !== "ready" && !(status === "sent" && i === 0);
-                const isFinalCompleted = done && isLastStep(i);
-                const StepIcon = isActiveCurrent ? Share2
-                  : isFinalCompleted && !giftHasBalance && step === "opened" ? CheckCircle2
-                  : STATUS_META[step].Icon;
-                const stepColor = isActiveCurrent ? "#92400e"
-                  : isFinalCompleted && !giftHasBalance && step === "opened" ? "#15803d"
-                  : STATUS_META[step].color;
-                const stepBg = isActiveCurrent ? "#fef3c7"
-                  : isFinalCompleted && !giftHasBalance && step === "opened" ? "#dcfce7"
-                  : STATUS_META[step].bg;
-                const isNextPending = !done && !isActiveCurrent && i === statusIdx + 1 && (status === "sent" || status === "ready");
-                const label = isActiveCurrent ? "Ready"
-                  : step === "scheduled" ? "Scheduled"
-                  : step === "sent" ? "Ready"
-                  : step === "opened" ? "Opened"
-                  : "Redeemed";
-                return (
-                  <React.Fragment key={step}>
-                    <div className="flex flex-col items-center gap-0.5">
-                      <div className="relative">
-                        {isNextPending && (
-                          <span className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ background: stepColor }} />
-                        )}
-                        <div
-                          className="w-6 h-6 rounded-full flex items-center justify-center transition-colors relative"
-                          style={{
-                            background: (done || isActiveCurrent) ? stepBg : "hsl(var(--secondary))",
-                            color: (done || isActiveCurrent) ? stepColor : "hsl(var(--muted-foreground))",
-                            opacity: isNextPending ? 0.45 : 1,
-                          }}
-                        >
-                          <StepIcon className="w-3 h-3" />
-                        </div>
-                      </div>
-                      <span className="text-[10px] leading-tight" style={{ color: (done || isActiveCurrent) ? stepColor : "hsl(var(--muted-foreground)/0.5)" }}>
-                        {label}
-                      </span>
-                    </div>
-                    {i < steps.length - 1 && (
-                      <div
-                        className="flex-1 h-px mx-1 mb-3 transition-colors"
-                        style={{ background: done && i < statusIdx ? (STATUS_META[steps[i + 1]] ? STATUS_META[steps[i + 1]].color + "66" : stepColor + "66") : "hsl(var(--border))" }}
-                      />
-                    )}
-                  </React.Fragment>
-                );
-              });
-            })()}
-          </div>
-
-          <AnimatePresence mode="wait">
-            {confirmDelete ? (
-              <motion.div
-                key="confirm"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15 }}
-                className="flex flex-col gap-1.5"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {activeBalanceBlocked ? (
-                  <>
-                    <p className="text-xs text-muted-foreground leading-snug">
-                      This gift has an active balance and can't be removed until it's redeemed.{" "}
-                      Need help?{" "}
-                      <a
-                        href="mailto:help@gifted.page"
-                        className="underline text-primary hover:opacity-70 transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Contact us
-                      </a>
-                    </p>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setActiveBalanceBlocked(false); }}
-                      className="self-start px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
-                    >
-                      Close
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-xs text-muted-foreground">Remove from your dashboard? Gift data is kept.</span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
-                        className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
-                        disabled={isDeleting}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleHide}
-                        disabled={isDeleting}
-                        className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
-                      >
-                        {isDeleting ? "Removing…" : "Remove"}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="actions"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15 }}
-                className="flex items-center justify-between gap-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center gap-2 flex-wrap">
-                  {status === "opened" && !gift.redeemedAt && (
-                    <ResendButton url={shareUrl} recipientName={gift.recipientName} />
-                  )}
-                  {status !== "opened" && (
-                    <span className="text-xs text-muted-foreground">
-                      {status === "redeemed" && gift.redeemedAt
-                        ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
-                        : status === "sent"
-                          ? `Ready since ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                        : status === "ready"
-                          ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                        : status === "scheduled" && gift.scheduledFor
-                          ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
-                          : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {status !== "ready" && status !== "sent" && (
-                    <CopyButton url={shareUrl} />
-                  )}
-                  <a
-                    href={`${window.location.origin}${BASE}/open/${gift.id}?preview=true`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Preview gift"
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-                  >
-                    <ExternalLink className="w-4 h-4" />
+      {/* Actions row */}
+      <AnimatePresence mode="wait">
+        {confirmDelete ? (
+          <motion.div
+            key="confirm"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="flex flex-col gap-1.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {activeBalanceBlocked ? (
+              <>
+                <p className="text-xs text-muted-foreground leading-snug">
+                  This gift has an active balance and can't be removed until it's redeemed.{" "}
+                  <a href="mailto:help@gifted.page" className="underline text-primary hover:opacity-70 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                    Contact us
                   </a>
+                </p>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); setActiveBalanceBlocked(false); }}
+                  className="self-start px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                >
+                  Close
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-muted-foreground">Remove from your dashboard? Gift data is kept.</span>
+                <div className="flex items-center gap-1">
                   <button
-                    title="Remove from dashboard"
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                    className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                    className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                    disabled={isDeleting}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleHide}
+                    disabled={isDeleting}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? "Removing…" : "Remove"}
                   </button>
                 </div>
-              </motion.div>
+              </>
             )}
-          </AnimatePresence>
-        </div>
-      </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="actions"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center justify-between gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              {status === "opened" && !gift.redeemedAt && (
+                <ResendButton url={shareUrl} recipientName={gift.recipientName} />
+              )}
+              {status !== "opened" && (
+                <span className="text-xs text-muted-foreground">
+                  {status === "redeemed" && gift.redeemedAt
+                    ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                    : status === "sent"
+                      ? `Ready since ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                    : status === "ready"
+                      ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
+                    : status === "scheduled" && gift.scheduledFor
+                      ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
+                      : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-0.5 shrink-0">
+              {status !== "ready" && status !== "sent" && (
+                <CopyButton url={shareUrl} />
+              )}
+              <a
+                href={`${window.location.origin}${BASE}/open/${gift.id}?preview=true`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Preview gift"
+                onClick={(e) => e.stopPropagation()}
+                className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+              <button
+                title="Remove from dashboard"
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -573,8 +514,6 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const exp = EXPERIENCE_META[gift.experience] ?? DEFAULT_EXP;
-  const ExpIcon = exp.Icon;
 
   function handleCardClick() {
     if (confirmDelete) return;
@@ -597,121 +536,373 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
     }
   }, [gift.id, queryClient]);
 
+  const hasUnclaimedBalance = !!(gift.amount && parseFloat(gift.amount) > 0 && gift.openedAt && !gift.redeemedAt);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.25 + idx * 0.07, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ delay: 0.15 + idx * 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       onClick={handleCardClick}
-      className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/30 transition-all cursor-pointer"
+      className="border-b border-border/40 last:border-0 px-5 py-4 hover:bg-secondary/20 transition-colors cursor-pointer"
     >
-      <div className="flex items-stretch">
-        <div className="w-1.5 shrink-0" style={{ background: exp.color }} />
-
-        <div className="flex-1 p-5 flex flex-col gap-3 min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: exp.bg }}>
-                <ExpIcon className="w-4 h-4" style={{ color: exp.color }} />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-base leading-tight truncate">{gift.giftTitle || "A gift for you"}</p>
-                <p className="text-sm text-muted-foreground">
-                  From <span className="font-medium text-foreground">{gift.senderName}</span>
-                  {" · "}{gift.occasion}
-                </p>
-              </div>
-            </div>
-
-            {gift.amount && parseFloat(gift.amount) > 0 && (
-              <div className="shrink-0 bg-primary/10 text-primary font-semibold text-sm px-3 py-1 rounded-full border border-primary/20">
-                ${parseFloat(gift.amount).toFixed(0)}
-              </div>
-            )}
-          </div>
-
-          <AnimatePresence mode="wait">
-            {confirmDelete ? (
-              <motion.div
-                key="confirm"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15 }}
-                className="flex items-center justify-between gap-2"
-              >
-                <span className="text-xs text-muted-foreground">Remove from received gifts?</span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
-                    className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
-                    disabled={isDeleting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleHideReceived}
-                    disabled={isDeleting}
-                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
-                  >
-                    {isDeleting ? "Removing…" : "Remove"}
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="actions"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15 }}
-                className="flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2 flex-wrap">
-                  {gift.redeemedAt ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "#dcfce7", color: "#15803d" }}>
-                      <CheckCircle2 className="w-3 h-3" />
-                      Redeemed
-                    </span>
-                  ) : gift.openedAt && gift.amount && parseFloat(gift.amount) > 0 ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setLocation(`/open/${gift.id}`); }}
-                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border transition-colors"
-                      style={{ background: "hsl(28,62%,36%,0.08)", color: "hsl(28,62%,36%)", borderColor: "hsl(28,62%,36%,0.25)" }}
-                    >
-                      <DollarSign className="w-3 h-3" />
-                      Claim ${parseFloat(gift.amount).toFixed(0)}
-                    </button>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "#dcfce7", color: "#15803d" }}>
-                      <Eye className="w-3 h-3" />
-                      {exp.label}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-xs text-muted-foreground">
-                    {gift.redeemedAt
-                      ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
-                      : gift.openedAt
-                        ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
-                        : gift.createdAt
-                          ? `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                          : ""}
-                  </span>
-                  <button
-                    title="Remove from received gifts"
-                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-                    className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+      {/* Title + amount */}
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <p className="font-medium text-sm leading-snug">{gift.giftTitle || "A gift for you"}</p>
+        {gift.amount && parseFloat(gift.amount) > 0 && (
+          <p className={`text-sm font-semibold shrink-0 ${hasUnclaimedBalance ? "text-primary" : "text-foreground"}`}>
+            ${parseFloat(gift.amount).toFixed(0)}
+          </p>
+        )}
       </div>
+
+      {/* Meta */}
+      <p className="text-xs text-muted-foreground mb-2.5">
+        From <span className="text-foreground font-medium">{gift.senderName}</span>
+        {" · "}{gift.occasion}
+        {" · "}
+        {gift.redeemedAt
+          ? <span className="font-medium" style={{ color: "#15803d" }}>● Redeemed</span>
+          : gift.openedAt
+            ? <span className="font-medium" style={{ color: "#6d28d9" }}>● Opened</span>
+            : <span className="text-muted-foreground/60">● Unopened</span>
+        }
+      </p>
+
+      {/* Actions row */}
+      <AnimatePresence mode="wait">
+        {confirmDelete ? (
+          <motion.div
+            key="confirm"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center justify-between gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-xs text-muted-foreground">Remove from received gifts?</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleHideReceived}
+                disabled={isDeleting}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? "Removing…" : "Remove"}
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="actions"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center justify-between gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-xs text-muted-foreground">
+              {gift.redeemedAt
+                ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                : gift.openedAt
+                  ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
+                  : `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
+            </span>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <a
+                href={`${window.location.origin}${BASE}/open/${gift.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open gift"
+                onClick={(e) => e.stopPropagation()}
+                className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+              <button
+                title="Remove from received gifts"
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+// ─── Physical gift card ───────────────────────────────────────────────────────
+
+function PhysicalGiftCard({ gift, idx, onRefresh, onHide }: {
+  gift: PhysicalGift;
+  idx: number;
+  onRefresh: () => void;
+  onHide: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const [confirmHide, setConfirmHide] = useState(false);
+  const [hiding, setHiding] = useState(false);
+
+  const latestEvent = gift.trackingStatus && gift.trackingStatus.length > 0
+    ? gift.trackingStatus[gift.trackingStatus.length - 1]
+    : null;
+
+  const isDelivered = !!gift.deliveredAt;
+
+  async function handleRefresh(e: React.MouseEvent) {
+    e.stopPropagation();
+    setRefreshing(true);
+    try {
+      await fetch(`${BASE}/api/gifted/physical-gifts/${gift.id}/refresh`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["physical-gifts"] });
+      onRefresh();
+    } catch { /* silent */ } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleHide(e: React.MouseEvent) {
+    e.stopPropagation();
+    setHiding(true);
+    try {
+      await fetch(`${BASE}/api/gifted/physical-gifts/${gift.id}/hide`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["physical-gifts"] });
+      onHide();
+    } catch {
+      setHiding(false);
+      setConfirmHide(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 + idx * 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="border-b border-border/40 last:border-0 px-5 py-4"
+    >
+      {/* Label + direction */}
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <Package className={`w-3.5 h-3.5 shrink-0 ${isDelivered ? "text-green-600" : "text-muted-foreground"}`} />
+          <p className="font-medium text-sm leading-snug truncate">{gift.label}</p>
+        </div>
+        {isDelivered && (
+          <span className="text-xs font-medium text-green-700 shrink-0">Delivered</span>
+        )}
+      </div>
+
+      {/* Carrier + person meta */}
+      <p className="text-xs text-muted-foreground mb-1.5 ml-5.5 pl-0.5">
+        {gift.direction === "received" ? "From" : "To"}{" "}
+        <span className="text-foreground font-medium">
+          {gift.direction === "received" ? (gift.senderName || "—") : (gift.recipientName || "—")}
+        </span>
+        {gift.carrier && (
+          <> · {CARRIER_LABELS[gift.carrier] ?? gift.carrier}</>
+        )}
+        {gift.trackingNumber && (
+          <> · <span className="font-mono text-[10px]">{gift.trackingNumber.slice(0, 16)}{gift.trackingNumber.length > 16 ? "…" : ""}</span></>
+        )}
+      </p>
+
+      {/* Latest tracking event */}
+      {latestEvent && (
+        <p className="text-xs text-muted-foreground ml-5.5 mb-1.5">
+          <span className="font-medium text-foreground">{latestEvent.message}</span>
+          {latestEvent.location && <> · {latestEvent.location}</>}
+          {" · "}{formatDistanceToNow(new Date(latestEvent.timestamp), { addSuffix: true })}
+        </p>
+      )}
+      {!latestEvent && gift.carrier && !isDelivered && (
+        <p className="text-xs text-muted-foreground/60 ml-5.5 mb-1.5">No tracking updates yet</p>
+      )}
+      {!gift.carrier && (
+        <p className="text-xs text-muted-foreground/60 ml-5.5 mb-1.5">No tracking added</p>
+      )}
+
+      {/* Actions */}
+      {confirmHide ? (
+        <div className="flex items-center gap-2 ml-5.5 mt-2" onClick={(e) => e.stopPropagation()}>
+          <span className="text-xs text-muted-foreground">Remove this package?</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); setConfirmHide(false); }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            disabled={hiding}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleHide}
+            disabled={hiding}
+            className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+          >
+            {hiding ? "Removing…" : "Remove"}
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 ml-4 mt-1.5">
+          {gift.carrier && (
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all disabled:opacity-50"
+              title="Refresh tracking"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); setConfirmHide(true); }}
+            className="p-1.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+            title="Remove package"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Add Physical Gift Form ───────────────────────────────────────────────────
+
+const CARRIERS = [
+  { value: "usps", label: "USPS" },
+  { value: "ups", label: "UPS" },
+  { value: "fedex", label: "FedEx" },
+  { value: "dhl", label: "DHL" },
+  { value: "amazon", label: "Amazon" },
+  { value: "lasership", label: "LaserShip" },
+  { value: "ontrac", label: "OnTrac" },
+  { value: "canada-post", label: "Canada Post" },
+];
+
+function AddPhysicalGiftForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
+  const [label, setLabel] = useState("");
+  const [direction, setDirection] = useState<"sent" | "received">("received");
+  const [personName, setPersonName] = useState("");
+  const [carrier, setCarrier] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!label.trim()) { setError("Description is required"); return; }
+    setSaving(true);
+    setError("");
+    try {
+      const body: Record<string, string> = {
+        label: label.trim(),
+        direction,
+        ...(carrier ? { carrier } : {}),
+        ...(trackingNumber.trim() ? { trackingNumber: trackingNumber.trim() } : {}),
+      };
+      if (direction === "received" && personName.trim()) body.senderName = personName.trim();
+      if (direction === "sent" && personName.trim()) body.recipientName = personName.trim();
+
+      const res = await fetch(`${BASE}/api/gifted/physical-gifts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error || "Failed to save");
+      }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save — please try again.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      className="bg-secondary/30 rounded-2xl p-4 border border-border/50"
+    >
+      <form onSubmit={handleSave} className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium text-sm">Add a package</h3>
+          <div className="flex bg-secondary rounded-full p-0.5 gap-0.5">
+            {(["received", "sent"] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDirection(d)}
+                className={`text-xs px-3 py-1 rounded-full transition-colors font-medium ${
+                  direction === d ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {d === "received" ? "I received it" : "I sent it"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="What is it? e.g. Birthday flowers from Dad"
+          className="rounded-xl h-10 text-sm"
+          autoFocus
+        />
+        <Input
+          value={personName}
+          onChange={(e) => setPersonName(e.target.value)}
+          placeholder={direction === "received" ? "From (optional)" : "To (optional)"}
+          className="rounded-xl h-10 text-sm"
+        />
+
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={carrier}
+            onChange={(e) => setCarrier(e.target.value)}
+            className="text-sm border border-border rounded-xl px-3 py-2 bg-background text-foreground h-10"
+          >
+            <option value="">Carrier (optional)</option>
+            {CARRIERS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          <Input
+            value={trackingNumber}
+            onChange={(e) => setTrackingNumber(e.target.value)}
+            placeholder="Tracking # (optional)"
+            className="rounded-xl h-10 text-sm font-mono"
+          />
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onCancel} className="rounded-full">Cancel</Button>
+          <Button type="submit" size="sm" disabled={saving} className="rounded-full">
+            {saving ? "Saving…" : "Add package"}
+          </Button>
+        </div>
+      </form>
     </motion.div>
   );
 }
@@ -775,29 +966,16 @@ function ProfileEditModal({ user, onClose, onSaved }: {
         <form onSubmit={handleSave} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-foreground">First name</label>
-            <Input
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              placeholder="First name"
-              className="rounded-xl h-11"
-              autoFocus
-            />
+            <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" className="rounded-xl h-11" autoFocus />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-foreground">Last name</label>
-            <Input
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              placeholder="Last name (optional)"
-              className="rounded-xl h-11"
-            />
+            <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name (optional)" className="rounded-xl h-11" />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-3 mt-1">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1 rounded-full">Cancel</Button>
-            <Button type="submit" disabled={saving} className="flex-1 rounded-full">
-              {saving ? "Saving…" : "Save"}
-            </Button>
+            <Button type="submit" disabled={saving} className="flex-1 rounded-full">{saving ? "Saving…" : "Save"}</Button>
           </div>
         </form>
       </motion.div>
@@ -809,6 +987,44 @@ function ProfileEditModal({ user, onClose, onSaved }: {
 
 const contactsApiSupported = typeof navigator !== "undefined" && "contacts" in navigator;
 
+type PendingOccasion = { label: string; month: number; day: number };
+
+const OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Thanksgiving", "Valentine's Day", "Hanukkah", "Other"];
+
+function OccasionDateFields({ label, month, day, onMonthChange, onDayChange }: {
+  label: string; month: number; day: number;
+  onMonthChange: (m: number) => void; onDayChange: (d: number) => void;
+}) {
+  const isFloating = label in FLOATING_OCCASION_KEYS;
+  if (isFloating) {
+    const floatingKey = FLOATING_OCCASION_KEYS[label];
+    const { month: fm, day: fd } = computeFloatingDate(floatingKey, new Date().getFullYear());
+    return (
+      <span className="text-xs text-muted-foreground italic">
+        Date computed each year · {MONTH_NAMES[fm - 1]} {fd} this year
+      </span>
+    );
+  }
+  return (
+    <>
+      <select
+        value={month}
+        onChange={e => onMonthChange(Number(e.target.value))}
+        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+      >
+        {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+      </select>
+      <select
+        value={day}
+        onChange={e => onDayChange(Number(e.target.value))}
+        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
+      >
+        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+      </select>
+    </>
+  );
+}
+
 function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -818,15 +1034,11 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
   const [importing, setImporting] = useState(false);
   const [pendingOccasions, setPendingOccasions] = useState<PendingOccasion[]>([]);
 
-  function addOccasionRow() {
-    setPendingOccasions(r => [...r, { label: "Birthday", month: 1, day: 1 }]);
-  }
+  function addOccasionRow() { setPendingOccasions(r => [...r, { label: "Birthday", month: 1, day: 1 }]); }
   function updateOccasionRow(i: number, patch: Partial<PendingOccasion>) {
     setPendingOccasions(r => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
   }
-  function removeOccasionRow(i: number) {
-    setPendingOccasions(r => r.filter((_, idx) => idx !== i));
-  }
+  function removeOccasionRow(i: number) { setPendingOccasions(r => r.filter((_, idx) => idx !== i)); }
 
   async function handleImportFromContacts() {
     setImporting(true);
@@ -834,13 +1046,11 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
       const contacts = await (navigator as any).contacts.select(["name", "tel", "email"], { multiple: false });
       if (contacts && contacts.length > 0) {
         const c = contacts[0];
-        if (c.name?.[0])  setName(c.name[0]);
-        if (c.tel?.[0])   setPhone(c.tel[0].replace(/\D/g, "").replace(/^1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") || c.tel[0]);
+        if (c.name?.[0]) setName(c.name[0]);
+        if (c.tel?.[0]) setPhone(c.tel[0].replace(/\D/g, "").replace(/^1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") || c.tel[0]);
         if (c.email?.[0]) setEmail(c.email[0]);
       }
-    } catch {
-      // User cancelled — no action needed
-    } finally {
+    } catch { /* User cancelled */ } finally {
       setImporting(false);
     }
   }
@@ -886,14 +1096,7 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-base">New contact</h3>
           {contactsApiSupported && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleImportFromContacts}
-              disabled={importing}
-              className="rounded-full h-8 text-xs gap-1.5 border-primary/30 text-primary"
-            >
+            <Button type="button" variant="outline" size="sm" onClick={handleImportFromContacts} disabled={importing} className="rounded-full h-8 text-xs gap-1.5 border-primary/30 text-primary">
               <BookUser className="w-3.5 h-3.5" />
               {importing ? "Opening…" : "From contacts"}
             </Button>
@@ -904,25 +1107,15 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
           <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-10" />
           <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-10" type="email" />
         </div>
-
-        {/* Occasions */}
         {pendingOccasions.length > 0 && (
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             <span className="text-xs font-medium text-muted-foreground">Occasions</span>
             {pendingOccasions.map((occ, i) => (
               <div key={i} className="flex flex-wrap items-center gap-2">
-                <select
-                  value={occ.label}
-                  onChange={e => updateOccasionRow(i, { label: e.target.value })}
-                  className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground flex-1 min-w-[120px]"
-                >
+                <select value={occ.label} onChange={e => updateOccasionRow(i, { label: e.target.value })} className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground flex-1 min-w-[120px]">
                   {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
-                <OccasionDateFields
-                  label={occ.label} month={occ.month} day={occ.day}
-                  onMonthChange={m => updateOccasionRow(i, { month: m })}
-                  onDayChange={d => updateOccasionRow(i, { day: d })}
-                />
+                <OccasionDateFields label={occ.label} month={occ.month} day={occ.day} onMonthChange={m => updateOccasionRow(i, { month: m })} onDayChange={d => updateOccasionRow(i, { day: d })} />
                 <button type="button" onClick={() => removeOccasionRow(i)} className="text-muted-foreground/60 hover:text-destructive transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -930,21 +1123,14 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
             ))}
           </div>
         )}
-        <button
-          type="button"
-          onClick={addOccasionRow}
-          className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors self-start"
-        >
+        <button type="button" onClick={addOccasionRow} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors self-start">
           <Cake className="w-3.5 h-3.5" />
           {pendingOccasions.length === 0 ? "Add an occasion (optional)" : "Add another occasion"}
         </button>
-
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onCancel} className="rounded-full">Cancel</Button>
-          <Button type="submit" size="sm" disabled={saving} className="rounded-full">
-            {saving ? "Saving…" : "Add contact"}
-          </Button>
+          <Button type="submit" size="sm" disabled={saving} className="rounded-full">{saving ? "Saving…" : "Add contact"}</Button>
         </div>
       </form>
     </motion.div>
@@ -953,45 +1139,6 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
 
 // ─── Add Occasion Form ────────────────────────────────────────────────────────
 
-const OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Thanksgiving", "Valentine's Day", "Hanukkah", "Other"];
-
-function OccasionDateFields({ label, month, day, onMonthChange, onDayChange }: {
-  label: string; month: number; day: number;
-  onMonthChange: (m: number) => void; onDayChange: (d: number) => void;
-}) {
-  const isFloating = label in FLOATING_OCCASION_KEYS;
-  if (isFloating) {
-    const floatingKey = FLOATING_OCCASION_KEYS[label];
-    const { month: fm, day: fd } = computeFloatingDate(floatingKey, new Date().getFullYear());
-    return (
-      <span className="text-xs text-muted-foreground italic">
-        Date computed each year · {MONTH_NAMES[fm - 1]} {fd} this year
-      </span>
-    );
-  }
-  return (
-    <>
-      <select
-        value={month}
-        onChange={e => onMonthChange(Number(e.target.value))}
-        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-      >
-        {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-      </select>
-      <select
-        value={day}
-        onChange={e => onDayChange(Number(e.target.value))}
-        className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-      >
-        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
-      </select>
-    </>
-  );
-}
-
-
-type PendingOccasion = { label: string; month: number; day: number };
-
 function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; onSaved: () => void; onCancel: () => void }) {
   const [rows, setRows] = useState<PendingOccasion[]>([{ label: "Birthday", month: 1, day: 1 }]);
   const [saving, setSaving] = useState(false);
@@ -999,23 +1146,17 @@ function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; 
   function updateRow(i: number, patch: Partial<PendingOccasion>) {
     setRows(r => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
   }
-  function removeRow(i: number) {
-    setRows(r => r.length === 1 ? r : r.filter((_, idx) => idx !== i));
-  }
-  function addRow() {
-    setRows(r => [...r, { label: "Birthday", month: 1, day: 1 }]);
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      await Promise.all(rows.map(row =>
+      await Promise.all(rows.map(occ =>
         fetch(`${BASE}/api/gifted/contacts/${contactId}/occasions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify(buildOccasionPayload(row.label, row.month, row.day)),
+          body: JSON.stringify(buildOccasionPayload(occ.label, occ.month, occ.day)),
         })
       ));
       onSaved();
@@ -1025,37 +1166,24 @@ function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; 
   }
 
   return (
-    <form onSubmit={handleSave} className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
-      {rows.map((row, i) => (
+    <form onSubmit={handleSave} className="flex flex-col gap-2 pt-2">
+      {rows.map((occ, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
-          <select
-            value={row.label}
-            onChange={e => updateRow(i, { label: e.target.value })}
-            className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-          >
+          <select value={occ.label} onChange={e => updateRow(i, { label: e.target.value })} className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground">
             {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
-          <OccasionDateFields label={row.label} month={row.month} day={row.day}
-            onMonthChange={m => updateRow(i, { month: m })}
-            onDayChange={d => updateRow(i, { day: d })}
-          />
+          <OccasionDateFields label={occ.label} month={occ.month} day={occ.day} onMonthChange={m => updateRow(i, { month: m })} onDayChange={d => updateRow(i, { day: d })} />
           {rows.length > 1 && (
-            <button type="button" onClick={() => removeRow(i)} className="text-muted-foreground/60 hover:text-destructive transition-colors">
+            <button type="button" onClick={() => setRows(r => r.filter((_, idx) => idx !== i))} className="text-muted-foreground/50 hover:text-destructive transition-colors">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       ))}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button type="button" onClick={addRow} className="text-xs text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-          <Plus className="w-3 h-3" /> Add another occasion
-        </button>
-        <div className="flex items-center gap-2 ml-auto">
-          <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
-          <Button type="submit" size="sm" disabled={saving} className="rounded-full h-7 text-xs px-3">
-            {saving ? "Saving…" : `Save ${rows.length > 1 ? `${rows.length} occasions` : "occasion"}`}
-          </Button>
-        </div>
+      <div className="flex items-center gap-2 mt-1">
+        <Button type="submit" size="sm" disabled={saving} className="rounded-full h-7 text-xs">{saving ? "Saving…" : "Save"}</Button>
+        <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
+        <button type="button" onClick={() => setRows(r => [...r, { label: "Birthday", month: 1, day: 1 }])} className="text-xs text-primary hover:opacity-80 transition-opacity ml-auto">+ Add another</button>
       </div>
     </form>
   );
@@ -1063,17 +1191,10 @@ function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; 
 
 // ─── Contact Card ─────────────────────────────────────────────────────────────
 
-type OccasionEditRow = {
-  id: string | null;
-  label: string;
-  month: number;
-  day: number;
-  floatingKey: string | null;
-  deleted: boolean;
-};
+type OccasionEditRow = { id: string | null; label: string; month: number; day: number; floatingKey: string | null; deleted: boolean };
 
-function initOccasionRows(occ: Contact["occasions"]): OccasionEditRow[] {
-  return occ.map(o => ({
+function initOccasionRows(occasions: ContactOccasion[]): OccasionEditRow[] {
+  return occasions.map(o => ({
     id: o.id,
     label: o.label,
     month: o.month ?? 1,
@@ -1083,20 +1204,19 @@ function initOccasionRows(occ: Contact["occasions"]): OccasionEditRow[] {
   }));
 }
 
-function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh: () => void; idx: number }) {
+function ContactCard({ contact, idx, onRefresh }: { contact: Contact; idx: number; onRefresh: () => void }) {
   const [, setLocation] = useLocation();
   const [showOccasionForm, setShowOccasionForm] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState(contact.name);
   const [editPhone, setEditPhone] = useState(contact.phone ?? "");
   const [editEmail, setEditEmail] = useState(contact.email ?? "");
-  const [editOccasions, setEditOccasions] = useState<OccasionEditRow[]>([]);
+  const [editOccasions, setEditOccasions] = useState<OccasionEditRow[]>(initOccasionRows(contact.occasions));
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  async function handleDeleteContact(e: React.MouseEvent) {
-    e.stopPropagation();
+  async function handleDeleteContact() {
     await fetch(`${BASE}/api/gifted/contacts/${contact.id}`, { method: "DELETE", credentials: "include" });
     onRefresh();
   }
@@ -1143,15 +1263,11 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
         body: JSON.stringify({ name: editName, phone: editPhone, email: editEmail, notes: contact.notes ?? undefined }),
       });
       if (!contactRes.ok) throw new Error("Failed");
-
       const originalById = Object.fromEntries(contact.occasions.map(o => [o.id, o]));
-
       await Promise.all(editOccasions.map(row => {
         const payload = buildOccasionPayload(row.label, row.month, row.day);
         if (row.id) {
-          if (row.deleted) {
-            return fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions/${row.id}`, { method: "DELETE", credentials: "include" });
-          }
+          if (row.deleted) return fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions/${row.id}`, { method: "DELETE", credentials: "include" });
           const orig = originalById[row.id];
           const changed = !orig || orig.label !== row.label || orig.month !== row.month || orig.day !== row.day || orig.floatingKey !== row.floatingKey;
           if (changed) {
@@ -1172,7 +1288,6 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
         }
         return Promise.resolve();
       }));
-
       setShowEdit(false);
       onRefresh();
     } catch {
@@ -1182,10 +1297,7 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
     }
   }
 
-  function handleEditCancel() {
-    setEditError("");
-    setShowEdit(false);
-  }
+  function handleEditCancel() { setEditError(""); setShowEdit(false); }
 
   const nextOccasion = contact.occasions.length > 0
     ? [...contact.occasions].sort((a, b) => daysUntilOccasion(a) - daysUntilOccasion(b))[0]
@@ -1197,7 +1309,7 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 + idx * 0.06, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="bg-card border border-border rounded-2xl p-5"
+      className="border-b border-border/40 last:border-0 py-4"
     >
       {showEdit ? (
         <form onSubmit={handleEditSave} className="flex flex-col gap-3">
@@ -1210,36 +1322,16 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
             <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-9 text-sm" />
             <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-9 text-sm" type="email" />
           </div>
-
-          {/* Editable occasions */}
           {editOccasions.filter(r => !r.deleted).length > 0 && (
             <div className="flex flex-col gap-2 pt-2 border-t border-border">
               <span className="text-xs font-medium text-muted-foreground">Occasions</span>
               {editOccasions.map((row, i) => row.deleted ? null : (
                 <div key={i} className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={row.label}
-                    onChange={e => {
-                      const newLabel = e.target.value;
-                      const fk = FLOATING_OCCASION_KEYS[newLabel] ?? null;
-                      updateEditOccasion(i, { label: newLabel, floatingKey: fk });
-                    }}
-                    className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground"
-                  >
+                  <select value={row.label} onChange={e => { const newLabel = e.target.value; const fk = FLOATING_OCCASION_KEYS[newLabel] ?? null; updateEditOccasion(i, { label: newLabel, floatingKey: fk }); }} className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground">
                     {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
-                  <OccasionDateFields
-                    label={row.label} month={row.month} day={row.day}
-                    onMonthChange={m => updateEditOccasion(i, { month: m })}
-                    onDayChange={d => updateEditOccasion(i, { day: d })}
-                  />
-                  <button type="button" onClick={() => {
-                    if (row.id) {
-                      updateEditOccasion(i, { deleted: true });
-                    } else {
-                      setEditOccasions(rows => rows.filter((_, idx) => idx !== i));
-                    }
-                  }} className="text-muted-foreground/50 hover:text-destructive transition-colors">
+                  <OccasionDateFields label={row.label} month={row.month} day={row.day} onMonthChange={m => updateEditOccasion(i, { month: m })} onDayChange={d => updateEditOccasion(i, { day: d })} />
+                  <button type="button" onClick={() => { if (row.id) { updateEditOccasion(i, { deleted: true }); } else { setEditOccasions(rows => rows.filter((_, idx) => idx !== i)); } }} className="text-muted-foreground/50 hover:text-destructive transition-colors">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1250,22 +1342,19 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
             <Cake className="w-3.5 h-3.5" />
             {editOccasions.filter(r => !r.deleted).length === 0 ? "Add an occasion" : "Add another occasion"}
           </button>
-
           {editError && <p className="text-xs text-destructive">{editError}</p>}
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={editSaving} className="rounded-full h-8 text-xs">
-              {editSaving ? "Saving…" : "Save changes"}
-            </Button>
+            <Button type="submit" size="sm" disabled={editSaving} className="rounded-full h-8 text-xs">{editSaving ? "Saving…" : "Save changes"}</Button>
           </div>
         </form>
       ) : (
-        <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <span className="text-primary font-semibold text-sm">{contact.name[0]?.toUpperCase()}</span>
+            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0">
+              <span className="text-foreground font-semibold text-sm">{contact.name[0]?.toUpperCase()}</span>
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-base leading-tight">{contact.name}</p>
+              <p className="font-semibold text-sm leading-tight">{contact.name}</p>
               {(contact.phone || contact.email) && (
                 <p className="text-xs text-muted-foreground truncate">{contact.phone || contact.email}</p>
               )}
@@ -1286,16 +1375,10 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
               </div>
             ) : (
               <>
-                <button
-                  onClick={openEdit}
-                  className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-                >
+                <button onClick={openEdit} className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                >
+                <button onClick={() => setConfirmDelete(true)} className="p-2 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </>
@@ -1305,11 +1388,10 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
       )}
 
       {!showEdit && nextOccasion && daysUntil !== null && daysUntil <= 30 && (
-        <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
+        <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
           <Bell className="w-3.5 h-3.5 text-amber-600 shrink-0" />
           <p className="text-xs text-amber-800">
-            <span className="font-medium">{nextOccasion.label}</span>
-            {" "}
+            <span className="font-medium">{nextOccasion.label}</span>{" "}
             {daysUntil === 0 ? "is today" : daysUntil === 1 ? "is tomorrow" : `in ${daysUntil} days`}
             {" · "}{(() => { const r = resolveOccasionDate(nextOccasion); return `${MONTH_NAMES[r.month - 1]} ${r.day}`; })()}
           </p>
@@ -1317,7 +1399,7 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
       )}
 
       {!showEdit && contact.occasions.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="flex flex-wrap gap-1.5 mt-3">
           {contact.occasions.map(occ => {
             const d = daysUntilOccasion(occ);
             const r = resolveOccasionDate(occ);
@@ -1326,13 +1408,8 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
                 <Cake className="w-3 h-3 text-muted-foreground" />
                 <span className="font-medium">{occ.label}</span>
                 <span className="text-muted-foreground">{MONTH_NAMES[r.month - 1]} {r.day}</span>
-                {d <= 7 && (
-                  <span className="text-amber-600 font-medium">· {d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d}d`}</span>
-                )}
-                <button
-                  onClick={() => handleDeleteOccasion(occ.id)}
-                  className="ml-1 text-muted-foreground/50 hover:text-destructive transition-colors"
-                >
+                {d <= 7 && <span className="text-amber-600 font-medium">· {d === 0 ? "Today" : d === 1 ? "Tomorrow" : `${d}d`}</span>}
+                <button onClick={() => handleDeleteOccasion(occ.id)} className="ml-1 text-muted-foreground/50 hover:text-destructive transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </div>
@@ -1341,30 +1418,24 @@ function ContactCard({ contact, onRefresh, idx }: { contact: Contact; onRefresh:
         </div>
       )}
 
-      <AnimatePresence>
-        {showOccasionForm ? (
-          <motion.div
-            key="form"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <AddOccasionForm
-              contactId={contact.id}
-              onSaved={() => { setShowOccasionForm(false); onRefresh(); }}
-              onCancel={() => setShowOccasionForm(false)}
-            />
-          </motion.div>
-        ) : (
-          <button
-            onClick={() => setShowOccasionForm(true)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Plus className="w-3 h-3" />
-            Add occasion
-          </button>
-        )}
-      </AnimatePresence>
+      {!showEdit && (
+        <AnimatePresence>
+          {showOccasionForm ? (
+            <motion.div key="form" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+              <AddOccasionForm
+                contactId={contact.id}
+                onSaved={() => { setShowOccasionForm(false); onRefresh(); }}
+                onCancel={() => setShowOccasionForm(false)}
+              />
+            </motion.div>
+          ) : (
+            <button onClick={() => setShowOccasionForm(true)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors mt-2">
+              <Plus className="w-3 h-3" />
+              Add occasion
+            </button>
+          )}
+        </AnimatePresence>
+      )}
     </motion.div>
   );
 }
@@ -1397,13 +1468,9 @@ function UpcomingOccasionsBanner({ contacts, onGift }: { contacts: Contact[]; on
                 <div key={o.id} className="flex items-center justify-between gap-3">
                   <p className="text-xs text-amber-800">
                     <span className="font-medium">{o.contactName}</span>'s {o.label}
-                    {" · "}
-                    {d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`}
+                    {" · "}{d === 0 ? "today" : d === 1 ? "tomorrow" : `in ${d} days`}
                   </p>
-                  <button
-                    onClick={() => onGift(o.contactName)}
-                    className="text-xs font-medium text-amber-700 hover:text-amber-900 underline underline-offset-2 shrink-0 transition-colors"
-                  >
+                  <button onClick={() => onGift(o.contactName)} className="text-xs font-medium text-amber-700 hover:text-amber-900 underline underline-offset-2 shrink-0 transition-colors">
                     Gift them
                   </button>
                 </div>
@@ -1418,7 +1485,7 @@ function UpcomingOccasionsBanner({ contacts, onGift }: { contacts: Contact[]; on
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Tab = "sent" | "received" | "people";
+type Tab = "sent" | "inbox" | "people";
 
 export default function MyGiftsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -1431,57 +1498,45 @@ export default function MyGiftsPage() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [localName, setLocalName] = useState<{ first: string; last: string } | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showAddPhysical, setShowAddPhysical] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(search);
     const tab = params.get("tab");
-    if (tab === "contacts" || tab === "people") {
-      setActiveTab("people");
-    }
+    if (tab === "contacts" || tab === "people") setActiveTab("people");
+    if (tab === "inbox" || tab === "received") setActiveTab("inbox");
   }, [search]);
 
   useEffect(() => {
     const authReturn = localStorage.getItem("gifted_auth_return");
     if (!authReturn) return;
     localStorage.removeItem("gifted_auth_return");
-
     const [returnPath, qs] = authReturn.split("?", 2);
     const params = new URLSearchParams(qs ?? "");
     const claimId = params.get("claim");
     const saveReceivedId = params.get("save-received");
-
     if (claimId) {
-      fetch(`${BASE}/api/gifted/gifts/${claimId}/claim`, {
-        method: "PATCH",
-        credentials: "include",
-      }).finally(() => {
-        if (returnPath !== "/my-gifts") setLocation(returnPath);
-      });
+      fetch(`${BASE}/api/gifted/gifts/${claimId}/claim`, { method: "PATCH", credentials: "include" })
+        .finally(() => { if (returnPath !== "/my-gifts") setLocation(returnPath); });
     } else if (saveReceivedId) {
-      fetch(`${BASE}/api/gifted/gifts/${saveReceivedId}/save-received`, {
-        method: "PATCH",
-        credentials: "include",
-      }).then(async (res) => {
-        const body = await res.json().catch(() => ({}));
-        const blockedAsSender = body?.isSender === true;
-        if (!blockedAsSender && res.ok) {
-          queryClient.invalidateQueries({ queryKey: ["received-gifts"] });
-          setActiveTab("received");
-        } else if (blockedAsSender) {
-          setSenderBlockedNotice(true);
-          setActiveTab("sent");
-        }
-      }).catch(() => {});
+      fetch(`${BASE}/api/gifted/gifts/${saveReceivedId}/save-received`, { method: "PATCH", credentials: "include" })
+        .then(async (res) => {
+          const body = await res.json().catch(() => ({}));
+          const blockedAsSender = (body as any)?.isSender === true;
+          if (!blockedAsSender && res.ok) {
+            queryClient.invalidateQueries({ queryKey: ["received-gifts"] });
+            setActiveTab("inbox");
+          } else if (blockedAsSender) {
+            setSenderBlockedNotice(true);
+            setActiveTab("sent");
+          }
+        }).catch(() => {});
     } else if (returnPath !== "/my-gifts") {
       setLocation(returnPath);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleNewGift() {
-    clearGiftSession();
-    setLocation("/create");
-  }
-
+  function handleNewGift() { clearGiftSession(); setLocation("/create"); }
   function handleGiftContact(contactName: string) {
     clearGiftSession();
     localStorage.setItem("gifted_recipient_name", contactName);
@@ -1511,6 +1566,13 @@ export default function MyGiftsPage() {
     staleTime: 60_000,
   });
 
+  const { data: physicalGiftsData, isLoading: physicalLoading, refetch: refetchPhysical } = useQuery({
+    queryKey: ["physical-gifts"],
+    queryFn: fetchPhysicalGifts,
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1522,63 +1584,44 @@ export default function MyGiftsPage() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 pb-24 text-center gap-6">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center"
-        >
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }} className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
           <Gift className="w-10 h-10 text-primary" />
         </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}>
           <h1 className="font-serif text-4xl font-medium mb-3">Your gift dashboard</h1>
-          <p className="text-muted-foreground max-w-sm mx-auto">
-            Sign in to see all the gifts you've sent and received, track when they've been opened, and manage your gifting history.
-          </p>
+          <p className="text-muted-foreground max-w-sm mx-auto">Sign in to see all the gifts you've sent and received, track when they've been opened, and manage your gifting history.</p>
         </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="flex flex-col sm:flex-row gap-3"
-        >
-          <Button size="lg" className="rounded-full px-10 h-13" onClick={() => setLocation("/sign-in")}>
-            Sign in
-          </Button>
-          <Button size="lg" variant="outline" className="rounded-full px-10 h-13" onClick={handleNewGift}>
-            Build a moment
-          </Button>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }} className="flex flex-col sm:flex-row gap-3">
+          <Button size="lg" className="rounded-full px-10 h-13" onClick={() => setLocation("/sign-in")}>Sign in</Button>
+          <Button size="lg" variant="outline" className="rounded-full px-10 h-13" onClick={handleNewGift}>Build a moment</Button>
         </motion.div>
       </div>
     );
   }
 
-  // ── Stats
+  // Stats
   const totalSent     = myGifts?.length ?? 0;
   const totalValue    = myGifts?.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0) ?? 0;
   const openedCount   = myGifts?.filter(g => !!g.openedAt && !g.redeemedAt).length ?? 0;
   const redeemed      = myGifts?.filter(g => !!g.redeemedAt && hasBalance(g)).length ?? 0;
   const totalReceived = receivedGifts?.length ?? 0;
 
-  // Most gifted recipient
   const recipientCounts: Record<string, number> = {};
   myGifts?.forEach(g => { recipientCounts[g.recipientName] = (recipientCounts[g.recipientName] ?? 0) + 1; });
-  const mostGifted = Object.entries(recipientCounts).sort((a, b) => b[1] - a[1])[0];
 
   const displayFirstName = localName?.first ?? user?.firstName ?? null;
   const displayLastName  = localName?.last ?? user?.lastName ?? null;
-
-  const initials = [displayFirstName, displayLastName]
-    .filter(Boolean)
-    .map(n => n![0])
-    .join("")
-    .toUpperCase() || (user?.email?.[0]?.toUpperCase() ?? "?");
+  const initials = [displayFirstName, displayLastName].filter(Boolean).map(n => n![0]).join("").toUpperCase() || (user?.email?.[0]?.toUpperCase() ?? "?");
 
   const upcomingContactsData = contactsData ?? [];
+
+  // Received gifts with unclaimed balance (for the action banner)
+  const unclaimedGifts = receivedGifts?.filter(g =>
+    g.amount && parseFloat(g.amount) > 0 && g.openedAt && !g.redeemedAt
+  ) ?? [];
+  const totalUnclaimedBalance = unclaimedGifts.reduce((sum, g) => sum + parseFloat(g.amount!), 0);
+
+  const TAB_LABELS: Record<Tab, string> = { sent: "Sent", inbox: "My Gifts", people: "People" };
 
   return (
     <div className="min-h-screen w-full pb-28">
@@ -1593,16 +1636,23 @@ export default function MyGiftsPage() {
         >
           <div className="flex items-center gap-4">
             {user?.profileImageUrl ? (
-              <img src={user.profileImageUrl} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20" />
+              <img src={user.profileImageUrl} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-border" />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20">
-                <span className="text-primary font-bold text-base">{initials}</span>
+              <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center ring-2 ring-border">
+                <span className="text-foreground font-bold text-base">{initials}</span>
               </div>
             )}
             <div>
-              <p className="text-sm text-muted-foreground font-medium">{greeting(displayFirstName)}</p>
+              <p className="text-xs text-muted-foreground font-medium">{greeting(displayFirstName)}</p>
               <div className="flex items-center gap-2">
-                <h1 className="font-serif text-2xl md:text-3xl font-medium leading-tight">Your gifts</h1>
+                <button
+                  onClick={() => setActiveTab(activeTab === "inbox" ? "sent" : "inbox")}
+                  className="font-serif text-2xl md:text-3xl font-medium leading-tight hover:text-primary transition-colors flex items-center gap-1 group"
+                  title="View my gifts"
+                >
+                  Your gifts
+                  <ChevronRight className={`w-5 h-5 text-muted-foreground/50 group-hover:text-primary transition-all ${activeTab === "inbox" ? "rotate-90 text-primary" : ""}`} />
+                </button>
                 <button
                   onClick={() => setShowProfileEdit(true)}
                   className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
@@ -1613,7 +1663,7 @@ export default function MyGiftsPage() {
               </div>
             </div>
           </div>
-          <Button onClick={handleNewGift} className="rounded-full px-5 gap-2 hidden sm:flex shadow-md hover:-translate-y-0.5 transition-transform">
+          <Button onClick={handleNewGift} className="rounded-full px-5 gap-2 hidden sm:flex shadow-sm hover:-translate-y-0.5 transition-transform">
             <Plus className="w-4 h-4" />
             Build a moment
           </Button>
@@ -1622,21 +1672,10 @@ export default function MyGiftsPage() {
         {/* ── Sender-blocked notice ── */}
         <AnimatePresence>
           {senderBlockedNotice && (
-            <motion.div
-              key="sender-blocked"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.3 }}
-              className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3"
-            >
+            <motion.div key="sender-blocked" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }} className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
               <Send className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-              <p className="text-sm text-amber-800 flex-1">
-                You can't save your own gift as received. It's already in your Sent tab.
-              </p>
-              <button onClick={() => setSenderBlockedNotice(false)} className="text-amber-500 hover:text-amber-700 transition-colors shrink-0">
-                <X className="w-4 h-4" />
-              </button>
+              <p className="text-sm text-amber-800 flex-1">You can't save your own gift as received. It's already in your Sent tab.</p>
+              <button onClick={() => setSenderBlockedNotice(false)} className="text-amber-500 hover:text-amber-700 transition-colors shrink-0"><X className="w-4 h-4" /></button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1646,52 +1685,53 @@ export default function MyGiftsPage() {
           <UpcomingOccasionsBanner contacts={upcomingContactsData} onGift={handleGiftContact} />
         )}
 
-        {/* ── Stats row (only on Sent tab) ── */}
+        {/* ── Flat stat strip (Sent tab, has gifts) ── */}
         {activeTab === "sent" && !giftsLoading && totalSent > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-            <StatCard label="Sent" value={totalSent} Icon={Package} delay={0.05} />
-            <StatCard
-              label="Total gifted"
-              value={totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"}
-              sub={mostGifted && mostGifted[1] > 1 ? `${mostGifted[0]} most gifted` : undefined}
-              Icon={DollarSign}
-              delay={0.1}
-            />
-            <StatCard
-              label="Opened"
-              value={openedCount}
-              sub={activeStatFilter === "opened" ? "tap to clear filter" : openedCount > 0 ? "tap to view" : undefined}
-              Icon={Eye}
-              delay={0.15}
-              active={activeStatFilter === "opened"}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05, duration: 0.4 }}
+            className="flex divide-x divide-border/50 border border-border/60 rounded-xl mb-7 bg-card overflow-hidden"
+          >
+            <div className="flex-1 px-4 py-3.5 min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Sent</p>
+              <p className="font-serif text-2xl font-medium">{totalSent}</p>
+            </div>
+            <div className="flex-1 px-4 py-3.5 min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Total</p>
+              <p className="font-serif text-2xl font-medium">{totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"}</p>
+            </div>
+            <button
+              className={`flex-1 px-4 py-3.5 text-left transition-colors min-w-0 ${activeStatFilter === "opened" ? "bg-primary/5" : "hover:bg-secondary/50"}`}
               onClick={() => { setActiveStatFilter(f => f === "opened" ? null : "opened"); setActiveTab("sent"); }}
-            />
-            <StatCard
-              label="Redeemed"
-              value={redeemed}
-              sub={activeStatFilter === "redeemed" ? "tap to clear filter" : redeemed > 0 ? "tap to view" : undefined}
-              Icon={CheckCircle2}
-              delay={0.2}
-              active={activeStatFilter === "redeemed"}
+            >
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Opened</p>
+              <p className={`font-serif text-2xl font-medium ${activeStatFilter === "opened" ? "text-primary" : ""}`}>{openedCount}</p>
+            </button>
+            <button
+              className={`flex-1 px-4 py-3.5 text-left transition-colors min-w-0 ${activeStatFilter === "redeemed" ? "bg-primary/5" : "hover:bg-secondary/50"}`}
               onClick={() => { setActiveStatFilter(f => f === "redeemed" ? null : "redeemed"); setActiveTab("sent"); }}
-            />
-          </div>
+            >
+              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Redeemed</p>
+              <p className={`font-serif text-2xl font-medium ${activeStatFilter === "redeemed" ? "text-primary" : ""}`}>{redeemed}</p>
+            </button>
+          </motion.div>
         )}
 
         {/* ── Tabs ── */}
-        <div className="flex items-center gap-1 mb-6 bg-secondary/50 rounded-2xl p-1 w-fit">
-          {(["sent", "received", "people"] as Tab[]).map((tab) => (
+        <div className="flex items-center gap-0 border-b border-border/50 mb-6">
+          {(["sent", "inbox", "people"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              className={`px-4 pb-3 text-sm font-medium transition-colors relative ${
                 activeTab === tab
-                  ? "bg-card text-foreground shadow-sm"
+                  ? "text-foreground border-b-2 border-foreground -mb-px"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab === "sent" ? "Sent" : tab === "received" ? "Received" : "People"}
-              {tab === "received" && totalReceived > 0 && (
+              {TAB_LABELS[tab]}
+              {tab === "inbox" && totalReceived > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
                   {totalReceived}
                 </span>
@@ -1708,9 +1748,12 @@ export default function MyGiftsPage() {
         {/* ── Sent tab ── */}
         {activeTab === "sent" && (
           giftsLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-0 border border-border/60 rounded-xl bg-card overflow-hidden">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 rounded-2xl bg-muted/40 animate-pulse" />
+                <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
+                  <div className="h-3 w-48 bg-muted/50 rounded animate-pulse mb-2" />
+                  <div className="h-2.5 w-32 bg-muted/30 rounded animate-pulse" />
+                </div>
               ))}
             </div>
           ) : !myGifts || myGifts.length === 0 ? (
@@ -1718,31 +1761,31 @@ export default function MyGiftsPage() {
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1, duration: 0.5 }}
-              className="text-center py-20 bg-card border border-border rounded-3xl px-6"
+              className="text-center py-20 bg-card border border-border/60 rounded-2xl px-6"
             >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
-                <Gift className="w-8 h-8 text-primary" />
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                <Gift className="w-7 h-7 text-primary" />
               </div>
               <h2 className="font-serif text-2xl font-medium mb-2">No gifts sent yet</h2>
               <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">
                 Create your first gift — a personal video, photos, note, playlist, and optional cash balance — all in one beautiful reveal.
               </p>
-              <Button onClick={handleNewGift} className="rounded-full px-8 h-12 gap-2 shadow-md">
+              <Button onClick={handleNewGift} className="rounded-full px-8 h-12 gap-2 shadow-sm">
                 <Plus className="w-4 h-4" />
                 Send your first gift
               </Button>
             </motion.div>
           ) : (
-            <div className="space-y-3">
+            <div>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="flex items-center justify-between mb-1"
+                transition={{ delay: 0.1 }}
+                className="flex items-center justify-between mb-3"
               >
                 {activeStatFilter ? (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground capitalize">
+                    <span className="text-sm font-medium text-foreground">
                       {activeStatFilter === "opened" ? "Opened — awaiting redemption" : "Redeemed"}
                     </span>
                     <button
@@ -1753,93 +1796,181 @@ export default function MyGiftsPage() {
                     </button>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground font-medium">
-                    {totalSent} gift{totalSent !== 1 ? "s" : ""} sent
-                  </p>
+                  <p className="text-xs text-muted-foreground">{totalSent} gift{totalSent !== 1 ? "s" : ""} sent · most recent first</p>
                 )}
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  Most recent first
-                </div>
               </motion.div>
-              {(activeStatFilter
-                ? myGifts.filter(g =>
-                    activeStatFilter === "opened"
-                      ? !!g.openedAt && !g.redeemedAt
-                      : !!g.redeemedAt
-                  )
-                : myGifts
-              ).map((gift, i) => (
-                <GiftCard key={gift.id} gift={gift} idx={i} />
-              ))}
+              <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                {(activeStatFilter
+                  ? myGifts.filter(g =>
+                      activeStatFilter === "opened" ? !!g.openedAt && !g.redeemedAt : !!g.redeemedAt
+                    )
+                  : myGifts
+                ).map((gift, i) => (
+                  <GiftCard key={gift.id} gift={gift} idx={i} />
+                ))}
+              </div>
             </div>
           )
         )}
 
-        {/* ── Received tab ── */}
-        {activeTab === "received" && (
-          receivedLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 rounded-2xl bg-muted/40 animate-pulse" />
-              ))}
-            </div>
-          ) : !receivedGifts || receivedGifts.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="text-center py-20 bg-card border border-border rounded-3xl px-6"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
-                <Inbox className="w-8 h-8 text-primary" />
-              </div>
-              <h2 className="font-serif text-2xl font-medium mb-2">No received gifts yet</h2>
-              <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">
-                When someone sends you a gift and you save it to your account, it will appear here.
-              </p>
-            </motion.div>
-          ) : (
-            <div className="space-y-3">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className="flex items-center justify-between mb-1"
-              >
-                <p className="text-sm text-muted-foreground font-medium">
-                  {totalReceived} gift{totalReceived !== 1 ? "s" : ""} received
-                </p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  Most recent first
+        {/* ── My Gifts (Inbox) tab ── */}
+        {activeTab === "inbox" && (
+          <div className="space-y-6">
+            {/* Received digital gifts */}
+            <div>
+              {receivedLoading ? (
+                <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
+                      <div className="h-3 w-48 bg-muted/50 rounded animate-pulse mb-2" />
+                      <div className="h-2.5 w-32 bg-muted/30 rounded animate-pulse" />
+                    </div>
+                  ))}
                 </div>
-              </motion.div>
-              {receivedGifts.map((gift, i) => (
-                <ReceivedGiftCard key={gift.id} gift={gift} idx={i} />
-              ))}
+              ) : !receivedGifts || receivedGifts.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-16 bg-card border border-border/60 rounded-2xl px-6"
+                >
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Inbox className="w-7 h-7 text-primary" />
+                  </div>
+                  <h2 className="font-serif text-xl font-medium mb-2">No received gifts yet</h2>
+                  <p className="text-muted-foreground max-w-xs mx-auto text-sm">
+                    When someone sends you a gift and you save it to your account, it will appear here.
+                  </p>
+                </motion.div>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground mb-3">{totalReceived} gift{totalReceived !== 1 ? "s" : ""} received</p>
+                  <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                    {receivedGifts.map((gift, i) => (
+                      <ReceivedGiftCard key={gift.id} gift={gift} idx={i} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          )
+
+            {/* Needs redemption callout */}
+            {unclaimedGifts.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="border border-primary/25 rounded-xl bg-primary/5 overflow-hidden"
+              >
+                <div className="px-5 py-4 border-b border-primary/15">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground">
+                      You have ${totalUnclaimedBalance.toFixed(0)} to collect
+                    </p>
+                    <span className="text-xs text-muted-foreground">{unclaimedGifts.length} gift{unclaimedGifts.length !== 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+                {unclaimedGifts.map((gift, i) => (
+                  <div
+                    key={gift.id}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-primary/10 last:border-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{gift.giftTitle || "A gift for you"}</p>
+                      <p className="text-xs text-muted-foreground">From {gift.senderName}</p>
+                    </div>
+                    <button
+                      onClick={() => setLocation(`/open/${gift.id}`)}
+                      className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors shrink-0 whitespace-nowrap"
+                    >
+                      Collect ${parseFloat(gift.amount!).toFixed(0)}
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+
+            {/* Physical packages */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Physical packages</p>
+                  <p className="text-xs text-muted-foreground">Track gifts you've sent or received by mail</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddPhysical(true)}
+                  className="rounded-full gap-1.5 h-8 text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add
+                </Button>
+              </div>
+
+              <AnimatePresence>
+                {showAddPhysical && (
+                  <motion.div key="add-physical" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-4">
+                    <AddPhysicalGiftForm
+                      onSaved={() => { setShowAddPhysical(false); refetchPhysical(); queryClient.invalidateQueries({ queryKey: ["physical-gifts"] }); }}
+                      onCancel={() => setShowAddPhysical(false)}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {physicalLoading ? (
+                <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
+                      <div className="h-3 w-36 bg-muted/50 rounded animate-pulse mb-2" />
+                      <div className="h-2.5 w-52 bg-muted/30 rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : !physicalGiftsData || physicalGiftsData.length === 0 ? (
+                !showAddPhysical && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center py-12 bg-card border border-border/60 rounded-xl px-6"
+                  >
+                    <Truck className="w-7 h-7 text-muted-foreground/40 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No packages yet</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">Add a tracking number to follow a gift in the mail</p>
+                    <button
+                      onClick={() => setShowAddPhysical(true)}
+                      className="mt-4 text-xs text-primary font-medium hover:opacity-80 transition-opacity"
+                    >
+                      + Add a package
+                    </button>
+                  </motion.div>
+                )
+              ) : (
+                <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                  {physicalGiftsData.map((pg, i) => (
+                    <PhysicalGiftCard
+                      key={pg.id}
+                      gift={pg}
+                      idx={i}
+                      onRefresh={() => refetchPhysical()}
+                      onHide={() => { queryClient.invalidateQueries({ queryKey: ["physical-gifts"] }); refetchPhysical(); }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* ── People tab ── */}
         {activeTab === "people" && (
           <div className="space-y-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="flex items-center justify-between"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Save contacts and occasion dates.</p>
                 <p className="text-xs text-muted-foreground/70">We'll remind you 7 days before each occasion.</p>
               </div>
-              <Button
-                size="sm"
-                onClick={() => setShowAddContact(true)}
-                className="rounded-full gap-1.5"
-              >
+              <Button size="sm" onClick={() => setShowAddContact(true)} className="rounded-full gap-1.5">
                 <UserPlus className="w-3.5 h-3.5" />
                 Add
               </Button>
@@ -1855,17 +1986,16 @@ export default function MyGiftsPage() {
             </AnimatePresence>
 
             {contactsLoading ? (
-              <div className="space-y-3">
+              <div className="border border-border/60 rounded-xl bg-card overflow-hidden px-4">
                 {[1, 2].map(i => (
-                  <div key={i} className="h-24 rounded-2xl bg-muted/40 animate-pulse" />
+                  <div key={i} className="h-16 border-b border-border/40 last:border-0 py-4">
+                    <div className="h-3 w-36 bg-muted/50 rounded animate-pulse mb-2" />
+                    <div className="h-2.5 w-24 bg-muted/30 rounded animate-pulse" />
+                  </div>
                 ))}
               </div>
             ) : !contactsData || contactsData.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-16 bg-card border border-border rounded-3xl px-6"
-              >
+              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-16 bg-card border border-border/60 rounded-2xl px-6">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <Users className="w-7 h-7 text-primary" />
                 </div>
@@ -1879,7 +2009,7 @@ export default function MyGiftsPage() {
                 </Button>
               </motion.div>
             ) : (
-              <div className="space-y-3">
+              <div className="border border-border/60 rounded-xl bg-card overflow-hidden px-5">
                 {contactsData.map((c, i) => (
                   <ContactCard key={c.id} contact={c} idx={i} onRefresh={() => refetchContacts()} />
                 ))}
