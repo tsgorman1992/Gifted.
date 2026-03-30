@@ -357,6 +357,68 @@ router.get("/gifted/my-gifts", async (req, res) => {
   }
 });
 
+// GET /api/gifted/notifications — derive notification feed from sender's gift activity
+router.get("/gifted/notifications", async (req, res) => {
+  const userId = (req as any).user?.id;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  try {
+    const rows = await db
+      .select({
+        id: gifts.id,
+        recipientName: gifts.recipientName,
+        giftTitle: gifts.giftTitle,
+        amount: gifts.amount,
+        openedAt: gifts.openedAt,
+        redeemedAt: gifts.redeemedAt,
+        reaction: gifts.reaction,
+        reactionAt: gifts.reactionAt,
+      })
+      .from(gifts)
+      .where(
+        and(
+          eq(gifts.senderUserId, userId),
+          eq(gifts.paid, true),
+          sql`(${gifts.senderHidden} IS NULL OR ${gifts.senderHidden} = false)`
+        )
+      );
+
+    type NotifItem = {
+      type: "opened" | "redeemed" | "reaction";
+      giftId: string;
+      recipientName: string;
+      giftTitle: string;
+      amount: string | null;
+      reaction?: string | null;
+      at: Date;
+    };
+
+    const items: NotifItem[] = [];
+
+    for (const g of rows) {
+      if (g.reactionAt && g.reaction) {
+        items.push({ type: "reaction", giftId: g.id, recipientName: g.recipientName, giftTitle: g.giftTitle, amount: g.amount, reaction: g.reaction, at: g.reactionAt });
+      }
+      if (g.redeemedAt) {
+        items.push({ type: "redeemed", giftId: g.id, recipientName: g.recipientName, giftTitle: g.giftTitle, amount: g.amount, at: g.redeemedAt });
+      }
+      if (g.openedAt) {
+        items.push({ type: "opened", giftId: g.id, recipientName: g.recipientName, giftTitle: g.giftTitle, amount: g.amount, at: g.openedAt });
+      }
+    }
+
+    items.sort((a, b) => b.at.getTime() - a.at.getTime());
+
+    res.json(items.slice(0, 40));
+  } catch (err) {
+    console.error("Error fetching notifications:", err);
+    res.status(500).json({ error: "Failed to fetch notifications" });
+  }
+});
+
 // PATCH /api/gifted/gifts/:id/claim — link an anonymous gift to the authenticated user
 router.patch("/gifted/gifts/:id/claim", async (req, res) => {
   const userId = (req as any).user?.id;

@@ -9,8 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Gift, LogOut, ChevronDown, Settings, Bell } from "lucide-react";
+import { User, Gift, LogOut, ChevronDown, Settings } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -52,13 +53,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <Gift className="w-3.5 h-3.5" />
                     My Gifts
                   </Link>
-                  <Link
-                    href="/my-gifts"
-                    aria-label="Notifications"
-                    className="relative flex items-center justify-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                  >
-                    <Bell className="w-4 h-4" />
-                  </Link>
+                  <NotificationBell />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-full">
