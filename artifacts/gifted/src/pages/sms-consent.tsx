@@ -64,7 +64,7 @@ export default function SmsConsentPage() {
           <div className="bg-muted/50 rounded-2xl p-4 space-y-1">
             <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Sample message sent</p>
             <p className="text-sm text-muted-foreground font-mono">
-              Your gifted. verification code is: 847291. Expires in 10 min. Do not share. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.
+              Your gifted. verification code is 847291. Expires in 10 min. Do not share it with anyone. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.
             </p>
           </div>
         </section>
