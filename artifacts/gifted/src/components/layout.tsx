@@ -43,6 +43,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
             gifted.
           </a>
           <nav className="flex items-center gap-3">
+            {/* Features link — always visible on sm+ */}
+            <Link
+              href="/features"
+              className={`hidden sm:block text-sm font-medium transition-colors px-3 py-1.5 rounded-full hover:bg-secondary ${location === "/features" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
+            >
+              Features
+            </Link>
+
             {!isLoading && (
               isAuthenticated && user ? (
                 <>
@@ -82,6 +90,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
+                        <Link href="/features" className="flex items-center gap-2 cursor-pointer sm:hidden">
+                          Features
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link href="/account" className="flex items-center gap-2 cursor-pointer">
                           <Settings className="w-4 h-4" />
                           Account settings
@@ -96,19 +109,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </DropdownMenu>
                 </>
               ) : (
-                <>
-                  <Link
-                    href="/features"
-                    className={`hidden sm:block text-sm font-medium transition-colors px-3 py-1.5 rounded-full hover:bg-secondary ${location === "/features" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
-                  >
-                    Features
-                  </Link>
-                  <Link href="/sign-in"
-                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Sign in
-                  </Link>
-                </>
+                <Link href="/sign-in"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Sign in
+                </Link>
               )
             )}
             <Button onClick={handleSendGift} className="rounded-full px-6 shadow-md hover:-translate-y-0.5 transition-transform duration-300">
@@ -119,17 +124,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </header>
       <main className="flex-1 w-full">{children}</main>
       <footer className="w-full bg-secondary/50 py-12 mt-auto">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col items-center md:items-start gap-2">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-start justify-between gap-8">
+          <div className="flex flex-col items-start gap-2">
             <span className="font-serif text-2xl font-bold">gifted.</span>
             <span className="text-sm text-muted-foreground">Personal in the moment. Flexible in the end.</span>
           </div>
-          <div className="flex gap-6 text-sm text-muted-foreground">
-            <Link href="/features" className="hover:text-foreground transition-colors">Features</Link>
-            <Link href="/terms"    className="hover:text-foreground transition-colors">Terms</Link>
-            <Link href="/privacy"  className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link href="/faq"      className="hover:text-foreground transition-colors">FAQ</Link>
-            <Link href="/contact"  className="hover:text-foreground transition-colors">Contact</Link>
+          <div className="flex flex-col sm:flex-row gap-8">
+            <div className="flex flex-col gap-2.5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Explore</p>
+              <Link href="/features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</Link>
+              <Link href="/faq"      className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</Link>
+              <Link href="/contact"  className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Legal</p>
+              <Link href="/terms"   className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
+              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+            </div>
           </div>
         </div>
       </footer>
