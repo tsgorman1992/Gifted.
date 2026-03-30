@@ -27,7 +27,14 @@ export type OccasionLike = { month: number | null; day: number | null; floatingK
 
 export function resolveOccasionDate(occ: OccasionLike): { month: number; day: number } {
   if (occ.floatingKey) {
-    return computeFloatingDate(occ.floatingKey, new Date().getFullYear());
+    const today = new Date();
+    const year  = today.getFullYear();
+    const thisYear = computeFloatingDate(occ.floatingKey, year);
+    // If this year's occurrence has already passed, show next year's date
+    if (new Date(year, thisYear.month - 1, thisYear.day) < today) {
+      return computeFloatingDate(occ.floatingKey, year + 1);
+    }
+    return thisYear;
   }
   return { month: occ.month!, day: occ.day! };
 }

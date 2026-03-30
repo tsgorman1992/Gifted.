@@ -22,7 +22,7 @@ router.get("/gifted/contacts", async (req, res) => {
       .select()
       .from(contactOccasions)
       .where(eq(contactOccasions.userId, userId))
-      .orderBy(asc(contactOccasions.month), asc(contactOccasions.day));
+      .orderBy(asc(contactOccasions.createdAt));
 
     const occasionsByContact = occasions.reduce<Record<string, typeof occasions>>((acc, o) => {
       if (!acc[o.contactId]) acc[o.contactId] = [];

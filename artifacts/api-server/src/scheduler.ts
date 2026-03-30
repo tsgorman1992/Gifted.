@@ -4,6 +4,24 @@ import { and, isNotNull, isNull, lte, eq, sql } from "drizzle-orm";
 import twilio from "twilio";
 import { sendSenderNudgeEmail, sendSenderSecondNudgeEmail, sendUnredeemedSenderEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail } from "./lib/email";
 
+// ─── Floating occasion date helpers (server-side) ─────────────────────────────
+
+function nthWeekdayOfMonth(year: number, month: number, weekday: number, n: number): number {
+  const d = new Date(year, month - 1, 1);
+  while (d.getDay() !== weekday) d.setDate(d.getDate() + 1);
+  d.setDate(d.getDate() + (n - 1) * 7);
+  return d.getDate();
+}
+
+function computeFloatingDate(floatingKey: string, year: number): { month: number; day: number } {
+  switch (floatingKey) {
+    case "mothers-day":  return { month: 5,  day: nthWeekdayOfMonth(year, 5,  0, 2) };
+    case "fathers-day":  return { month: 6,  day: nthWeekdayOfMonth(year, 6,  0, 3) };
+    case "thanksgiving": return { month: 11, day: nthWeekdayOfMonth(year, 11, 4, 4) };
+    default:             return { month: 1,  day: 1 };
+  }
+}
+
 interface TrackingEvent {
   status: string;
   message: string;
@@ -447,7 +465,8 @@ async function sendOccasionReminders() {
       const targetMonth = target.getMonth() + 1;
       const targetDay = target.getDate();
 
-      const upcoming = await db
+      // Fixed-date occasions matching today/7d
+      const fixedUpcoming = await db
         .select({
           occasionId: contactOccasions.id,
           occasionLabel: contactOccasions.label,
@@ -465,6 +484,33 @@ async function sendOccasionReminders() {
             eq(contactOccasions.day, targetDay),
           )
         );
+
+      // Floating occasions — fetch all and filter by computed date
+      const allFloating = await db
+        .select({
+          occasionId: contactOccasions.id,
+          occasionLabel: contactOccasions.label,
+          floatingKey: contactOccasions.floatingKey,
+          lastReminderSentYear: contactOccasions.lastReminderSentYear,
+          contactName: contacts.name,
+          userEmail: usersTable.email,
+          userFirstName: usersTable.firstName,
+        })
+        .from(contactOccasions)
+        .innerJoin(contacts, eq(contactOccasions.contactId, contacts.id))
+        .innerJoin(usersTable, eq(contactOccasions.userId, usersTable.id))
+        .where(isNotNull(contactOccasions.floatingKey));
+
+      const floatingUpcoming = allFloating.filter(occ => {
+        if (!occ.floatingKey) return false;
+        const { month, day } = computeFloatingDate(occ.floatingKey, currentYear);
+        return month === targetMonth && day === targetDay;
+      });
+
+      const upcoming = [
+        ...fixedUpcoming,
+        ...floatingUpcoming.map(o => ({ ...o, floatingKey: undefined })),
+      ];
 
       for (const occ of upcoming) {
         if (!occ.userEmail) continue;
