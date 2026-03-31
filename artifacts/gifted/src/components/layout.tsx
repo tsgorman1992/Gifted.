@@ -125,8 +125,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen w-full flex flex-col bg-background selection:bg-primary/20">
       <header className="sticky top-0 z-50 w-full glass-panel border-b-0 shadow-sm transition-all duration-300">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Logo — desktop only; removed on mobile to free up nav space */}
-          <a href="/" onClick={handleLogoClick} className="hidden sm:block font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-80 transition-opacity cursor-pointer">
+          <a href="/" onClick={handleLogoClick} className="font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-80 transition-opacity cursor-pointer">
             gifted.
           </a>
 
