@@ -125,19 +125,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen w-full flex flex-col bg-background selection:bg-primary/20">
       <header className="sticky top-0 z-50 w-full glass-panel border-b-0 shadow-sm transition-all duration-300">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-          <a href="/" onClick={handleLogoClick} className="font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-80 transition-opacity cursor-pointer">
+          {/* Logo — desktop only; removed on mobile to free up nav space */}
+          <a href="/" onClick={handleLogoClick} className="hidden sm:block font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-80 transition-opacity cursor-pointer">
             gifted.
           </a>
 
           <nav className="flex items-center gap-3">
-            {/* Home icon — always visible on desktop; on mobile only when NOT signed in */}
+            {/* Home — text link on desktop only */}
             <a
               href="/"
               onClick={handleLogoClick}
-              title="Home"
-              className={`${isAuthenticated ? "hidden sm:flex" : "flex"} items-center justify-center w-9 h-9 rounded-full transition-colors hover:bg-secondary ${location === "/" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
+              className={`hidden sm:flex items-center gap-1.5 text-sm font-medium transition-colors px-3 py-1.5 rounded-full hover:bg-secondary ${location === "/" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
             >
-              <House className="w-4 h-4" />
+              <House className="w-3.5 h-3.5" />
+              Home
             </a>
 
             {/* Features — always show on desktop; on mobile only show when NOT signed in (signed-in users get it in the dropdown) */}
