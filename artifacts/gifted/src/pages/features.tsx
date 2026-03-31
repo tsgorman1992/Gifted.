@@ -442,7 +442,7 @@ function TrackingSection() {
             ].map((f, i) => (
               <motion.div key={f.title} {...fadeUp(0.1 + i * 0.07)} className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                  <f.icon className="w-4 h-4 text-primary" />
+                  <f.icon className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">{f.title}</p>
