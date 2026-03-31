@@ -82,14 +82,20 @@ export default function SignInPage() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
+        <div className="text-center mb-3">
+          <a href="/" className="font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-70 transition-opacity">
+            gifted.
+          </a>
+        </div>
+
         <div className="text-center mb-8">
           <h1 className="font-serif text-4xl font-medium mb-2">
             {mode === "sign-in" ? "Welcome back." : "Create an account."}
           </h1>
           <p className="text-muted-foreground text-base leading-relaxed">
             {mode === "sign-in"
-              ? "Sign in to track your sent gifts and create new moments."
-              : "Start sending unforgettable gift experiences."}
+              ? "Sign in to track your moments and create new ones."
+              : "Start sending moments people won't forget."}
           </p>
         </div>
 

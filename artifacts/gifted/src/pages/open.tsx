@@ -143,7 +143,7 @@ export default function OpenPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground text-sm">Loading your gift...</p>
+        <p className="text-muted-foreground text-sm">Opening your moment...</p>
       </div>
     );
   }
@@ -154,7 +154,7 @@ export default function OpenPage() {
         <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
           <AlertCircle className="w-8 h-8 text-destructive" />
         </div>
-        <h1 className="font-serif text-3xl mb-3">Gift not found</h1>
+        <h1 className="font-serif text-3xl mb-3">Moment not found</h1>
         <p className="text-muted-foreground mb-8 max-w-sm">
           {errorMsg}. The link may have expired or been entered incorrectly.
         </p>
@@ -188,7 +188,7 @@ export default function OpenPage() {
         <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
           <Gift className="w-9 h-9 text-primary" />
         </div>
-        <h1 className="font-serif text-3xl mb-3">Your gift for {giftRecipientName}</h1>
+        <h1 className="font-serif text-3xl mb-3">Your moment for {giftRecipientName}</h1>
         <p className="text-muted-foreground mb-6 max-w-sm">
           Share the link below when you're ready. <span className="font-medium text-foreground">{giftRecipientName}</span> will see the full surprise when they open it.
         </p>
@@ -206,7 +206,7 @@ export default function OpenPage() {
           <div className="flex gap-3">
             <Link href="/my-gifts" className="flex-1">
               <Button variant="outline" className="rounded-xl w-full">
-                Back to dashboard
+                Your moments
               </Button>
             </Link>
             <Link href="/" className="flex-1">

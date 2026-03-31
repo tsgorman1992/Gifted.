@@ -17,7 +17,7 @@ const PHOTOS = [
 
 const HOW_STEPS = [
   { icon: Heart,      label: "Build the moment",   desc: "Write a note that sounds like you. Add a video message, photos, or link anything — concert tickets, a restaurant reservation, a song." },
-  { icon: Gift,       label: "Add a real balance",  desc: "Fund it with whatever feels right. Add a spending intention like 'Coffee on me' or 'Date night' so they know it was thoughtful, not lazy." },
+  { icon: Gift,       label: "Add a balance",  desc: "Fund it with whatever feels right. Add a spending intention like 'Coffee on me' or 'Date night' so they know it was thoughtful, not lazy." },
   { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they provide their payout details and our team sends the balance directly to them — same day." },
 ];
 
@@ -25,7 +25,7 @@ const FEATURES = [
   { icon: Play,       title: "Video Messages",  desc: "Record a heartfelt message they can keep forever." },
   { icon: ImageIcon,  title: "Photo Memories",  desc: "Add up to 6 photos to remind them of the good times." },
   { icon: Link2,      title: "Add Any Link",     desc: "Concert tickets, a dinner reservation, a song — anything with a URL becomes part of the gift." },
-  { icon: CreditCard, title: "Flexible Funds",  desc: "No more restrictive gift cards. Recipients choose Venmo, Cash App, PayPal, or Zelle — and we send the balance same day." },
+  { icon: CreditCard, title: "Their balance",  desc: "No gift cards, no restrictions. Recipients choose Venmo, Cash App, PayPal, or Zelle — and we send the balance same day." },
 ];
 
 const LINK_DEMOS = [

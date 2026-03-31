@@ -283,7 +283,7 @@ export default function RedeemPage() {
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                   <ShieldCheck className="w-8 h-8 text-primary" />
                 </div>
-                <h1 className="font-serif text-5xl font-medium">Verify to Claim</h1>
+                <h1 className="font-serif text-5xl font-medium">Verify to claim</h1>
                 <p className="text-lg text-muted-foreground max-w-sm mx-auto">
                   To protect the{" "}
                   <span className="font-semibold text-foreground">${displayAmount}</span>{" "}
@@ -528,7 +528,7 @@ export default function RedeemPage() {
               animate={{ opacity: 1, y: 0 }}
               className="text-center space-y-6 mt-12"
             >
-              <h1 className="font-serif text-5xl font-medium">Enjoy the gift!</h1>
+              <h1 className="font-serif text-5xl font-medium">Enjoy the moment!</h1>
               <p className="text-xl text-muted-foreground">No balance attached — nothing to collect here.</p>
               <Link href="/">
                 <Button variant="outline" className="rounded-full h-12 px-8">Back to home</Button>
