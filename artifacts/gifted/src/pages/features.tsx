@@ -602,7 +602,7 @@ function PayoutSection() {
               </div>
               <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 border border-green-100">
                 <Zap className="w-4 h-4 text-green-600 shrink-0" />
-                <p className="text-xs text-green-800 font-medium">Sent same day — usually within hours</p>
+                <p className="text-xs text-green-800 font-medium">Sent same day</p>
               </div>
             </div>
           </div>
@@ -618,7 +618,7 @@ function PayoutSection() {
               Real money. Their way. <span className="text-primary italic">Same day.</span>
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed">
-              No gift cards. No restrictions. No waiting. Recipients choose how they want to receive the balance — Venmo, Cash App, PayPal, or Zelle — and we send it directly to them, usually within hours.
+              No gift cards. No restrictions. No waiting. Recipients choose how they want to receive the balance — Venmo, Cash App, PayPal, or Zelle — and we send it directly to them, same day.
             </p>
           </motion.div>
 
@@ -727,7 +727,7 @@ function MobileFeaturesScroll() {
             Real money. Their way. <span className="text-primary italic">Same day.</span>
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-            No gift cards, no restrictions. They pick Venmo, Cash App, PayPal, or Zelle — and we send it directly, usually within hours.
+            No gift cards, no restrictions. They pick Venmo, Cash App, PayPal, or Zelle — and we send it directly, same day.
           </p>
         </motion.div>
 
@@ -754,7 +754,7 @@ function MobileFeaturesScroll() {
             </div>
             <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 border border-green-100">
               <Zap className="w-4 h-4 text-green-600 shrink-0" />
-              <p className="text-xs text-green-800 font-medium">Sent same day — usually within hours</p>
+              <p className="text-xs text-green-800 font-medium">Sent same day</p>
             </div>
           </div>
         </motion.div>
