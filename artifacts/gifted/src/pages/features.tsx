@@ -59,7 +59,7 @@ function HeroSection({ onStart }: { onStart: () => void }) {
             </motion.div>
 
             <motion.h1 {...fadeUp(0.1)} className="font-serif text-4xl md:text-6xl lg:text-7xl font-medium leading-[1.1] text-white mb-5">
-              Your gifts. <br />
+              Your moments. <br />
               <span style={{ color: "hsl(28,75%,65%)" }} className="italic">Tracked. Timed.<br />Remembered.</span>
             </motion.h1>
 
