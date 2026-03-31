@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2 } from "lucide-react";
+import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -233,6 +233,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/features" className="flex items-center gap-2 cursor-pointer sm:hidden">
+                          <Sparkles className="w-4 h-4" />
                           Features
                         </Link>
                       </DropdownMenuItem>
