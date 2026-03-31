@@ -1,5 +1,17 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { useEffect } from "react";
+
+// Redirect /reveal?giftId=xxx → /open/xxx so auto-save and account-linking run correctly
+function RevealRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    const giftId = new URLSearchParams(window.location.search).get("giftId");
+    if (giftId) {
+      setLocation(`/open/${giftId}`, { replace: true });
+    }
+  }, [setLocation]);
+  return null;
+}
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,7 +28,6 @@ function ScrollToTop() {
 import LandingPage  from "@/pages/landing";
 import CreatePage   from "@/pages/create";
 import PreviewPage  from "@/pages/preview";
-import RevealPage   from "@/pages/reveal";
 import OpenPage     from "@/pages/open";
 import RedeemPage   from "@/pages/redeem";
 import FaqPage      from "@/pages/faq";
@@ -40,7 +51,7 @@ function Router() {
         <Route path="/"          component={LandingPage}  />
         <Route path="/create"    component={CreatePage}   />
         <Route path="/preview"   component={PreviewPage}  />
-        <Route path="/reveal"    component={RevealPage}   />
+        <Route path="/reveal"    component={RevealRedirect} />
         <Route path="/open/:id"  component={OpenPage}     />
         <Route path="/redeem"    component={RedeemPage}   />
         <Route path="/faq"       component={FaqPage}      />
