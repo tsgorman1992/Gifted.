@@ -1271,7 +1271,7 @@ function playExperienceSound(exp: string) {
 function ScrollHint({ isDark }: { isDark: boolean }) {
   const [visible, setVisible] = React.useState(true);
   React.useEffect(() => {
-    const t = setTimeout(() => setVisible(false), 3000);
+    const t = setTimeout(() => setVisible(false), 5000);
     return () => clearTimeout(t);
   }, []);
   return (
@@ -1517,10 +1517,13 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const [linkCopied, setLinkCopied]       = useState<Record<number, boolean>>({});
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
   const [extraLinks, setExtraLinks]       = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
-  const [recipientName, setRecipientName] = useState(mockGiftData.recipientName);
-  const [senderName, setSenderName]       = useState(mockGiftData.senderName);
-  const [giftTitle, setGiftTitle]         = useState(mockGiftData.title);
-  const [experience, setExperience]       = useState(DEFAULT_EXPERIENCE);
+  const [recipientName, setRecipientName] = useState(() => localStorage.getItem("gifted_recipient_name") || mockGiftData.recipientName);
+  const [senderName, setSenderName]       = useState(() => localStorage.getItem("gifted_sender_name") || mockGiftData.senderName);
+  const [giftTitle, setGiftTitle]         = useState(() => localStorage.getItem("gifted_gift_title") || mockGiftData.title);
+  const [experience, setExperience]       = useState(() => {
+    const stored = localStorage.getItem("gifted_experience");
+    return (stored && CONFIGS[stored]) ? stored : DEFAULT_EXPERIENCE;
+  });
   const [giftAmount, setGiftAmount]       = useState<string | null>(null);
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
   const [giftPaid, setGiftPaid]           = useState<boolean>(true);
@@ -1603,6 +1606,34 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
 
     if (resolvedGiftId) {
       setGiftId(resolvedGiftId);
+
+      // Pre-populate from localStorage immediately so the pre-reveal shows real data
+      // while the API fetch (below) is still in flight. This eliminates the flash of
+      // mock names ("Sarah / Jamie") on slow connections.
+      const lsNote = localStorage.getItem("gifted_personal_note");
+      if (lsNote) setPersonalNote(lsNote);
+
+      const lsAmt = localStorage.getItem("gifted_amount");
+      if (lsAmt && parseFloat(lsAmt) > 0) setGiftAmount(lsAmt);
+
+      const lsIntent = localStorage.getItem("gifted_intent");
+      if (lsIntent) setGiftIntent(lsIntent);
+
+      const lsLinksRaw = localStorage.getItem("gifted_extra_links");
+      if (lsLinksRaw) {
+        try {
+          const parsed = JSON.parse(lsLinksRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const normalized = parsed
+              .map((item: string | {url: string; label: string; subtitle?: string}) =>
+                typeof item === "string" ? { url: item, label: "" } : item
+              )
+              .filter((l: {url: string}) => l.url);
+            if (normalized.length > 0) setExtraLinks(normalized);
+          }
+        } catch { /* ignore */ }
+      }
+
       // Mark as opened (only for real opens, not preview mode)
       if (!isPreviewMode) {
         fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}/opened`, {
@@ -2040,7 +2071,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
                     transition={{ duration: 0.12 }}
                     className="relative z-10"
                   >
-                    {experience === "midnight-stars" ? "Reveal" : experience === "snow-flurry" ? "Open" : "Tap to open"}
+                    {experience === "midnight-stars" ? "Reveal" : "Open your moment"}
                   </motion.span>
                   {/* Shimmer sweep — loops every 3.5s */}
                   {!isOpening && (

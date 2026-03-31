@@ -620,17 +620,14 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
                   ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
                   : `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
             </span>
-            <div className="flex items-center gap-0.5 shrink-0">
-              <a
-                href={`${window.location.origin}${BASE}/open/${gift.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open gift"
-                onClick={(e) => e.stopPropagation()}
-                className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={(e) => { e.stopPropagation(); setLocation(`/open/${gift.id}`); }}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
               >
-                <ExternalLink className="w-4 h-4" />
-              </a>
+                <Eye className="w-3.5 h-3.5" />
+                {gift.openedAt ? "Watch again" : "Open"}
+              </button>
               <button
                 title="Remove from received gifts"
                 onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
