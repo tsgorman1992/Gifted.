@@ -173,10 +173,12 @@ export default function OpenPage() {
   const isPreviewMode = new URLSearchParams(window.location.search).get("preview") === "true";
 
   const handleSenderCopy = async () => {
-    // Copy the clean shareable link (strip ?preview=true)
-    const url = new URL(window.location.href);
-    url.searchParams.delete("preview");
-    await navigator.clipboard.writeText(url.toString());
+    // Always copy the /api/share/:id URL — this is the OG-enabled link
+    // that generates the gift-specific preview card in iMessage, WhatsApp, etc.
+    // Never copy window.location.href (/open/:id) — that's the React SPA and
+    // returns the generic index.html with no gift-specific OG tags.
+    const shareUrl = `${window.location.origin}${BASE}/api/share/${giftId}`;
+    await navigator.clipboard.writeText(shareUrl);
     setSenderCopied(true);
     setTimeout(() => setSenderCopied(false), 2000);
   };
