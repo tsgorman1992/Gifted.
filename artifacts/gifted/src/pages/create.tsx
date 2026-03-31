@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone, Play,
 } from "lucide-react";
 import QRCodeLib from "qrcode";
 import { useUpload } from "@workspace/object-storage-web";
@@ -76,6 +76,7 @@ const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
 const ACCEPTED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 
 const LINK_IDEAS = [
+  "YouTube video...",
   "Spotify playlist...",
   "Concert tickets...",
   "Dinner reservation...",
@@ -86,7 +87,6 @@ const LINK_IDEAS = [
   "Apple Music mix...",
   "Event link...",
   "Podcast episode...",
-  "YouTube video...",
   "SoundCloud track...",
   "Anything with a URL...",
 ];
@@ -1919,6 +1919,18 @@ export default function CreatePage() {
                                 {linkErrors[idx]}
                               </p>
                             )}
+                            {link.url.trim() && !hasError && (link.url.includes("youtube.com") || link.url.includes("youtu.be")) && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex items-center gap-1.5 pl-1"
+                              >
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-full px-2.5 py-1">
+                                  <Play className="w-3 h-3 fill-red-600" />
+                                  Plays inline — no tap required
+                                </div>
+                              </motion.div>
+                            )}
                             {link.url.trim() && !hasError && (
                               <Input
                                 placeholder='Label — e.g. "Your birthday dinner at Nobu"'
@@ -1944,7 +1956,7 @@ export default function CreatePage() {
                         <Plus className="w-3.5 h-3.5" /> Add another link
                       </button>
                     )}
-                    <p className="text-xs text-muted-foreground">Each link shows as a tap-to-open card in their gift — perfect for layering experiences.</p>
+                    <p className="text-xs text-muted-foreground">Each link shows as a tap-to-open card in their gift — YouTube links play inline right inside the moment.</p>
                   </div>
                 </div>
 
