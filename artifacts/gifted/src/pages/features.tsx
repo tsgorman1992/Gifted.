@@ -642,7 +642,7 @@ function PayoutSection() {
               <Zap className="w-3 h-3" /> Same-day payouts
             </div>
             <h2 className="font-serif text-3xl md:text-5xl font-medium leading-tight mb-4">
-              Real money. Their way. <span className="text-primary italic">Same day.</span>
+              Their balance. Their way. <span className="text-primary italic">Same day.</span>
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed">
               No gift cards. No restrictions. No waiting. Recipients choose how they want to receive the balance — Venmo, Cash App, PayPal, or Zelle — and we send it directly to them, same day.
@@ -751,7 +751,7 @@ function MobileFeaturesScroll() {
             <Zap className="w-3 h-3" /> Same-day payouts
           </div>
           <h2 className="font-serif text-2xl font-medium leading-snug mb-2">
-            Real money. Their way. <span className="text-primary italic">Same day.</span>
+            Their balance. Their way. <span className="text-primary italic">Same day.</span>
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
             No gift cards, no restrictions. They pick Venmo, Cash App, PayPal, or Zelle — and we send it directly, same day.
