@@ -73,8 +73,8 @@ function HeroSection({ onStart }: { onStart: () => void }) {
             </motion.div>
           </div>
 
-          {/* right — dashboard preview mockup (desktop only) */}
-          <motion.div {...fadeUp(0.15)} className="w-full hidden lg:block">
+          {/* right — dashboard preview mockup */}
+          <motion.div {...fadeUp(0.15)} className="w-full">
             <PhoneFrame className="w-full">
               <div className="p-4 space-y-3 pb-6">
                 {/* mini header */}
@@ -643,92 +643,6 @@ function PayoutSection() {
   );
 }
 
-// ─── Mobile-only compact feature grid ─────────────────────────────────────────
-function MobileFeatureGrid() {
-  const features = [
-    {
-      icon: Gift,
-      title: "Full gift moment",
-      desc: "Note, video, photos, a link, and real cash — all in one experience.",
-    },
-    {
-      icon: Clock,
-      title: "Build ahead",
-      desc: "Create it now, share it when the moment arrives.",
-    },
-    {
-      icon: Bell,
-      title: "Live tracking",
-      desc: "Know the second they open it, redeem it, or react.",
-    },
-    {
-      icon: Cake,
-      title: "Occasion reminders",
-      desc: "We remind you 3 days before and the morning of every occasion.",
-    },
-    {
-      icon: Users,
-      title: "Gifting circle",
-      desc: "Everyone you gift, their history, and upcoming occasions — organized.",
-    },
-    {
-      icon: Zap,
-      title: "Same-day payouts",
-      desc: "Venmo, Cash App, PayPal, or Zelle. Sent directly, same day.",
-    },
-  ];
-
-  return (
-    <section className="lg:hidden w-full px-5 py-10 bg-background">
-      {/* 6-feature grid */}
-      <div className="grid grid-cols-2 gap-3 mb-8">
-        {features.map((f, i) => (
-          <motion.div
-            key={f.title}
-            {...fadeUp(i * 0.04)}
-            className="p-4 rounded-2xl border border-border bg-card"
-          >
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
-              <f.icon className="w-4 h-4 text-primary" />
-            </div>
-            <p className="text-sm font-semibold mb-1 leading-snug">{f.title}</p>
-            <p className="text-xs text-muted-foreground leading-snug">{f.desc}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* What's in a gift */}
-      <motion.div {...fadeUp(0.24)} className="rounded-2xl border border-border p-4 bg-secondary/40 mb-6">
-        <p className="text-sm font-semibold mb-3">What goes into a gift?</p>
-        <div className="grid grid-cols-2 gap-y-2.5">
-          {[
-            { icon: MessageSquare, label: "Personal note" },
-            { icon: Play,          label: "Video message" },
-            { icon: ImageIcon,     label: "Up to 6 photos" },
-            { icon: Link2,         label: "Any link" },
-            { icon: CreditCard,    label: "Cash balance" },
-          ].map(f => (
-            <div key={f.label} className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <f.icon className="w-3 h-3 text-primary" />
-              </div>
-              <span className="text-xs font-medium">{f.label}</span>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Trust chips */}
-      <motion.div {...fadeUp(0.3)} className="flex flex-wrap justify-center gap-2">
-        {["No account needed", "5% fee only", "Same-day payouts"].map(t => (
-          <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary text-xs text-muted-foreground">
-            <Check className="w-3 h-3 text-primary" />{t}
-          </span>
-        ))}
-      </motion.div>
-    </section>
-  );
-}
 
 // ─── Section: Final CTA ───────────────────────────────────────────────────────
 function CtaSection({ onStart }: { onStart: () => void }) {
@@ -771,17 +685,12 @@ export default function FeaturesPage() {
   return (
     <div className="w-full flex flex-col">
       <HeroSection onStart={handleStart} />
-      {/* Mobile: compact feature grid replaces the 6 full sections below */}
-      <MobileFeatureGrid />
-      {/* Desktop: full editorial sections with mockups */}
-      <div className="hidden lg:block">
-        <GiftMomentSection />
-        <ScheduledSection />
-        <TrackingSection />
-        <OccasionSection />
-        <GiftingCircleSection />
-        <PayoutSection />
-      </div>
+      <GiftMomentSection />
+      <ScheduledSection />
+      <TrackingSection />
+      <OccasionSection />
+      <GiftingCircleSection />
+      <PayoutSection />
       <CtaSection onStart={handleStart} />
     </div>
   );
