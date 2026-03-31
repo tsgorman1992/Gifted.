@@ -64,7 +64,7 @@ function HeroSection({ onStart }: { onStart: () => void }) {
             </motion.h1>
 
             <motion.p {...fadeUp(0.2)} className="text-base md:text-xl text-white/60 max-w-lg mb-8 leading-relaxed">
-              gifted. is more than a gift builder — it's the layer between you and the people who matter most. Personal moments, real money, birthday reminders, live tracking. All in one place.
+              gifted. is more than a gift builder — it's the layer between you and the people who matter most. Personal moments, spendable balance, birthday reminders, live tracking. All in one place.
             </motion.p>
 
             <motion.div {...fadeUp(0.28)} className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -76,9 +76,9 @@ function HeroSection({ onStart }: { onStart: () => void }) {
               </Button>
             </motion.div>
 
-            <motion.div {...fadeUp(0.35)} className="flex flex-wrap gap-x-6 gap-y-2 mt-6 text-xs text-white/40">
+            <motion.div {...fadeUp(0.35)} className="flex flex-wrap gap-x-6 gap-y-2 mt-6 text-xs text-white">
               {["No account needed to start", "Same-day payouts", "Free to try"].map(t => (
-                <span key={t} className="flex items-center gap-1.5"><Check className="w-3 h-3 text-primary/70" />{t}</span>
+                <span key={t} className="flex items-center gap-1.5"><Check className="w-3 h-3 text-primary" />{t}</span>
               ))}
             </motion.div>
           </div>
