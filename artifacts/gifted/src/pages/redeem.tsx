@@ -250,11 +250,11 @@ export default function RedeemPage() {
         </div>
         <h1 className="font-serif text-4xl font-medium mb-3">Already redeemed</h1>
         <p className="text-muted-foreground max-w-sm mb-8">
-          This gift has already been redeemed. If you think this is a mistake, please contact{" "}
+          This moment has already been redeemed. If you think this is a mistake, please contact{" "}
           <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a>.
         </p>
         <Link href={giftId ? `/open/${giftId}` : "/"}>
-          <Button variant="outline" className="rounded-full h-12 px-8">Back to gift</Button>
+          <Button variant="outline" className="rounded-full h-12 px-8">Back to moment</Button>
         </Link>
       </div>
     );
@@ -265,7 +265,7 @@ export default function RedeemPage() {
       <div className="max-w-5xl mx-auto w-full">
 
         <Link href={giftId ? `/open/${giftId}` : "/"} className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-10 transition-colors">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to gift
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to moment
         </Link>
 
         <AnimatePresence mode="wait">
@@ -297,7 +297,7 @@ export default function RedeemPage() {
                     We'll send a one-time code to the phone number on file.
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    This is the number the sender entered when creating your gift. The code expires in 10 minutes.
+                    This is the number the sender entered when creating your moment. The code expires in 10 minutes.
                   </p>
                 </div>
 

@@ -56,7 +56,7 @@ export default function OpenPage() {
       .then(async (res) => {
         if (!res.ok) {
           setStatus("error");
-          setErrorMsg(res.status === 404 ? "This gift could not be found" : "Something went wrong loading this gift");
+          setErrorMsg(res.status === 404 ? "This moment could not be found" : "Something went wrong loading this moment");
           return;
         }
         const gift = await res.json();
@@ -105,7 +105,7 @@ export default function OpenPage() {
       })
       .catch(() => {
         setStatus("error");
-        setErrorMsg("Something went wrong loading this gift");
+        setErrorMsg("Something went wrong loading this moment");
       });
   }, [id]);
 
@@ -200,7 +200,7 @@ export default function OpenPage() {
             {senderCopied ? (
               <><Check className="w-4 h-4" /> Copied!</>
             ) : (
-              <><Copy className="w-4 h-4" /> Copy gift link</>
+              <><Copy className="w-4 h-4" /> Copy link</>
             )}
           </Button>
           <div className="flex gap-3">
@@ -240,7 +240,7 @@ export default function OpenPage() {
               <Gift className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-tight">Save this gift</p>
+              <p className="font-semibold text-sm leading-tight">Save this moment</p>
               <p className="text-xs text-muted-foreground">Sign in to keep it in your account</p>
             </div>
             <Button size="sm" className="rounded-full gap-1.5 shrink-0" onClick={handleSaveToAccount}>
@@ -280,7 +280,7 @@ export default function OpenPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm leading-tight">Gift already claimed</p>
-              <p className="text-xs text-muted-foreground">This gift was saved by another account</p>
+              <p className="text-xs text-muted-foreground">This moment was saved by another account</p>
             </div>
           </div>
         </div>
