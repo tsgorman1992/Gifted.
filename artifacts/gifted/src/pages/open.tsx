@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Gift, LogIn, Copy, Check } from "lucide-react";
+import { Loader2, AlertCircle, Gift, LogIn, Copy, Check, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 const RevealPage = React.lazy(() => import("@/pages/reveal"));
@@ -44,6 +44,7 @@ export default function OpenPage() {
   const [revealed, setRevealed] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "claimed">("idle");
   const [senderCopied, setSenderCopied] = useState(false);
+  const [savePromptDismissed, setSavePromptDismissed] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -234,8 +235,10 @@ export default function OpenPage() {
         <RevealPage onRevealComplete={handleRevealComplete} />
       </React.Suspense>
 
-      {/* Save-to-account prompt — shown after reveal for signed-out users */}
-      {revealed && !authLoading && !isAuthenticated && (
+      {/* Save-to-account prompt — shown as soon as gift loads for signed-out users.
+          Intentionally NOT gated on `revealed` — if the user closes the tab before
+          finishing the reveal they should have already had a chance to save it. */}
+      {status === "ready" && !authLoading && !isAuthenticated && !savePromptDismissed && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -249,6 +252,13 @@ export default function OpenPage() {
               <LogIn className="w-3.5 h-3.5" />
               Sign in
             </Button>
+            <button
+              onClick={() => setSavePromptDismissed(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0 -mr-1"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
