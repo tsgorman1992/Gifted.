@@ -2271,7 +2271,7 @@ export default function MyGiftsPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Save contacts and occasion dates.</p>
-                <p className="text-xs text-muted-foreground/70">We'll remind you 7 days before each occasion.</p>
+                <p className="text-xs text-muted-foreground/70">We'll remind you 7 days before each occasion and again on the day.</p>
               </div>
               <Button size="sm" onClick={() => setShowAddContact(true)} className="rounded-full gap-1.5">
                 <UserPlus className="w-3.5 h-3.5" />
