@@ -461,8 +461,8 @@ async function sendOccasionReminders() {
     const utcHour = now.getUTCHours();
 
     for (const daysAway of REMINDER_DAYS) {
-      // Day-of reminders are gated to 10–11am UTC to avoid midnight surprises
-      if (daysAway === 0 && (utcHour < 10 || utcHour >= 11)) continue;
+      // Day-of reminders are gated to 14–15 UTC (= 9am EST / 10am EDT)
+      if (daysAway === 0 && (utcHour < 14 || utcHour >= 15)) continue;
 
       const target = new Date(now);
       target.setDate(target.getDate() + daysAway);
