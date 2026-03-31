@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Bell, Calendar, Gift, Heart, Play, Image as ImageIcon, Link2, CreditCard,
   ArrowRight, Check, Cake, Users, Sparkles, Clock, Zap, MessageSquare,
-  ChevronRight, PartyPopper, Smile,
+  ChevronRight, PartyPopper, Smile, ChevronDown,
 } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
 
@@ -45,6 +45,18 @@ function PhoneFrame({ children, className = "" }: { children: React.ReactNode; c
 
 // ─── Section: Hero ────────────────────────────────────────────────────────────
 function HeroSection({ onStart }: { onStart: () => void }) {
+  const [atTop, setAtTop] = useState(true);
+
+  useEffect(() => {
+    const onScroll = () => setAtTop(window.scrollY < 60);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  function scrollToFeatures() {
+    document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   return (
     <section className="w-full relative overflow-hidden" style={{ background: "linear-gradient(160deg, #1a1209 0%, #2c1a08 50%, #1a1209 100%)" }}>
       {/* ambient glow */}
@@ -144,6 +156,33 @@ function HeroSection({ onStart }: { onStart: () => void }) {
           </motion.div>
         </div>
       </div>
+
+      {/* Scroll indicator — fixed to viewport bottom, fades out as soon as the user scrolls */}
+      <AnimatePresence>
+        {atTop && (
+          <motion.button
+            key="scroll-hint"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
+            onClick={scrollToFeatures}
+            aria-label="Scroll to features"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1 group"
+          >
+            <span className="text-[11px] font-medium text-white/40 group-hover:text-white/70 transition-colors tracking-wide uppercase">
+              Scroll to explore
+            </span>
+            <motion.div
+              animate={{ y: [0, 6, 0] }}
+              transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+              className="w-8 h-8 rounded-full border border-white/20 bg-white/5 flex items-center justify-center group-hover:border-white/40 group-hover:bg-white/10 transition-colors"
+            >
+              <ChevronDown className="w-4 h-4 text-white/50 group-hover:text-white/80 transition-colors" />
+            </motion.div>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
