@@ -48,32 +48,53 @@ export function Layout({ children }: { children: React.ReactNode }) {
   async function handlePhotoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Photo must be under 5 MB.");
-      return;
-    }
 
     setUploadState("uploading");
     try {
+      // Compress if over 1.5 MB — phone cameras produce 8-15 MB photos
+      let uploadBlob: Blob = file;
+      if (file.size > 1.5 * 1024 * 1024) {
+        uploadBlob = await new Promise<Blob>((resolve, reject) => {
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            const MAX = 1200;
+            let { width, height } = img;
+            if (width > MAX || height > MAX) {
+              if (width >= height) { height = Math.round(height * MAX / width); width = MAX; }
+              else { width = Math.round(width * MAX / height); height = MAX; }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(b => b ? resolve(b) : reject(new Error("Compression failed")), "image/jpeg", 0.85);
+          };
+          img.onerror = reject;
+          img.src = url;
+        });
+      }
+
       // 1. Request presigned upload URL
       const reqRes = await fetch(`${BASE}/api/storage/uploads/request-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          name: file.name,
-          size: file.size,
-          contentType: file.type || "image/jpeg",
+          name: "profile.jpg",
+          size: uploadBlob.size,
+          contentType: "image/jpeg",
         }),
       });
       if (!reqRes.ok) throw new Error("Could not get upload URL");
       const { uploadURL, objectPath } = await reqRes.json() as { uploadURL: string; objectPath: string };
 
-      // 2. Upload the file directly
+      // 2. Upload the (possibly compressed) blob
       const uploadRes = await fetch(uploadURL, {
         method: "PUT",
-        headers: { "Content-Type": file.type || "image/jpeg" },
-        body: file,
+        headers: { "Content-Type": "image/jpeg" },
+        body: uploadBlob,
       });
       if (!uploadRes.ok) throw new Error("Upload failed");
 
