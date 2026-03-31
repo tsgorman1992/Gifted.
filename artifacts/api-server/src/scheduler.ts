@@ -456,13 +456,14 @@ async function sendOccasionReminders() {
     const now = new Date();
     const currentYear = now.getFullYear();
 
-    // 7-day advance + day-of (day-of only fires 10–11am UTC)
+    // 7-day advance + day-of, both gated to 12–13 UTC (= 7am EST / 8am EDT)
     const REMINDER_DAYS = [0, 7];
     const utcHour = now.getUTCHours();
 
+    // All occasion reminders only fire in the 12:00–12:59 UTC window
+    if (utcHour < 12 || utcHour >= 13) return;
+
     for (const daysAway of REMINDER_DAYS) {
-      // Day-of reminders are gated to 14–15 UTC (= 9am EST / 10am EDT)
-      if (daysAway === 0 && (utcHour < 14 || utcHour >= 15)) continue;
 
       const target = new Date(now);
       target.setDate(target.getDate() + daysAway);
