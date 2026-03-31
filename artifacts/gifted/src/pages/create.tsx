@@ -1858,24 +1858,7 @@ export default function CreatePage() {
 
                   {/* Links — anything with a URL, multiple allowed */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium flex items-baseline gap-1 flex-wrap">
-                      Add links
-                      <span className="text-muted-foreground font-normal">— tickets, playlists, reservations,</span>
-                      <span className="relative inline-flex overflow-hidden" style={{ minWidth: "6ch" }}>
-                        <AnimatePresence mode="wait">
-                          <motion.span
-                            key={linkLabelIdx}
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -6 }}
-                            transition={{ duration: 0.22 }}
-                            className="text-primary font-normal whitespace-nowrap"
-                          >
-                            {LINK_LABEL_WORDS[linkLabelIdx]}
-                          </motion.span>
-                        </AnimatePresence>
-                      </span>
-                    </Label>
+                    <Label className="text-sm font-medium">Add links <span className="text-muted-foreground font-normal">— tickets, playlists, reservations, anything</span></Label>
                     <div className="space-y-3">
                       {extraLinks.map((link, idx) => {
                         const hasError = !!linkErrors[idx];
@@ -1885,7 +1868,7 @@ export default function CreatePage() {
                               <div className="relative flex-1">
                                 <Link2 className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${hasError ? "text-destructive" : "text-muted-foreground"}`} />
                                 <Input
-                                  placeholder={LINK_IDEAS[idx % LINK_IDEAS.length]}
+                                  placeholder={idx === 0 ? LINK_IDEAS[linkLabelIdx % LINK_IDEAS.length] : LINK_IDEAS[idx % LINK_IDEAS.length]}
                                   className={`h-11 rounded-xl text-sm pl-10 transition-all ${hasError ? "border-destructive focus-visible:ring-destructive/30" : ""}`}
                                   value={link.url}
                                   onChange={(e) => {
