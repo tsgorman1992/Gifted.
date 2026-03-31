@@ -10,7 +10,7 @@ import {
   Check, Sparkles, TrendingUp, Heart, Star,
   DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
   Inbox, Trash2, X, Share2, Send, Users, Bell,
-  UserPlus, Cake, Pencil, BookUser, Truck, RefreshCw, ChevronRight,
+  UserPlus, Cake, Pencil, BookUser, Truck, RefreshCw, ChevronRight, Wallet,
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInCalendarDays } from "date-fns";
 import {
@@ -1932,38 +1932,52 @@ export default function MyGiftsPage() {
           return (
             <div className="space-y-6">
               {/* ── 1. Redemption callout — always at top ── */}
-              {!receivedLoading && unclaimedGifts.length > 0 && (
+              {!receivedLoading && (
                 <motion.div
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="border border-primary/25 rounded-xl bg-primary/5 overflow-hidden"
+                  className={`border rounded-xl overflow-hidden ${unclaimedGifts.length > 0 ? "border-primary/25 bg-primary/5" : "border-border/60 bg-card"}`}
                 >
-                  <div className="px-5 py-4 border-b border-primary/15 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-foreground">
-                      You have ${totalUnclaimedBalance.toFixed(0)} to collect
-                    </p>
-                    <span className="text-xs text-muted-foreground">
-                      {unclaimedGifts.length} gift{unclaimedGifts.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  {unclaimedGifts.map((gift) => (
-                    <div
-                      key={gift.id}
-                      className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-primary/10 last:border-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{gift.giftTitle || "A gift for you"}</p>
-                        <p className="text-xs text-muted-foreground">From {gift.senderName}</p>
+                  {unclaimedGifts.length > 0 ? (
+                    <>
+                      <div className="px-5 py-4 border-b border-primary/15 flex items-center justify-between">
+                        <p className="text-sm font-semibold text-foreground">
+                          You have ${totalUnclaimedBalance.toFixed(0)} to collect
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                          {unclaimedGifts.length} gift{unclaimedGifts.length !== 1 ? "s" : ""}
+                        </span>
                       </div>
-                      <button
-                        onClick={() => setLocation(`/open/${gift.id}`)}
-                        className="flex items-center gap-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 transition-colors shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full shadow-sm"
-                      >
-                        Collect ${parseFloat(gift.amount!).toFixed(0)}
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
+                      {unclaimedGifts.map((gift) => (
+                        <div
+                          key={gift.id}
+                          className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-primary/10 last:border-0"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{gift.giftTitle || "A gift for you"}</p>
+                            <p className="text-xs text-muted-foreground">From {gift.senderName}</p>
+                          </div>
+                          <button
+                            onClick={() => setLocation(`/open/${gift.id}`)}
+                            className="flex items-center gap-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 transition-colors shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full shadow-sm"
+                          >
+                            Collect ${parseFloat(gift.amount!).toFixed(0)}
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="px-5 py-4 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-muted/60 flex items-center justify-center shrink-0">
+                        <Wallet className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Nothing to redeem right now</p>
+                        <p className="text-xs text-muted-foreground">Any gift balances ready to collect will appear here.</p>
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </motion.div>
               )}
 
