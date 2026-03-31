@@ -181,41 +181,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </DropdownMenuTrigger>
 
                     <DropdownMenuContent align="end" className="w-56 rounded-2xl">
-                      {/* User identity header */}
+                      {/* Tappable avatar header */}
                       <div className="px-3 py-2.5 flex items-center gap-2.5 border-b border-border mb-1">
-                        {user.profileImageUrl ? (
-                          <img src={user.profileImageUrl} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <span className="text-primary font-bold text-base leading-none">{initials}</span>
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="relative shrink-0 group"
+                          title={user.profileImageUrl ? "Change photo" : "Add profile photo"}
+                        >
+                          {user.profileImageUrl ? (
+                            <img src={user.profileImageUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-primary font-bold text-base leading-none">{initials}</span>
+                            </div>
+                          )}
+                          {/* Camera badge */}
+                          <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-background border border-border flex items-center justify-center shadow-sm group-hover:bg-secondary transition-colors">
+                            {uploadState === "uploading" ? (
+                              <Loader2 className="w-2.5 h-2.5 animate-spin text-primary" />
+                            ) : uploadState === "done" ? (
+                              <Check className="w-2.5 h-2.5 text-green-600" />
+                            ) : (
+                              <Camera className="w-2.5 h-2.5 text-muted-foreground" />
+                            )}
                           </div>
-                        )}
+                        </button>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                           {user.email && <p className="text-xs text-muted-foreground truncate">{user.email}</p>}
+                          <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                            {uploadState === "uploading" ? "Uploading…" : uploadState === "done" ? "Photo saved!" : "Tap photo to change"}
+                          </p>
                         </div>
                       </div>
-
-                      {/* Upload photo */}
-                      <DropdownMenuItem
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        {uploadState === "uploading" ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                        ) : uploadState === "done" ? (
-                          <Check className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <Camera className="w-4 h-4" />
-                        )}
-                        {uploadState === "uploading"
-                          ? "Uploading…"
-                          : uploadState === "done"
-                            ? "Photo saved!"
-                            : user.profileImageUrl
-                              ? "Change photo"
-                              : "Add profile photo"}
-                      </DropdownMenuItem>
 
                       <DropdownMenuSeparator />
 
