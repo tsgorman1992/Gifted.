@@ -193,10 +193,11 @@ function ChartCard({ title, children, isEmpty }: { title: string; children: Reac
 }
 
 function TrendsPanel({
-  trends, loading, expLabels,
+  trends, loading, error, expLabels,
 }: {
   trends: TrendsData | null;
   loading: boolean;
+  error: string | null;
   expLabels: Record<string, string>;
 }) {
   if (loading) {
@@ -204,6 +205,15 @@ function TrendsPanel({
       <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
         <RefreshCw className="w-6 h-6 animate-spin" />
         <p className="text-sm">Loading trends…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-2 text-destructive/70">
+        <AlertTriangle className="w-6 h-6" />
+        <p className="text-sm">{error}</p>
       </div>
     );
   }
@@ -371,6 +381,7 @@ export default function AdminPage() {
   const [trends, setTrends]           = useState<TrendsData | null>(null);
   const [trendsLoading, setTrendsLoading] = useState(false);
   const [trendsLoaded, setTrendsLoaded]   = useState(false);
+  const [trendsError, setTrendsError]     = useState<string | null>(null);
 
   const [showWipe, setShowWipe]   = useState(false);
   const [wipeInput, setWipeInput] = useState("");
@@ -382,10 +393,16 @@ export default function AdminPage() {
   const loadTrends = useCallback(async () => {
     if (trendsLoaded) return;
     setTrendsLoading(true);
+    setTrendsError(null);
     try {
-      const data = await fetch(`${API}/api/admin/trends`, { headers }).then(r => r.json());
+      const r = await fetch(`${API}/api/admin/trends`, { headers });
+      if (!r.ok) { setTrendsError("Failed to load trends. Try refreshing."); return; }
+      const data = await r.json() as TrendsData;
+      if (!Array.isArray(data?.monthly)) { setTrendsError("Unexpected response from server."); return; }
       setTrends(data);
       setTrendsLoaded(true);
+    } catch {
+      setTrendsError("Could not connect. Try refreshing.");
     } finally {
       setTrendsLoading(false);
     }
@@ -865,7 +882,7 @@ export default function AdminPage() {
 
         {/* ── Trends tab ────────────────────────────────────────────────── */}
         {tab === "trends" && (
-          <TrendsPanel trends={trends} loading={trendsLoading} expLabels={EXP_LABELS} />
+          <TrendsPanel trends={trends} loading={trendsLoading} error={trendsError} expLabels={EXP_LABELS} />
         )}
 
       </main>

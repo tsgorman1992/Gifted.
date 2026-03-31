@@ -345,20 +345,24 @@ router.get("/admin/trends", async (req, res) => {
       ORDER BY month ASC
     `);
 
-    // ── Experience breakdown (all paid gifts, all time) ────────────────────
+    // ── Experience breakdown (all paid gifts, all time, no nulls/blanks) ──
     const expBreakdownRaw = await db.execute(sql`
       SELECT experience, COUNT(*) AS cnt
       FROM gifts
       WHERE paid = true
+        AND experience IS NOT NULL
+        AND experience <> ''
       GROUP BY experience
       ORDER BY cnt DESC
     `);
 
-    // ── Occasion breakdown (all paid gifts, all time) ──────────────────────
+    // ── Occasion breakdown (all paid gifts, all time, no nulls/blanks) ──────
     const occBreakdownRaw = await db.execute(sql`
       SELECT occasion, COUNT(*) AS cnt
       FROM gifts
       WHERE paid = true
+        AND occasion IS NOT NULL
+        AND occasion <> ''
       GROUP BY occasion
       ORDER BY cnt DESC
     `);
