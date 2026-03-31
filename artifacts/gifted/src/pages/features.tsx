@@ -44,7 +44,7 @@ function HeroSection({ onStart }: { onStart: () => void }) {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* left */}
           <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-            <motion.div {...fadeUp(0.05)} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-medium mb-6">
+            <motion.div {...fadeUp(0.05)} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/25 bg-white/10 text-white text-xs font-medium mb-6">
               <Sparkles className="w-3 h-3" /> The complete gifting platform
             </motion.div>
 
@@ -395,7 +395,7 @@ function TrackingSection() {
         {/* copy */}
         <div className="flex flex-col gap-6">
           <motion.div {...fadeUp(0.05)}>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-medium mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/25 bg-white/10 text-white text-xs font-medium mb-4">
               <Bell className="w-3 h-3" /> Live tracking
             </div>
             <h2 className="font-serif text-3xl md:text-5xl font-medium leading-tight mb-4 text-white">
