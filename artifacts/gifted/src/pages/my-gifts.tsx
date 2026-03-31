@@ -1928,10 +1928,10 @@ export default function MyGiftsPage() {
                       </div>
                       <button
                         onClick={() => setLocation(`/open/${gift.id}`)}
-                        className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors shrink-0 whitespace-nowrap"
+                        className="flex items-center gap-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 transition-colors shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full shadow-sm"
                       >
                         Collect ${parseFloat(gift.amount!).toFixed(0)}
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
