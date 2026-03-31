@@ -91,6 +91,17 @@ const LINK_IDEAS = [
   "Anything with a URL...",
 ];
 
+const LINK_LABEL_WORDS = [
+  "anything",
+  "concert tickets",
+  "a dinner",
+  "a playlist",
+  "an Airbnb",
+  "a song",
+  "show tickets",
+  "a mix",
+];
+
 // ─── URL helpers ──────────────────────────────────────────────────────────────
 
 function autoCorrectUrl(raw: string): string {
@@ -785,6 +796,13 @@ export default function CreatePage() {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
+
+  // Cycling link label word
+  const [linkLabelIdx, setLinkLabelIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setLinkLabelIdx(i => (i + 1) % LINK_LABEL_WORDS.length), 2600);
+    return () => clearInterval(id);
+  }, []);
 
   // Gift state
   const [selectedExperience, setSelectedExperience] = useState(() => getSuggestedExperience("Birthday"));
@@ -1840,7 +1858,24 @@ export default function CreatePage() {
 
                   {/* Links — anything with a URL, multiple allowed */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Add links <span className="text-muted-foreground font-normal">— tickets, playlists, reservations, anything</span></Label>
+                    <Label className="text-sm font-medium flex items-baseline gap-1 flex-wrap">
+                      Add links
+                      <span className="text-muted-foreground font-normal">— tickets, playlists, reservations,</span>
+                      <span className="relative inline-flex overflow-hidden" style={{ minWidth: "6ch" }}>
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={linkLabelIdx}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.22 }}
+                            className="text-primary font-normal whitespace-nowrap"
+                          >
+                            {LINK_LABEL_WORDS[linkLabelIdx]}
+                          </motion.span>
+                        </AnimatePresence>
+                      </span>
+                    </Label>
                     <div className="space-y-3">
                       {extraLinks.map((link, idx) => {
                         const hasError = !!linkErrors[idx];
