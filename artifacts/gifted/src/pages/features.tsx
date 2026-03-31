@@ -644,178 +644,255 @@ function PayoutSection() {
 }
 
 
-// ─── Mobile Hybrid: visual showcase + feature grid ────────────────────────────
-function MobileHybridSection() {
+// ─── Mobile: single visual + copy per feature ─────────────────────────────────
+function MobileFeaturesScroll() {
+  const days = ["S","M","T","W","T","F","S"];
+  const dates = [null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31];
+
   return (
-    <section className="lg:hidden w-full px-4 pt-2 pb-12 bg-background space-y-6">
+    <section className="lg:hidden w-full bg-background">
 
-      {/* ── 2×2 visual card grid ── */}
-      <div className="grid grid-cols-2 gap-3">
-
-        {/* Card 1: Dashboard stats */}
-        <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="font-serif text-xs font-bold">gifted.</span>
-            <div className="relative">
-              <Bell className="w-3 h-3 text-muted-foreground" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary text-white text-[7px] font-bold flex items-center justify-center">3</span>
-            </div>
+      {/* ── 1. Dashboard ── */}
+      <div className="px-5 py-10 border-b border-border">
+        <motion.div {...fadeUp(0)}>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+            <Bell className="w-3 h-3" /> Your dashboard
           </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[{ l: "Sent", v: "12" }, { l: "Opened", v: "8", hi: true }, { l: "Redeemed", v: "5" }, { l: "Gifted", v: "$640" }].map(s => (
-              <div key={s.l} className={`rounded-lg p-1.5 border ${s.hi ? "border-primary/30 bg-primary/8" : "border-border bg-secondary/40"}`}>
-                <p className="text-[8px] text-muted-foreground">{s.l}</p>
-                <p className={`text-xs font-bold leading-tight ${s.hi ? "text-primary" : ""}`}>{s.v}</p>
+          <h2 className="font-serif text-2xl font-medium leading-snug mb-2">
+            Everything, always in view.
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            Stats, live notifications, and upcoming occasions — your gifting life at a glance the moment you open the app.
+          </p>
+        </motion.div>
+
+        <motion.div {...fadeUp(0.1)}>
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-serif text-sm font-bold">gifted.</span>
+              <div className="relative">
+                <Bell className="w-4 h-4 text-muted-foreground" />
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center">3</span>
               </div>
-            ))}
-          </div>
-          <div className="rounded-lg border border-border overflow-hidden">
-            {[
-              { icon: Cake, bg: "bg-rose-50 text-rose-500", t: "Sarah's Birthday", s: "Today!" },
-              { icon: PartyPopper, bg: "bg-green-50 text-green-600", t: "Mike redeemed", s: "$75 gift" },
-            ].map((n, i) => (
-              <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border last:border-0">
-                <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${n.bg}`}>
-                  <n.icon className="w-2 h-2" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[{ l: "Sent", v: "12" }, { l: "Opened", v: "8", hi: true }, { l: "Redeemed", v: "5" }, { l: "Total Gifted", v: "$640" }].map(s => (
+                <div key={s.l} className={`rounded-xl p-2.5 border ${s.hi ? "border-primary/30 bg-primary/8" : "border-border bg-secondary/40"}`}>
+                  <p className="text-[10px] text-muted-foreground">{s.l}</p>
+                  <p className={`text-base font-bold leading-tight ${s.hi ? "text-primary" : ""}`}>{s.v}</p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[8px] font-medium truncate">{n.t}</p>
-                  <p className="text-[7px] text-muted-foreground">{n.s}</p>
-                </div>
+              ))}
+            </div>
+            <div className="rounded-xl border border-border overflow-hidden">
+              <div className="px-3 py-2 border-b border-border bg-secondary/30">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Notifications</p>
               </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-1.5 p-1.5 rounded-lg border border-border">
-            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <span className="text-primary text-[8px] font-bold">S</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[8px] font-semibold truncate">Sarah Chen</p>
-              <p className="text-[7px] text-amber-600 font-medium">Birthday today</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Payout */}
-        <div className="bg-card border border-border rounded-2xl p-3 space-y-2.5">
-          <div className="text-center border-b border-border pb-2">
-            <p className="text-xl font-bold">$75.00</p>
-            <p className="text-[9px] text-muted-foreground">Yours to claim — same day</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[
-              { name: "Venmo", color: "#3D95CE", abbr: "V" },
-              { name: "Cash App", color: "#00D632", abbr: "$" },
-              { name: "PayPal", color: "#003087", abbr: "P" },
-              { name: "Zelle", color: "#6B1F7C", abbr: "Z" },
-            ].map(m => (
-              <div key={m.name} className="flex items-center gap-1.5 p-1.5 rounded-lg border border-border">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0" style={{ background: m.color }}>
-                  {m.abbr}
-                </div>
-                <span className="text-[9px] font-medium leading-tight">{m.name}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-1 p-1.5 rounded-lg bg-green-50 border border-green-100">
-            <Zap className="w-3 h-3 text-green-600 shrink-0" />
-            <p className="text-[8px] text-green-800 font-medium">Sent same day</p>
-          </div>
-        </div>
-
-        {/* Card 3: Calendar */}
-        <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold">December 2025</p>
-            <div className="flex gap-0.5">
-              <div className="w-4 h-4 rounded-full border border-border flex items-center justify-center">
-                <ChevronRight className="w-2 h-2 rotate-180 text-muted-foreground" />
-              </div>
-              <div className="w-4 h-4 rounded-full border border-border flex items-center justify-center">
-                <ChevronRight className="w-2 h-2 text-muted-foreground" />
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-7 gap-0.5">
-            {["S","M","T","W","T","F","S"].map((d,i) => (
-              <p key={i} className="text-[7px] text-center text-muted-foreground font-medium">{d}</p>
-            ))}
-            {[null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map((d, i) => (
-              <div key={i} className={`aspect-square flex items-center justify-center rounded-full text-[7px] font-medium
-                ${d === 25 ? "bg-primary text-white" : ""}
-                ${d === 20 || d === 22 ? "bg-secondary text-foreground" : ""}
-                ${d && d !== 25 && d !== 20 && d !== 22 ? "text-foreground" : ""}
-              `}>
-                {d}
-              </div>
-            ))}
-          </div>
-          <div className="p-1.5 rounded-xl border border-primary/20 bg-primary/5 flex items-center gap-1.5">
-            <div className="w-5 h-5 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <Bell className="w-2.5 h-2.5 text-white" />
-            </div>
-            <div>
-              <p className="text-[8px] font-semibold">Reminder · Dec 25</p>
-              <p className="text-[7px] text-muted-foreground">We'll remind you to share</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Occasions */}
-        <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
-          <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl border border-amber-200 bg-amber-50">
-            <Bell className="w-3 h-3 text-amber-600 shrink-0" />
-            <div>
-              <p className="text-[8px] font-semibold text-amber-900">Sarah's Birthday 🎂</p>
-              <p className="text-[7px] text-amber-700">Today · Don't forget!</p>
-            </div>
-          </div>
-          {[
-            { name: "Sarah Chen", init: "S", occasions: [{ l: "Birthday", d: "Dec 28", hot: true }] },
-            { name: "Mike Torres", init: "M", occasions: [{ l: "Anniversary", d: "Jan 14" }] },
-            { name: "Emma Walsh", init: "E", occasions: [{ l: "Mother's Day", d: "May 11" }] },
-          ].map(c => (
-            <div key={c.name} className="bg-card border border-border rounded-xl p-2">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
-                    <span className="text-primary text-[8px] font-bold">{c.init}</span>
+              {[
+                { icon: Cake, bg: "bg-rose-50", ic: "text-rose-500", text: "Sarah's Birthday is today", sub: "Don't forget to send a gift!" },
+                { icon: PartyPopper, bg: "bg-green-50", ic: "text-green-600", text: "Mike redeemed his $75 gift", sub: "Birthday Dinner" },
+                { icon: Gift, bg: "bg-primary/10", ic: "text-primary", text: "Emma opened your gift", sub: "Happy Graduation" },
+              ].map((n, i) => (
+                <div key={i} className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border last:border-0">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${n.bg}`}>
+                    <n.icon className={`w-3 h-3 ${n.ic}`} />
                   </div>
-                  <p className="text-[9px] font-semibold">{c.name}</p>
-                </div>
-                <button className="text-[7px] px-1.5 py-0.5 rounded-full border border-primary/30 text-primary">Gift</button>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {c.occasions.map(o => (
-                  <div key={o.l} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[7px] font-medium ${o.hot ? "bg-amber-50 border border-amber-200 text-amber-800" : "bg-secondary text-muted-foreground"}`}>
-                    <Cake className="w-2 h-2" />
-                    {o.l} · {o.d}
-                    {o.hot && <span className="text-amber-600 font-semibold ml-0.5">Today</span>}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium leading-tight truncate">{n.text}</p>
+                    <p className="text-[10px] text-muted-foreground">{n.sub}</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+            <div className="flex items-center gap-2.5 p-2.5 rounded-xl border border-border">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="text-primary text-xs font-bold">S</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold">Sarah Chen</p>
+                <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1"><Cake className="w-2.5 h-2.5" />Birthday today</p>
+              </div>
+              <button className="text-[10px] px-2.5 py-1 rounded-full font-medium text-primary border border-primary/30 bg-primary/5 shrink-0">Gift her</button>
+            </div>
+          </div>
+        </motion.div>
       </div>
 
-      {/* ── Compact feature list ── */}
-      <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-1">Everything included</p>
-        <div className="grid grid-cols-2 gap-2.5">
-          {[
-            { icon: Gift, title: "Full gift moment", desc: "Note, video, photos, link, and real cash." },
-            { icon: Clock, title: "Build ahead", desc: "Create now, share when the moment arrives." },
-            { icon: Bell, title: "Live tracking", desc: "Know when they open, redeem, or react." },
-            { icon: Cake, title: "Date reminders", desc: "3 days before and morning-of every occasion." },
-            { icon: Users, title: "Gifting circle", desc: "Everyone you gift, organized in one place." },
-            { icon: Zap, title: "Same-day payouts", desc: "Venmo, Cash App, PayPal, or Zelle." },
-          ].map((f, i) => (
-            <motion.div key={f.title} {...fadeUp(i * 0.04)} className="p-3 rounded-2xl border border-border bg-card">
-              <div className="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
-                <f.icon className="w-3.5 h-3.5 text-primary" />
+      {/* ── 2. Payout ── */}
+      <div className="px-5 py-10 border-b border-border" style={{ background: "hsl(28,40%,98%)" }}>
+        <motion.div {...fadeUp(0)}>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium border border-green-100 mb-4">
+            <Zap className="w-3 h-3" /> Same-day payouts
+          </div>
+          <h2 className="font-serif text-2xl font-medium leading-snug mb-2">
+            Real money. Their way. <span className="text-primary italic">Same day.</span>
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            No gift cards, no restrictions. They pick Venmo, Cash App, PayPal, or Zelle — and we send it directly, usually within hours.
+          </p>
+        </motion.div>
+
+        <motion.div {...fadeUp(0.1)}>
+          <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="text-center pb-3 border-b border-border">
+              <p className="text-3xl font-bold">$75.00</p>
+              <p className="text-sm text-muted-foreground">Yours to claim — same day</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { name: "Venmo", color: "#3D95CE", abbr: "V" },
+                { name: "Cash App", color: "#00D632", abbr: "$" },
+                { name: "PayPal", color: "#003087", abbr: "P" },
+                { name: "Zelle", color: "#6B1F7C", abbr: "Z" },
+              ].map(m => (
+                <div key={m.name} className="flex items-center gap-2.5 p-3 rounded-xl border border-border">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: m.color }}>
+                    {m.abbr}
+                  </div>
+                  <span className="text-sm font-medium">{m.name}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 border border-green-100">
+              <Zap className="w-4 h-4 text-green-600 shrink-0" />
+              <p className="text-xs text-green-800 font-medium">Sent same day — usually within hours</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── 3. Scheduled / Calendar ── */}
+      <div className="px-5 py-10 border-b border-border">
+        <motion.div {...fadeUp(0)}>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+            <Clock className="w-3 h-3" /> Build ahead
+          </div>
+          <h2 className="font-serif text-2xl font-medium leading-snug mb-2">
+            Build it today. <span className="text-primary italic">Share it when the moment arrives.</span>
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            Create the gift weeks in advance, set a reminder, and we'll nudge you when it's time to share from your own phone.
+          </p>
+        </motion.div>
+
+        <motion.div {...fadeUp(0.1)}>
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-sm">December 2025</p>
+              <div className="flex gap-1">
+                <div className="w-6 h-6 rounded-full border border-border flex items-center justify-center">
+                  <ChevronRight className="w-3 h-3 rotate-180 text-muted-foreground" />
+                </div>
+                <div className="w-6 h-6 rounded-full border border-border flex items-center justify-center">
+                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                </div>
               </div>
-              <p className="text-xs font-semibold mb-0.5 leading-snug">{f.title}</p>
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((d, i) => <p key={i} className="text-[10px] text-center text-muted-foreground font-medium">{d}</p>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {dates.map((d, i) => (
+                <div key={i} className={`aspect-square flex items-center justify-center rounded-full text-xs font-medium
+                  ${d === 25 ? "bg-primary text-white shadow-sm" : ""}
+                  ${d === 20 || d === 22 ? "bg-secondary text-foreground" : ""}
+                  ${d && d !== 25 && d !== 20 && d !== 22 ? "text-foreground" : ""}
+                `}>
+                  {d}
+                </div>
+              ))}
+            </div>
+            <div className="p-3 rounded-2xl border border-primary/20 bg-primary/5 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0">
+                <Bell className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold">Reminder set · Dec 25</p>
+                <p className="text-[10px] text-muted-foreground">We'll remind you to share · Emma's gift</p>
+              </div>
+            </div>
+            <div className="p-3 rounded-2xl border border-border bg-secondary/40 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Ready to share · Dec 20</p>
+                <p className="text-[10px] text-muted-foreground">Gift built & waiting · Mike's Anniversary</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── 4. Occasion tracking ── */}
+      <div className="px-5 py-10 border-b border-border" style={{ background: "hsl(28,40%,98%)" }}>
+        <motion.div {...fadeUp(0)}>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+            <Cake className="w-3 h-3" /> Occasion tracking
+          </div>
+          <h2 className="font-serif text-2xl font-medium leading-snug mb-2">
+            Never miss a <span className="text-primary italic">meaningful date</span> again.
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            Add birthdays and anniversaries to your contacts. We remind you 3 days before and the morning of — with a one-tap shortcut to start the gift.
+          </p>
+        </motion.div>
+
+        <motion.div {...fadeUp(0.1)}>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-amber-200 bg-amber-50">
+              <Bell className="w-4 h-4 text-amber-600 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-amber-900">Sarah's Birthday is today 🎂</p>
+                <p className="text-[10px] text-amber-700">Dec 28 · Don't forget to send a gift</p>
+              </div>
+            </div>
+            {[
+              { name: "Sarah Chen", init: "S", occasions: [{ label: "Birthday", date: "Dec 28", hot: true }, { label: "Christmas", date: "Dec 25" }] },
+              { name: "Mike Torres", init: "M", occasions: [{ label: "Anniversary", date: "Jan 14" }, { label: "Birthday", date: "Mar 5" }] },
+              { name: "Emma Walsh", init: "E", occasions: [{ label: "Mother's Day", date: "May 11" }, { label: "Birthday", date: "Jul 22" }] },
+            ].map(c => (
+              <div key={c.name} className="bg-card border border-border rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary text-sm font-bold">{c.init}</span>
+                    </div>
+                    <p className="font-semibold text-sm">{c.name}</p>
+                  </div>
+                  <button className="text-[10px] px-2.5 py-1 rounded-full border border-primary/30 text-primary bg-primary/5 font-medium">Gift them</button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {c.occasions.map(o => (
+                    <div key={o.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium ${o.hot ? "bg-amber-50 border border-amber-200 text-amber-800" : "bg-secondary text-muted-foreground"}`}>
+                      <Cake className="w-2.5 h-2.5" />
+                      {o.label} · {o.date}
+                      {o.hot && <span className="text-amber-600 font-semibold">Today</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── 5. Compact remaining features ── */}
+      <div className="px-5 py-10">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Also included</p>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { icon: Gift,         title: "Full gift moment", desc: "Note, video, photos, a link, and real cash — one experience." },
+            { icon: Play,         title: "Video message",    desc: "Record or upload a video they can replay forever." },
+            { icon: ImageIcon,    title: "Up to 6 photos",   desc: "Shared memories that put the gift in context." },
+            { icon: Link2,        title: "Any link",         desc: "Tickets, a song, a reservation — anything with a URL." },
+            { icon: Users,        title: "Gifting circle",   desc: "Everyone you gift, their history, and occasions — organized." },
+            { icon: Bell,         title: "Live tracking",    desc: "Know when they open it, redeem it, or react." },
+          ].map((f, i) => (
+            <motion.div key={f.title} {...fadeUp(i * 0.04)} className="p-3.5 rounded-2xl border border-border bg-card">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center mb-2.5">
+                <f.icon className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-xs font-semibold mb-1 leading-snug">{f.title}</p>
               <p className="text-[10px] text-muted-foreground leading-snug">{f.desc}</p>
             </motion.div>
           ))}
@@ -866,8 +943,8 @@ export default function FeaturesPage() {
   return (
     <div className="w-full flex flex-col">
       <HeroSection onStart={handleStart} />
-      {/* Mobile: compact visual showcase + feature grid */}
-      <MobileHybridSection />
+      {/* Mobile: single visual + copy per feature */}
+      <MobileFeaturesScroll />
       {/* Desktop: full editorial sections with mockups */}
       <div className="hidden lg:block">
         <GiftMomentSection />
