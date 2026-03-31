@@ -1003,8 +1003,8 @@ const VALID_PAYOUT_METHODS = new Set(["venmo", "cashapp", "zelle"]);
 router.patch("/gifted/profile", async (req, res) => {
   const userId = (req as any).user?.id;
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  const { displayName, payoutMethod, payoutHandle } = req.body as Record<string, string | undefined>;
-  if (payoutMethod !== undefined && payoutMethod !== "" && !VALID_PAYOUT_METHODS.has(payoutMethod)) {
+  const { displayName, payoutMethod, payoutHandle } = req.body as Record<string, string | null | undefined>;
+  if (payoutMethod !== undefined && payoutMethod !== "" && payoutMethod !== null && !VALID_PAYOUT_METHODS.has(payoutMethod)) {
     return res.status(400).json({ error: "Invalid payoutMethod. Must be one of: venmo, cashapp, zelle" });
   }
   const updates: Record<string, string | null> = {};

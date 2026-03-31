@@ -117,7 +117,7 @@ export default function AccountPage() {
           <p className="text-muted-foreground text-sm">{user?.email}</p>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-8">
+        <form onSubmit={handleSave} noValidate className="space-y-8">
 
           {/* Display name */}
           <section className="space-y-4">
