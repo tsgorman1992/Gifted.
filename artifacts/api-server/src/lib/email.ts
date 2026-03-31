@@ -548,7 +548,7 @@ export async function sendOccasionReminderEmail({
   if (!client) return;
 
   const greeting = userName ? `Hi ${userName},` : "Hi there,";
-  const urgency = `is in ${daysAway} day${daysAway !== 1 ? "s" : ""}`;
+  const urgency = daysAway === 0 ? "is today" : `is in ${daysAway} day${daysAway !== 1 ? "s" : ""}`;
 
   const body = `
     <h2 style="margin:0 0 8px;font-size:24px;font-weight:500;color:#1a1108;font-family:Georgia,serif;">
@@ -569,7 +569,7 @@ export async function sendOccasionReminderEmail({
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `${contactName}'s ${occasionLabel} is in ${daysAway} day${daysAway !== 1 ? "s" : ""} 🎁`,
+      subject: `${contactName}'s ${occasionLabel} is ${daysAway === 0 ? "today" : `in ${daysAway} day${daysAway !== 1 ? "s" : ""}`} 🎁`,
       html: layout(`Occasion reminder — gifted.`, body),
     });
     if (error) console.error("[email] sendOccasionReminderEmail error:", error);

@@ -456,10 +456,14 @@ async function sendOccasionReminders() {
     const now = new Date();
     const currentYear = now.getFullYear();
 
-    // Check for occasions 7 days from now only (day-of removed — too late to build a gift)
-    const REMINDER_DAYS = [7];
+    // 7-day advance + day-of (day-of only fires 10–11am UTC)
+    const REMINDER_DAYS = [0, 7];
+    const utcHour = now.getUTCHours();
 
     for (const daysAway of REMINDER_DAYS) {
+      // Day-of reminders are gated to 10–11am UTC to avoid midnight surprises
+      if (daysAway === 0 && (utcHour < 10 || utcHour >= 11)) continue;
+
       const target = new Date(now);
       target.setDate(target.getDate() + daysAway);
       const targetMonth = target.getMonth() + 1;
