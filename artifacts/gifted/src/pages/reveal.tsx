@@ -590,7 +590,7 @@ const PARTICLE_CFGS: Partial<Record<AmbientEffect, ParticleCfg>> = {
     sizes: [10, 22],
     batchSize: 16,
     batchInterval: 480,
-    duration: [3500, 6500],
+    duration: [2000, 3800],
     keyframe: "gifted-petal-fall",
   },
   "rose-petals": {
@@ -598,7 +598,7 @@ const PARTICLE_CFGS: Partial<Record<AmbientEffect, ParticleCfg>> = {
     sizes: [16, 30],
     batchSize: 12,
     batchInterval: 560,
-    duration: [4000, 7500],
+    duration: [2200, 4500],
     keyframe: "gifted-petal-fall",
   },
   snow: {
@@ -606,7 +606,7 @@ const PARTICLE_CFGS: Partial<Record<AmbientEffect, ParticleCfg>> = {
     sizes: [4, 14],
     batchSize: 24,
     batchInterval: 260,
-    duration: [2800, 5800],
+    duration: [1500, 3000],
     keyframe: "gifted-snow-fall",
     shape: "circle",
   },
@@ -673,17 +673,17 @@ function startAmbientParticles(effect: AmbientEffect, intensity: "low" | "medium
   }
   const iv = setInterval(spawnBatch, batchInterval + 200);
 
-  // Auto-stop spawning new particles after 12 s; in-flight ones fall out naturally
+  // Auto-stop spawning new particles after 8 s; in-flight ones fall out naturally
   const autoStop = setTimeout(() => {
     active = false;
     clearInterval(iv);
-  }, 12000);
+  }, 8000);
 
   return () => {
     active = false;
     clearInterval(iv);
     clearTimeout(autoStop);
-    setTimeout(() => container.remove(), 7000);
+    setTimeout(() => container.remove(), 4500);
   };
 }
 
