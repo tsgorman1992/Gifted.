@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   Bell, Calendar, Gift, Heart, Play, Image as ImageIcon, Link2, CreditCard,
@@ -8,6 +8,16 @@ import {
   ChevronRight, PartyPopper, Smile,
 } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
+
+// ─── Link demo cycling examples ──────────────────────────────────────────────
+const LINK_DEMOS = [
+  { label: "2 Tickets · The Weeknd",  sub: "Tap to view tickets"    },
+  { label: "8pm Friday at Nobu",       sub: "Tap to view reservation" },
+  { label: "Golden Hour – JVKE",       sub: "Tap to listen"           },
+  { label: "Cabin in Big Sur",         sub: "Tap to view stay"        },
+  { label: "Spa day · Sunday 2pm",     sub: "Tap to open"             },
+  { label: "Apple Music mix",          sub: "Tap to listen"           },
+];
 
 // ─── shared animation helpers ────────────────────────────────────────────────
 const fadeUp = (delay = 0) => ({
@@ -140,6 +150,12 @@ function HeroSection({ onStart }: { onStart: () => void }) {
 
 // ─── Section: The Gift Moment ─────────────────────────────────────────────────
 function GiftMomentSection() {
+  const [linkIdx, setLinkIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setLinkIdx(i => (i + 1) % LINK_DEMOS.length), 2600);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <section id="features" className="w-full py-20 md:py-28 px-6 bg-background">
       <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
@@ -182,14 +198,25 @@ function GiftMomentSection() {
                 <p className="absolute bottom-2 left-3 text-white/70 text-[9px]">Video message · 0:42</p>
               </div>
 
-              {/* link */}
-              <div className="flex items-center gap-2 p-2.5 rounded-xl border border-primary/20 bg-primary/5">
-                <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "hsl(28,62%,36%)" }}>
+              {/* link — cycles through examples */}
+              <div className="flex items-center gap-2 p-2.5 rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
+                <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: "hsl(28,62%,36%)" }}>
                   <Link2 className="w-3 h-3 text-white" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-medium">2 Tickets · The Weeknd</p>
-                  <p className="text-[9px] text-muted-foreground">Tap to view tickets</p>
+                <div className="relative flex-1 min-w-0 h-8">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={linkIdx}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.25 }}
+                      className="absolute inset-0 flex flex-col justify-center"
+                    >
+                      <p className="text-[10px] font-medium truncate">{LINK_DEMOS[linkIdx].label}</p>
+                      <p className="text-[9px] text-muted-foreground">{LINK_DEMOS[linkIdx].sub}</p>
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               </div>
 
