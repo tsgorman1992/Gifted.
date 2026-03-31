@@ -109,10 +109,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </a>
 
           <nav className="flex items-center gap-3">
-            {/* Features — desktop only */}
+            {/* Features — always show on desktop; on mobile only show when NOT signed in (signed-in users get it in the dropdown) */}
             <Link
               href="/features"
-              className={`hidden sm:block text-sm font-medium transition-colors px-3 py-1.5 rounded-full hover:bg-secondary ${location === "/features" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
+              className={`${isAuthenticated ? "hidden sm:block" : "block"} text-sm font-medium transition-colors px-3 py-1.5 rounded-full hover:bg-secondary ${location === "/features" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
             >
               Features
             </Link>

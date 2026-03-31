@@ -644,6 +644,187 @@ function PayoutSection() {
 }
 
 
+// ─── Mobile Hybrid: visual showcase + feature grid ────────────────────────────
+function MobileHybridSection() {
+  return (
+    <section className="lg:hidden w-full px-4 pt-2 pb-12 bg-background space-y-6">
+
+      {/* ── 2×2 visual card grid ── */}
+      <div className="grid grid-cols-2 gap-3">
+
+        {/* Card 1: Dashboard stats */}
+        <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="font-serif text-xs font-bold">gifted.</span>
+            <div className="relative">
+              <Bell className="w-3 h-3 text-muted-foreground" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary text-white text-[7px] font-bold flex items-center justify-center">3</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[{ l: "Sent", v: "12" }, { l: "Opened", v: "8", hi: true }, { l: "Redeemed", v: "5" }, { l: "Gifted", v: "$640" }].map(s => (
+              <div key={s.l} className={`rounded-lg p-1.5 border ${s.hi ? "border-primary/30 bg-primary/8" : "border-border bg-secondary/40"}`}>
+                <p className="text-[8px] text-muted-foreground">{s.l}</p>
+                <p className={`text-xs font-bold leading-tight ${s.hi ? "text-primary" : ""}`}>{s.v}</p>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-lg border border-border overflow-hidden">
+            {[
+              { icon: Cake, bg: "bg-rose-50 text-rose-500", t: "Sarah's Birthday", s: "Today!" },
+              { icon: PartyPopper, bg: "bg-green-50 text-green-600", t: "Mike redeemed", s: "$75 gift" },
+            ].map((n, i) => (
+              <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border last:border-0">
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${n.bg}`}>
+                  <n.icon className="w-2 h-2" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[8px] font-medium truncate">{n.t}</p>
+                  <p className="text-[7px] text-muted-foreground">{n.s}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5 p-1.5 rounded-lg border border-border">
+            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span className="text-primary text-[8px] font-bold">S</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[8px] font-semibold truncate">Sarah Chen</p>
+              <p className="text-[7px] text-amber-600 font-medium">Birthday today</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Payout */}
+        <div className="bg-card border border-border rounded-2xl p-3 space-y-2.5">
+          <div className="text-center border-b border-border pb-2">
+            <p className="text-xl font-bold">$75.00</p>
+            <p className="text-[9px] text-muted-foreground">Yours to claim — same day</p>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { name: "Venmo", color: "#3D95CE", abbr: "V" },
+              { name: "Cash App", color: "#00D632", abbr: "$" },
+              { name: "PayPal", color: "#003087", abbr: "P" },
+              { name: "Zelle", color: "#6B1F7C", abbr: "Z" },
+            ].map(m => (
+              <div key={m.name} className="flex items-center gap-1.5 p-1.5 rounded-lg border border-border">
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0" style={{ background: m.color }}>
+                  {m.abbr}
+                </div>
+                <span className="text-[9px] font-medium leading-tight">{m.name}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 p-1.5 rounded-lg bg-green-50 border border-green-100">
+            <Zap className="w-3 h-3 text-green-600 shrink-0" />
+            <p className="text-[8px] text-green-800 font-medium">Sent same day</p>
+          </div>
+        </div>
+
+        {/* Card 3: Calendar */}
+        <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold">December 2025</p>
+            <div className="flex gap-0.5">
+              <div className="w-4 h-4 rounded-full border border-border flex items-center justify-center">
+                <ChevronRight className="w-2 h-2 rotate-180 text-muted-foreground" />
+              </div>
+              <div className="w-4 h-4 rounded-full border border-border flex items-center justify-center">
+                <ChevronRight className="w-2 h-2 text-muted-foreground" />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-0.5">
+            {["S","M","T","W","T","F","S"].map((d,i) => (
+              <p key={i} className="text-[7px] text-center text-muted-foreground font-medium">{d}</p>
+            ))}
+            {[null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31].map((d, i) => (
+              <div key={i} className={`aspect-square flex items-center justify-center rounded-full text-[7px] font-medium
+                ${d === 25 ? "bg-primary text-white" : ""}
+                ${d === 20 || d === 22 ? "bg-secondary text-foreground" : ""}
+                ${d && d !== 25 && d !== 20 && d !== 22 ? "text-foreground" : ""}
+              `}>
+                {d}
+              </div>
+            ))}
+          </div>
+          <div className="p-1.5 rounded-xl border border-primary/20 bg-primary/5 flex items-center gap-1.5">
+            <div className="w-5 h-5 rounded-lg bg-primary flex items-center justify-center shrink-0">
+              <Bell className="w-2.5 h-2.5 text-white" />
+            </div>
+            <div>
+              <p className="text-[8px] font-semibold">Reminder · Dec 25</p>
+              <p className="text-[7px] text-muted-foreground">We'll remind you to share</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Occasions */}
+        <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
+          <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl border border-amber-200 bg-amber-50">
+            <Bell className="w-3 h-3 text-amber-600 shrink-0" />
+            <div>
+              <p className="text-[8px] font-semibold text-amber-900">Sarah's Birthday 🎂</p>
+              <p className="text-[7px] text-amber-700">Today · Don't forget!</p>
+            </div>
+          </div>
+          {[
+            { name: "Sarah Chen", init: "S", occasions: [{ l: "Birthday", d: "Dec 28", hot: true }] },
+            { name: "Mike Torres", init: "M", occasions: [{ l: "Anniversary", d: "Jan 14" }] },
+            { name: "Emma Walsh", init: "E", occasions: [{ l: "Mother's Day", d: "May 11" }] },
+          ].map(c => (
+            <div key={c.name} className="bg-card border border-border rounded-xl p-2">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-primary text-[8px] font-bold">{c.init}</span>
+                  </div>
+                  <p className="text-[9px] font-semibold">{c.name}</p>
+                </div>
+                <button className="text-[7px] px-1.5 py-0.5 rounded-full border border-primary/30 text-primary">Gift</button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {c.occasions.map(o => (
+                  <div key={o.l} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[7px] font-medium ${o.hot ? "bg-amber-50 border border-amber-200 text-amber-800" : "bg-secondary text-muted-foreground"}`}>
+                    <Cake className="w-2 h-2" />
+                    {o.l} · {o.d}
+                    {o.hot && <span className="text-amber-600 font-semibold ml-0.5">Today</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Compact feature list ── */}
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-1">Everything included</p>
+        <div className="grid grid-cols-2 gap-2.5">
+          {[
+            { icon: Gift, title: "Full gift moment", desc: "Note, video, photos, link, and real cash." },
+            { icon: Clock, title: "Build ahead", desc: "Create now, share when the moment arrives." },
+            { icon: Bell, title: "Live tracking", desc: "Know when they open, redeem, or react." },
+            { icon: Cake, title: "Date reminders", desc: "3 days before and morning-of every occasion." },
+            { icon: Users, title: "Gifting circle", desc: "Everyone you gift, organized in one place." },
+            { icon: Zap, title: "Same-day payouts", desc: "Venmo, Cash App, PayPal, or Zelle." },
+          ].map((f, i) => (
+            <motion.div key={f.title} {...fadeUp(i * 0.04)} className="p-3 rounded-2xl border border-border bg-card">
+              <div className="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+                <f.icon className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <p className="text-xs font-semibold mb-0.5 leading-snug">{f.title}</p>
+              <p className="text-[10px] text-muted-foreground leading-snug">{f.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ─── Section: Final CTA ───────────────────────────────────────────────────────
 function CtaSection({ onStart }: { onStart: () => void }) {
   return (
@@ -685,12 +866,17 @@ export default function FeaturesPage() {
   return (
     <div className="w-full flex flex-col">
       <HeroSection onStart={handleStart} />
-      <GiftMomentSection />
-      <ScheduledSection />
-      <TrackingSection />
-      <OccasionSection />
-      <GiftingCircleSection />
-      <PayoutSection />
+      {/* Mobile: compact visual showcase + feature grid */}
+      <MobileHybridSection />
+      {/* Desktop: full editorial sections with mockups */}
+      <div className="hidden lg:block">
+        <GiftMomentSection />
+        <ScheduledSection />
+        <TrackingSection />
+        <OccasionSection />
+        <GiftingCircleSection />
+        <PayoutSection />
+      </div>
       <CtaSection onStart={handleStart} />
     </div>
   );
