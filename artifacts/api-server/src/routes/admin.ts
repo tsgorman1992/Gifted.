@@ -307,4 +307,106 @@ router.patch("/admin/gifts/:id/set-recipient", async (req, res) => {
   }
 });
 
+// GET /api/admin/trends — month-over-month metrics for last 12 months
+router.get("/admin/trends", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    // Build the list of last 12 months as "YYYY-MM" strings
+    const months: string[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - i);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    }
+
+    // ── Monthly gift metrics (raw SQL via sql tag) ─────────────────────────
+    const giftMonthlyRaw = await db.execute(sql`
+      SELECT
+        to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+        COUNT(*) FILTER (WHERE paid = true)                                          AS gift_count,
+        COALESCE(SUM(amount::numeric) FILTER (WHERE paid = true), 0)                AS volume,
+        COUNT(*) FILTER (WHERE paid = true AND opened_at IS NOT NULL)               AS opens,
+        COUNT(*) FILTER (WHERE paid = true AND redeemed_at IS NOT NULL)             AS redeems
+      FROM gifts
+      WHERE created_at >= NOW() - INTERVAL '12 months'
+      GROUP BY month
+      ORDER BY month ASC
+    `);
+
+    // ── Monthly new user signups ───────────────────────────────────────────
+    const userMonthlyRaw = await db.execute(sql`
+      SELECT
+        to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
+        COUNT(*) AS new_users
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '12 months'
+      GROUP BY month
+      ORDER BY month ASC
+    `);
+
+    // ── Experience breakdown (all paid gifts, all time) ────────────────────
+    const expBreakdownRaw = await db.execute(sql`
+      SELECT experience, COUNT(*) AS cnt
+      FROM gifts
+      WHERE paid = true
+      GROUP BY experience
+      ORDER BY cnt DESC
+    `);
+
+    // ── Occasion breakdown (all paid gifts, all time) ──────────────────────
+    const occBreakdownRaw = await db.execute(sql`
+      SELECT occasion, COUNT(*) AS cnt
+      FROM gifts
+      WHERE paid = true
+      GROUP BY occasion
+      ORDER BY cnt DESC
+    `);
+
+    // Normalize to maps
+    type Row = Record<string, unknown>;
+    const giftMap = Object.fromEntries(
+      (giftMonthlyRaw.rows as Row[]).map(r => [r.month as string, r])
+    );
+    const userMap = Object.fromEntries(
+      (userMonthlyRaw.rows as Row[]).map(r => [r.month as string, r])
+    );
+
+    // Fill all 12 months (including zero months)
+    const monthly = months.map(m => {
+      const g = giftMap[m] ?? {};
+      const u = userMap[m] ?? {};
+      const giftCount = Number(g.gift_count ?? 0);
+      const opens     = Number(g.opens     ?? 0);
+      const redeems   = Number(g.redeems   ?? 0);
+      return {
+        month:      m,
+        giftCount,
+        volume:     parseFloat(String(g.volume ?? "0")),
+        feeRevenue: parseFloat(String(g.volume ?? "0")) * 0.05,
+        opens,
+        redeems,
+        openRate:   giftCount > 0 ? Math.round((opens   / giftCount) * 100) : 0,
+        redeemRate: opens     > 0 ? Math.round((redeems / opens)     * 100) : 0,
+        newUsers:   Number(u.new_users ?? 0),
+      };
+    });
+
+    const experienceBreakdown = (expBreakdownRaw.rows as Row[]).map(r => ({
+      name:  r.experience as string,
+      count: Number(r.cnt),
+    }));
+
+    const occasionBreakdown = (occBreakdownRaw.rows as Row[]).map(r => ({
+      name:  r.occasion as string,
+      count: Number(r.cnt),
+    }));
+
+    res.json({ monthly, experienceBreakdown, occasionBreakdown });
+  } catch (err) {
+    console.error("[admin] trends error:", err);
+    res.status(500).json({ error: "Failed to load trends" });
+  }
+});
+
 export default router;

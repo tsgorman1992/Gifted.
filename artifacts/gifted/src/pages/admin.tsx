@@ -4,8 +4,12 @@ import {
   Gift, DollarSign, Clock, CheckCircle2, RefreshCw, LogOut,
   ExternalLink, Copy, Check, Users, BadgeCheck, X,
   TrendingUp, Percent, Repeat2, Sparkles, Search, Trash2,
-  AlertTriangle, ChevronDown, ChevronUp,
+  AlertTriangle, ChevronDown, ChevronUp, BarChart2,
 } from "lucide-react";
+import {
+  ResponsiveContainer, BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+} from "recharts";
 
 const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 const API  = `${window.location.origin}${BASE}`;
@@ -69,6 +73,24 @@ interface UserRow {
   createdAt: string;
   giftsSent: number;
   giftsReceived: number;
+}
+
+interface MonthRow {
+  month: string;
+  giftCount: number;
+  volume: number;
+  feeRevenue: number;
+  opens: number;
+  redeems: number;
+  openRate: number;
+  redeemRate: number;
+  newUsers: number;
+}
+
+interface TrendsData {
+  monthly: MonthRow[];
+  experienceBreakdown: { name: string; count: number }[];
+  occasionBreakdown:   { name: string; count: number }[];
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -143,6 +165,190 @@ function StatCard({
   );
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const PRIMARY = "#8C5523";   // brand cognac — hsl(28,62%,36%)
+const GREEN   = "#16a34a";
+const BLUE    = "#2563eb";
+const VIOLET  = "#7c3aed";
+const SKY     = "#0ea5e9";
+
+function fmtMonth(m: string) {
+  const [year, month] = m.split("-");
+  const d = new Date(+year, +month - 1, 1);
+  return d.toLocaleDateString("en-US", { month: "short" }) + " '" + year.slice(2);
+}
+
+function ChartCard({ title, children, isEmpty }: { title: string; children: React.ReactNode; isEmpty?: boolean }) {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">{title}</h3>
+      {isEmpty ? (
+        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground/40 gap-2">
+          <BarChart2 className="w-8 h-8" />
+          <span className="text-xs">No data yet</span>
+        </div>
+      ) : children}
+    </div>
+  );
+}
+
+function TrendsPanel({
+  trends, loading, expLabels,
+}: {
+  trends: TrendsData | null;
+  loading: boolean;
+  expLabels: Record<string, string>;
+}) {
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+        <RefreshCw className="w-6 h-6 animate-spin" />
+        <p className="text-sm">Loading trends…</p>
+      </div>
+    );
+  }
+
+  if (!trends) return null;
+
+  const chartData = trends.monthly.map(m => ({ ...m, label: fmtMonth(m.month) }));
+  const hasGiftData  = chartData.some(m => m.giftCount > 0);
+  const hasUserData  = chartData.some(m => m.newUsers > 0);
+  const hasRateData  = chartData.some(m => m.openRate > 0 || m.redeemRate > 0);
+  const hasExpData   = trends.experienceBreakdown.length > 0;
+  const hasOccData   = trends.occasionBreakdown.length > 0;
+
+  const expData = trends.experienceBreakdown.map(e => ({
+    name:  expLabels[e.name] ?? e.name,
+    count: e.count,
+  }));
+  const occData = trends.occasionBreakdown;
+
+  const tooltipStyle = {
+    backgroundColor: "hsl(var(--card))",
+    border: "1px solid hsl(var(--border))",
+    borderRadius: "12px",
+    fontSize: "12px",
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Row 1: Volume + Gift Count */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ChartCard title="Monthly Volume ($)" isEmpty={!hasGiftData}>
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  labelStyle={{ fontWeight: 600 }}
+                  formatter={(v: number) => [`$${v.toFixed(2)}`, "Volume"]}
+                />
+                <Bar dataKey="volume" fill={PRIMARY} radius={[4, 4, 0, 0]} maxBarSize={32} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        <ChartCard title="Gifts Sent per Month" isEmpty={!hasGiftData}>
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  labelStyle={{ fontWeight: 600 }}
+                  formatter={(v: number) => [v, "Gifts"]}
+                />
+                <Bar dataKey="giftCount" fill={VIOLET} radius={[4, 4, 0, 0]} maxBarSize={32} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Row 2: Open/Redeem Rates + New Signups */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ChartCard title="Open & Redeem Rate (%)" isEmpty={!hasRateData}>
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={v => `${v}%`} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  labelStyle={{ fontWeight: 600 }}
+                  formatter={(v: number, name: string) => [`${v}%`, name === "openRate" ? "Open rate" : "Redeem rate"]}
+                />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }}
+                  formatter={(val) => val === "openRate" ? "Open rate" : "Redeem rate"} />
+                <Line type="monotone" dataKey="openRate"   stroke={BLUE}  strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="redeemRate" stroke={GREEN} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        <ChartCard title="New Signups per Month" isEmpty={!hasUserData}>
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  labelStyle={{ fontWeight: 600 }}
+                  formatter={(v: number) => [v, "New users"]}
+                />
+                <Bar dataKey="newUsers" fill={SKY} radius={[4, 4, 0, 0]} maxBarSize={32} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Row 3: Experience + Occasion breakdowns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ChartCard title="Experience Themes (all time)" isEmpty={!hasExpData}>
+          <div className="h-52">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart layout="vertical" data={expData} margin={{ top: 0, right: 16, left: 4, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" width={104} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, "Gifts"]} />
+                <Bar dataKey="count" fill={PRIMARY} radius={[0, 4, 4, 0]} maxBarSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        <ChartCard title="Occasions (all time)" isEmpty={!hasOccData}>
+          <div className="h-52">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart layout="vertical" data={occData} margin={{ top: 0, right: 16, left: 4, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, "Gifts"]} />
+                <Bar dataKey="count" fill={SKY} radius={[0, 4, 4, 0]} maxBarSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+      </div>
+
+      <p className="text-xs text-muted-foreground text-right pb-2">Last 12 months • All paid gifts</p>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [key, setKey]           = useState(() => sessionStorage.getItem("admin_key") ?? "");
   const [authed, setAuthed]     = useState(false);
@@ -154,12 +360,17 @@ export default function AdminPage() {
   const [giftRows, setGiftRows] = useState<GiftRow[]>([]);
   const [userRows, setUserRows] = useState<UserRow[]>([]);
   const [loading, setLoading]   = useState(false);
-  const [tab, setTab]           = useState<"cashouts" | "all" | "users">("cashouts");
+  const [tab, setTab]           = useState<"cashouts" | "all" | "users" | "trends">("cashouts");
   const [copied, setCopied]     = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [showPaidHistory, setShowPaidHistory] = useState(false);
 
   const [giftSearch, setGiftSearch] = useState("");
+
+  // Trends tab — lazy loaded
+  const [trends, setTrends]           = useState<TrendsData | null>(null);
+  const [trendsLoading, setTrendsLoading] = useState(false);
+  const [trendsLoaded, setTrendsLoaded]   = useState(false);
 
   const [showWipe, setShowWipe]   = useState(false);
   const [wipeInput, setWipeInput] = useState("");
@@ -167,6 +378,18 @@ export default function AdminPage() {
   const [wipeMsg, setWipeMsg]     = useState<string | null>(null);
 
   const headers = { "x-admin-key": key };
+
+  const loadTrends = useCallback(async () => {
+    if (trendsLoaded) return;
+    setTrendsLoading(true);
+    try {
+      const data = await fetch(`${API}/api/admin/trends`, { headers }).then(r => r.json());
+      setTrends(data);
+      setTrendsLoaded(true);
+    } finally {
+      setTrendsLoading(false);
+    }
+  }, [key, trendsLoaded]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -379,10 +602,14 @@ export default function AdminPage() {
               ["cashouts", "Cashouts",  pendingCashouts.length > 0 ? String(pendingCashouts.length) : null, "amber"],
               ["all",      "All Gifts", String(giftRows.length), "muted"],
               ["users",    "Accounts",  String(userRows.length), "violet"],
+              ["trends",   "Trends",    null,                    "none"],
             ] as const).map(([t, label, badge, badgeColor]) => (
               <button
                 key={t}
-                onClick={() => setTab(t as typeof tab)}
+                onClick={() => {
+                  setTab(t as typeof tab);
+                  if (t === "trends") loadTrends();
+                }}
                 className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap flex items-center gap-2 ${
                   tab === t
                     ? "border-primary text-primary"
@@ -634,6 +861,11 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* ── Trends tab ────────────────────────────────────────────────── */}
+        {tab === "trends" && (
+          <TrendsPanel trends={trends} loading={trendsLoading} expLabels={EXP_LABELS} />
         )}
 
       </main>
