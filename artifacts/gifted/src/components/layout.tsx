@@ -32,7 +32,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     setLocation("/");
   }
 
-  const isReveal = location === "/reveal" || location.startsWith("/open/") || location === "/redeem";
+  const isReveal = location === "/reveal" || location.startsWith("/open/") || location === "/redeem" || location === "/admin";
 
   if (isReveal) {
     return <main className="min-h-screen w-full bg-background selection:bg-primary/20">{children}</main>;
