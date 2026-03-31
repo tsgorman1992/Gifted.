@@ -456,8 +456,8 @@ async function sendOccasionReminders() {
     const now = new Date();
     const currentYear = now.getFullYear();
 
-    // Check for occasions 7 days from now AND today (day-of reminder)
-    const REMINDER_DAYS = [0, 7];
+    // Check for occasions 7 days from now only (day-of removed — too late to build a gift)
+    const REMINDER_DAYS = [7];
 
     for (const daysAway of REMINDER_DAYS) {
       const target = new Date(now);

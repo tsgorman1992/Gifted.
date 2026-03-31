@@ -548,11 +548,7 @@ export async function sendOccasionReminderEmail({
   if (!client) return;
 
   const greeting = userName ? `Hi ${userName},` : "Hi there,";
-  const urgency = daysAway === 0
-    ? "is today"
-    : daysAway === 1
-      ? "is tomorrow"
-      : `is in ${daysAway} day${daysAway > 1 ? "s" : ""}`;
+  const urgency = `is in ${daysAway} day${daysAway !== 1 ? "s" : ""}`;
 
   const body = `
     <h2 style="margin:0 0 8px;font-size:24px;font-weight:500;color:#1a1108;font-family:Georgia,serif;">
@@ -563,8 +559,8 @@ export async function sendOccasionReminderEmail({
     </p>
     ${btn("Build a gift moment", `${BASE_URL}/create`)}
     <p style="margin:20px 0 0;font-size:13px;color:#9e9087;line-height:1.6;">
-      You're receiving this because you saved this occasion in your gifted. dashboard. 
-      <a href="${BASE_URL}/my-gifts" style="color:#7c4a1e;text-decoration:underline;">Manage reminders</a>
+      You're receiving this because you saved this occasion in your gifted. contacts. 
+      <a href="${BASE_URL}/my-gifts?tab=people" style="color:#7c4a1e;text-decoration:underline;">Manage reminders</a>
     </p>
   `;
 
@@ -573,7 +569,7 @@ export async function sendOccasionReminderEmail({
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `${contactName}'s ${occasionLabel} is ${daysAway === 0 ? "today" : daysAway === 1 ? "tomorrow" : `in ${daysAway} days`} 🎁`,
+      subject: `${contactName}'s ${occasionLabel} is in ${daysAway} day${daysAway !== 1 ? "s" : ""} 🎁`,
       html: layout(`Occasion reminder — gifted.`, body),
     });
     if (error) console.error("[email] sendOccasionReminderEmail error:", error);
