@@ -12,7 +12,7 @@ import {
   Inbox, Trash2, X, Share2, Send, Users, Bell,
   UserPlus, Cake, Pencil, BookUser, Truck, RefreshCw, ChevronRight,
 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, differenceInCalendarDays } from "date-fns";
 import {
   FLOATING_OCCASION_KEYS,
   computeFloatingDate,
@@ -1555,7 +1555,7 @@ function LinkedGiftTracking({ gift, idx }: { gift: ReceivedGiftSummary; idx: num
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Tab = "inbox" | "sent" | "people";
+type Tab = "inbox" | "sent" | "scheduled" | "people";
 
 const INBOX_PREVIEW_COUNT = 5;
 
@@ -1572,12 +1572,14 @@ export default function MyGiftsPage() {
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddPhysical, setShowAddPhysical] = useState(false);
   const [showAllReceived, setShowAllReceived] = useState(false);
+  const [copiedGiftId, setCopiedGiftId] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(search);
     const tab = params.get("tab");
     if (tab === "contacts" || tab === "people") setActiveTab("people");
     if (tab === "inbox" || tab === "received") setActiveTab("inbox");
+    if (tab === "scheduled") setActiveTab("scheduled");
   }, [search]);
 
   useEffect(() => {
@@ -1694,7 +1696,9 @@ export default function MyGiftsPage() {
   ) ?? [];
   const totalUnclaimedBalance = unclaimedGifts.reduce((sum, g) => sum + parseFloat(g.amount!), 0);
 
-  const TAB_LABELS: Record<Tab, string> = { inbox: "My Gifts", sent: "Sent", people: "People" };
+  const scheduledGifts = (myGifts ?? []).filter(g => g.scheduledFor && !g.openedAt);
+
+  const TAB_LABELS: Record<Tab, string> = { inbox: "My Gifts", sent: "Sent", scheduled: "Scheduled", people: "People" };
 
   return (
     <div className="min-h-screen w-full pb-28">
@@ -1793,7 +1797,7 @@ export default function MyGiftsPage() {
 
         {/* ── Tabs ── */}
         <div className="flex items-center gap-0 border-b border-border/50 mb-6">
-          {(["inbox", "sent", "people"] as Tab[]).map((tab) => (
+          {(["inbox", "sent", "scheduled", "people"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1807,6 +1811,11 @@ export default function MyGiftsPage() {
               {tab === "inbox" && totalReceived > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
                   {totalReceived}
+                </span>
+              )}
+              {tab === "scheduled" && scheduledGifts.length > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
+                  {scheduledGifts.length}
                 </span>
               )}
               {tab === "people" && (contactsData?.length ?? 0) > 0 && (
@@ -2079,6 +2088,148 @@ export default function MyGiftsPage() {
             </div>
           );
         })()}
+
+        {/* ── Scheduled tab ── */}
+        {activeTab === "scheduled" && (
+          giftsLoading ? (
+            <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
+                  <div className="h-3 w-48 bg-muted/50 rounded animate-pulse mb-2" />
+                  <div className="h-2.5 w-32 bg-muted/30 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : scheduledGifts.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="text-center py-20 bg-card border border-border/60 rounded-2xl px-6"
+            >
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                <CalendarClock className="w-7 h-7 text-primary" />
+              </div>
+              <h2 className="font-serif text-2xl font-medium mb-2">No scheduled gifts</h2>
+              <p className="text-muted-foreground mb-8 max-w-xs mx-auto text-sm">
+                When you build a gift and set a reminder date, it appears here so you never miss the moment.
+              </p>
+              <Button onClick={handleNewGift} className="rounded-full px-8 h-12 gap-2 shadow-sm">
+                <Plus className="w-4 h-4" />
+                Build a moment
+              </Button>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.05 }}
+            >
+              <p className="text-xs text-muted-foreground mb-3">
+                {scheduledGifts.length} gift{scheduledGifts.length !== 1 ? "s" : ""} waiting to be shared
+              </p>
+              <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                {scheduledGifts.map((gift, i) => {
+                  const schedDate = new Date(gift.scheduledFor!);
+                  const days = differenceInCalendarDays(schedDate, new Date());
+                  const shareUrl = `${window.location.origin}${BASE}/api/share/${gift.id}`;
+                  const isCopied = copiedGiftId === gift.id;
+
+                  let urgencyLabel: string;
+                  let urgencyClass: string;
+                  if (days < 0) {
+                    urgencyLabel = `${Math.abs(days)}d overdue — share now`;
+                    urgencyClass = "text-red-600";
+                  } else if (days === 0) {
+                    urgencyLabel = "Today — ready to share";
+                    urgencyClass = "text-amber-600";
+                  } else if (days === 1) {
+                    urgencyLabel = "Tomorrow";
+                    urgencyClass = "text-primary";
+                  } else {
+                    urgencyLabel = `In ${days} days · ${format(schedDate, "MMM d")}`;
+                    urgencyClass = "text-muted-foreground";
+                  }
+
+                  const initial = gift.recipientName?.[0]?.toUpperCase() ?? "?";
+
+                  return (
+                    <motion.div
+                      key={gift.id}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="flex items-center gap-4 px-5 py-4 border-b border-border/40 last:border-0"
+                    >
+                      {/* Recipient initial */}
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                        <span className="text-sm font-semibold text-foreground">{initial}</span>
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold truncate">{gift.recipientName}</p>
+                          {gift.occasion && (
+                            <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                              {gift.occasion}
+                            </span>
+                          )}
+                          {gift.scheduleDelivered && (
+                            <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Bell className="w-3 h-3" />
+                              Reminder sent
+                            </span>
+                          )}
+                        </div>
+                        <p className={`text-xs mt-0.5 font-medium ${urgencyClass}`}>
+                          <CalendarClock className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+                          {urgencyLabel}
+                        </p>
+                        {gift.giftTitle && (
+                          <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{gift.giftTitle}</p>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(shareUrl).then(() => {
+                              setCopiedGiftId(gift.id);
+                              setTimeout(() => setCopiedGiftId(null), 2000);
+                            }).catch(() => {});
+                          }}
+                          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
+                            isCopied
+                              ? "text-green-700 bg-green-50 border border-green-200"
+                              : "text-white bg-primary hover:bg-primary/90 shadow-sm"
+                          }`}
+                        >
+                          {isCopied ? (
+                            <><Check className="w-3.5 h-3.5" /> Copied</>
+                          ) : (
+                            <><Share2 className="w-3.5 h-3.5" /> Share</>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setLocation(`/open/${gift.id}`)}
+                          className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                          title="View gift"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground/60 text-center mt-4 max-w-sm mx-auto">
+                Share the link directly from your phone when the moment is right — no automated delivery.
+              </p>
+            </motion.div>
+          )
+        )}
 
         {/* ── People tab ── */}
         {activeTab === "people" && (
