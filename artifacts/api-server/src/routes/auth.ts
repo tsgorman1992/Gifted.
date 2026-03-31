@@ -74,15 +74,21 @@ router.patch("/auth/profile", async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
 
-  const { firstName, lastName } = req.body as { firstName?: string; lastName?: string };
+  const { firstName, lastName, profileImageUrl } = req.body as {
+    firstName?: string;
+    lastName?: string;
+    profileImageUrl?: string;
+  };
 
   try {
+    const setFields: Record<string, unknown> = {};
+    if (firstName !== undefined) setFields.firstName = firstName.trim() || null;
+    if (lastName  !== undefined) setFields.lastName  = lastName.trim()  || null;
+    if (profileImageUrl !== undefined) setFields.profileImageUrl = profileImageUrl || null;
+
     const [updated] = await db
       .update(usersTable)
-      .set({
-        firstName: firstName?.trim() || null,
-        lastName: lastName?.trim() || null,
-      })
+      .set(setFields)
       .where(eq(usersTable.id, userId))
       .returning({
         id: usersTable.id,
@@ -94,10 +100,11 @@ router.patch("/auth/profile", async (req: Request, res: Response) => {
 
     if (!updated) { res.status(404).json({ error: "User not found" }); return; }
 
-    // Update the session with new name data
+    // Update the session with new data
     if (req.user) {
       (req.user as any).firstName = updated.firstName;
       (req.user as any).lastName = updated.lastName;
+      (req.user as any).profileImageUrl = updated.profileImageUrl;
     }
 
     res.json({ user: updated });
