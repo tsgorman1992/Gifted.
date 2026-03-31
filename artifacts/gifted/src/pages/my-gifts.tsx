@@ -1748,7 +1748,7 @@ export default function MyGiftsPage() {
 
   const scheduledGifts = (myGifts ?? []).filter(g => g.scheduledFor && !g.openedAt);
 
-  const TAB_LABELS: Record<Tab, string> = { inbox: "My Gifts", sent: "Sent", scheduled: "Scheduled", people: "People" };
+  const TAB_LABELS: Record<Tab, string> = { inbox: "Moments", sent: "Sent", scheduled: "Scheduled", people: "People" };
 
   return (
     <div className="min-h-screen w-full pb-28">
@@ -1772,14 +1772,9 @@ export default function MyGiftsPage() {
             <div>
               <p className="text-xs text-muted-foreground font-medium">{greeting(displayFirstName)}</p>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setActiveTab(activeTab === "inbox" ? "sent" : "inbox")}
-                  className="font-serif text-2xl md:text-3xl font-medium leading-tight hover:text-primary transition-colors flex items-center gap-1 group"
-                  title="View my gifts"
-                >
-                  Your gifts
-                  <ChevronRight className={`w-5 h-5 text-muted-foreground/50 group-hover:text-primary transition-all ${activeTab === "inbox" ? "rotate-90 text-primary" : ""}`} />
-                </button>
+                <h1 className="font-serif text-2xl md:text-3xl font-medium leading-tight">
+                  Your moments
+                </h1>
                 <button
                   onClick={() => setShowProfileEdit(true)}
                   className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
