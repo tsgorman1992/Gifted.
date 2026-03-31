@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles } from "lucide-react";
+import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles, House } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -130,6 +130,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </a>
 
           <nav className="flex items-center gap-3">
+            {/* Home icon — always visible on desktop; on mobile only when NOT signed in */}
+            <a
+              href="/"
+              onClick={handleLogoClick}
+              title="Home"
+              className={`${isAuthenticated ? "hidden sm:flex" : "flex"} items-center justify-center w-9 h-9 rounded-full transition-colors hover:bg-secondary ${location === "/" ? "text-foreground bg-secondary" : "text-muted-foreground"}`}
+            >
+              <House className="w-4 h-4" />
+            </a>
+
             {/* Features — always show on desktop; on mobile only show when NOT signed in (signed-in users get it in the dropdown) */}
             <Link
               href="/features"
@@ -219,6 +229,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
                       {/* Mobile-only nav items */}
                       <DropdownMenuItem asChild>
+                        <a href="/" onClick={(e) => { e.preventDefault(); setLocation("/"); }} className="flex items-center gap-2 cursor-pointer sm:hidden">
+                          <House className="w-4 h-4" />
+                          Home
+                        </a>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link href="/my-gifts" className="flex items-center gap-2 cursor-pointer sm:hidden">
                           <Gift className="w-4 h-4" />
                           My Gifts
@@ -265,7 +281,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               )
             )}
 
-            <Button onClick={handleSendGift} className="rounded-full px-6 shadow-md hover:-translate-y-0.5 transition-transform duration-300">
+            <Button onClick={handleSendGift} className="rounded-full px-4 text-sm shadow-md hover:-translate-y-0.5 transition-transform duration-300">
               Build a moment
             </Button>
           </nav>
