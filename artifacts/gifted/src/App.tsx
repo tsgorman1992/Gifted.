@@ -5,9 +5,11 @@ import { useEffect } from "react";
 function RevealRedirect() {
   const [, setLocation] = useLocation();
   useEffect(() => {
-    const giftId = new URLSearchParams(window.location.search).get("giftId");
+    const params = new URLSearchParams(window.location.search);
+    const giftId = params.get("giftId");
     if (giftId) {
-      setLocation(`/open/${giftId}`, { replace: true });
+      const isPreview = params.get("preview") === "true";
+      setLocation(`/open/${giftId}${isPreview ? "?preview=true" : ""}`, { replace: true });
     }
   }, [setLocation]);
   return null;
