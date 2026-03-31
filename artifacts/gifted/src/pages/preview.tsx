@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth-context";
 import QRCodeLib from "qrcode";
 import { trackEvent } from "@/lib/analytics";
 import { FLOATING_OCCASION_KEYS, buildOccasionPayload } from "@/lib/occasions";
+import { useIsMobileOrTablet } from "@/hooks/use-is-mobile-or-tablet";
 
 // ─── QR Code component ────────────────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ function formatPhone(raw: string): string {
 export default function PreviewPage() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading: authLoading, refetch } = useAuth();
+  const isMobileOrTablet = useIsMobileOrTablet();
 
   const [experience,     setExperience]     = useState(DEFAULT_EXPERIENCE);
   const [recipientName,  setRecipientName]  = useState(mockGiftData.recipientName);
@@ -971,9 +973,9 @@ export default function PreviewPage() {
 
           <motion.div {...fade(0.15)} className="space-y-3">
 
-            {/* ── Share / copy — mobile: native share + copy (shown first, above confirmation) ── */}
-            {(!hasBalance || isPaid) && (
-              <div className="flex gap-3 md:hidden">
+            {/* ── Share / copy — mobile/tablet: native share + copy (shown first, above confirmation) ── */}
+            {(!hasBalance || isPaid) && isMobileOrTablet && (
+              <div className="flex gap-3">
                 <Button
                   onClick={canShare ? handleShare : handleSMS}
                   disabled={saving}
@@ -997,9 +999,9 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* ── Desktop share section — shown first on desktop so action is unmissable ── */}
-            {(!hasBalance || isPaid) && (
-              <div className="hidden md:flex flex-col gap-3.5">
+            {/* ── Desktop share section — shown on desktop/non-touch devices ── */}
+            {(!hasBalance || isPaid) && !isMobileOrTablet && (
+              <div className="flex flex-col gap-3.5">
 
                 {/* Hero: text to my phone (recommended — comes from sender's own number) */}
                 <div className="rounded-2xl border-2 border-primary/25 bg-primary/5 p-4 space-y-2.5">
