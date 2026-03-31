@@ -1491,10 +1491,29 @@ function UpcomingOccasionsBanner({ contacts, onGift }: { contacts: Contact[]; on
 
 function LinkedGiftTracking({ gift, idx }: { gift: ReceivedGiftSummary; idx: number }) {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const [confirmDismiss, setConfirmDismiss] = useState(false);
+  const [dismissing, setDismissing] = useState(false);
+
   const latestEvent = gift.trackingStatus && gift.trackingStatus.length > 0
     ? gift.trackingStatus[gift.trackingStatus.length - 1]
     : null;
   const isDelivered = !!gift.trackingDeliveredAt;
+
+  async function handleDismiss(e: React.MouseEvent) {
+    e.stopPropagation();
+    setDismissing(true);
+    try {
+      await fetch(`${BASE}/api/gifted/gifts/${gift.id}/hide-received`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["received-gifts"] });
+    } catch {
+      setDismissing(false);
+      setConfirmDismiss(false);
+    }
+  }
 
   return (
     <motion.div
@@ -1541,13 +1560,44 @@ function LinkedGiftTracking({ gift, idx }: { gift: ReceivedGiftSummary; idx: num
         <p className="text-xs text-muted-foreground/60 ml-5.5 mb-1">No tracking updates yet</p>
       )}
 
-      <div className="ml-4 mt-1">
-        <button
-          onClick={() => setLocation(`/open/${gift.id}`)}
-          className="text-xs text-primary font-medium hover:opacity-80 transition-opacity"
-        >
-          View gift →
-        </button>
+      <div className="flex items-center gap-3 ml-4 mt-1.5">
+        {confirmDismiss ? (
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <span className="text-xs text-muted-foreground">Remove this package?</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDismiss(false); }}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              disabled={dismissing}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDismiss}
+              disabled={dismissing}
+              className="text-xs font-medium text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+            >
+              {dismissing ? "Removing…" : "Remove"}
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={() => setLocation(`/open/${gift.id}`)}
+              className="text-xs text-primary font-medium hover:opacity-80 transition-opacity"
+            >
+              View gift →
+            </button>
+            {isDelivered && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDismiss(true); }}
+                className="p-1 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                title="Remove from packages"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </>
+        )}
       </div>
     </motion.div>
   );
