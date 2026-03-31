@@ -603,6 +603,10 @@ router.get("/gifted/received-gifts", async (req, res) => {
         openedAt: g.openedAt,
         redeemedAt: g.redeemedAt,
         createdAt: g.createdAt,
+        trackingCarrier: g.trackingCarrier ?? null,
+        trackingNumber: g.trackingNumber ?? null,
+        trackingStatus: g.trackingStatus ?? null,
+        trackingDeliveredAt: g.trackingDeliveredAt ?? null,
       }))
     );
   } catch (err) {

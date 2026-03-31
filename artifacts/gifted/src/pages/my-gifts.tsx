@@ -53,6 +53,10 @@ interface ReceivedGiftSummary {
   openedAt: string | null;
   redeemedAt: string | null;
   createdAt: string;
+  trackingCarrier: string | null;
+  trackingNumber: string | null;
+  trackingStatus: TrackingEvent[] | null;
+  trackingDeliveredAt: string | null;
 }
 
 interface TrackingEvent {
@@ -1483,15 +1487,83 @@ function UpcomingOccasionsBanner({ contacts, onGift }: { contacts: Contact[]; on
   );
 }
 
+// ─── Linked gift tracking (from digital gift moments) ────────────────────────
+
+function LinkedGiftTracking({ gift, idx }: { gift: ReceivedGiftSummary; idx: number }) {
+  const [, setLocation] = useLocation();
+  const latestEvent = gift.trackingStatus && gift.trackingStatus.length > 0
+    ? gift.trackingStatus[gift.trackingStatus.length - 1]
+    : null;
+  const isDelivered = !!gift.trackingDeliveredAt;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.08 + idx * 0.04, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="border-b border-border/40 last:border-0 px-5 py-4"
+    >
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <Package className={`w-3.5 h-3.5 shrink-0 ${isDelivered ? "text-green-600" : "text-muted-foreground"}`} />
+          <p className="font-medium text-sm leading-snug truncate">
+            {gift.giftTitle || "A gift"} — shipment
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isDelivered && <span className="text-xs font-medium text-green-700">Delivered</span>}
+          <span
+            className="text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{ background: "hsl(28,62%,36%,0.08)", color: "hsl(28,62%,36%)" }}
+          >
+            from moment
+          </span>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground mb-1.5 ml-5.5 pl-0.5">
+        From <span className="text-foreground font-medium">{gift.senderName}</span>
+        {gift.trackingCarrier && (
+          <> · {CARRIER_LABELS[gift.trackingCarrier] ?? gift.trackingCarrier}</>
+        )}
+        {gift.trackingNumber && (
+          <> · <span className="font-mono text-[10px]">{gift.trackingNumber.slice(0, 16)}{gift.trackingNumber.length > 16 ? "…" : ""}</span></>
+        )}
+      </p>
+
+      {latestEvent ? (
+        <p className="text-xs text-muted-foreground ml-5.5 mb-1">
+          <span className="font-medium text-foreground">{latestEvent.message}</span>
+          {latestEvent.location && <> · {latestEvent.location}</>}
+          {" · "}{formatDistanceToNow(new Date(latestEvent.timestamp), { addSuffix: true })}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground/60 ml-5.5 mb-1">No tracking updates yet</p>
+      )}
+
+      <div className="ml-4 mt-1">
+        <button
+          onClick={() => setLocation(`/open/${gift.id}`)}
+          className="text-xs text-primary font-medium hover:opacity-80 transition-opacity"
+        >
+          View gift →
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-type Tab = "sent" | "inbox" | "people";
+type Tab = "inbox" | "sent" | "people";
+
+const INBOX_PREVIEW_COUNT = 5;
 
 export default function MyGiftsPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const search = useSearch();
-  const [activeTab, setActiveTab] = useState<Tab>("sent");
+  const [activeTab, setActiveTab] = useState<Tab>("inbox");
   const [activeStatFilter, setActiveStatFilter] = useState<"opened" | "redeemed" | null>(null);
   const queryClient = useQueryClient();
   const [senderBlockedNotice, setSenderBlockedNotice] = useState(false);
@@ -1499,6 +1571,7 @@ export default function MyGiftsPage() {
   const [localName, setLocalName] = useState<{ first: string; last: string } | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddPhysical, setShowAddPhysical] = useState(false);
+  const [showAllReceived, setShowAllReceived] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(search);
@@ -1621,7 +1694,7 @@ export default function MyGiftsPage() {
   ) ?? [];
   const totalUnclaimedBalance = unclaimedGifts.reduce((sum, g) => sum + parseFloat(g.amount!), 0);
 
-  const TAB_LABELS: Record<Tab, string> = { sent: "Sent", inbox: "My Gifts", people: "People" };
+  const TAB_LABELS: Record<Tab, string> = { inbox: "My Gifts", sent: "Sent", people: "People" };
 
   return (
     <div className="min-h-screen w-full pb-28">
@@ -1720,7 +1793,7 @@ export default function MyGiftsPage() {
 
         {/* ── Tabs ── */}
         <div className="flex items-center gap-0 border-b border-border/50 mb-6">
-          {(["sent", "inbox", "people"] as Tab[]).map((tab) => (
+          {(["inbox", "sent", "people"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1814,153 +1887,198 @@ export default function MyGiftsPage() {
         )}
 
         {/* ── My Gifts (Inbox) tab ── */}
-        {activeTab === "inbox" && (
-          <div className="space-y-6">
-            {/* Received digital gifts */}
-            <div>
-              {receivedLoading ? (
-                <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
-                      <div className="h-3 w-48 bg-muted/50 rounded animate-pulse mb-2" />
-                      <div className="h-2.5 w-32 bg-muted/30 rounded animate-pulse" />
-                    </div>
-                  ))}
-                </div>
-              ) : !receivedGifts || receivedGifts.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center py-16 bg-card border border-border/60 rounded-2xl px-6"
-                >
-                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <Inbox className="w-7 h-7 text-primary" />
-                  </div>
-                  <h2 className="font-serif text-xl font-medium mb-2">No received gifts yet</h2>
-                  <p className="text-muted-foreground max-w-xs mx-auto text-sm">
-                    When someone sends you a gift and you save it to your account, it will appear here.
-                  </p>
-                </motion.div>
-              ) : (
-                <>
-                  <p className="text-xs text-muted-foreground mb-3">{totalReceived} gift{totalReceived !== 1 ? "s" : ""} received</p>
-                  <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
-                    {receivedGifts.map((gift, i) => (
-                      <ReceivedGiftCard key={gift.id} gift={gift} idx={i} />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+        {activeTab === "inbox" && (() => {
+          // Received digital gifts that also have tracking (shared during moment creation)
+          const receivedWithTracking = (receivedGifts ?? []).filter(
+            g => g.trackingCarrier && g.trackingNumber
+          );
+          // All package rows: standalone physical + linked digital tracking
+          const hasAnyPackages = (physicalGiftsData?.length ?? 0) > 0 || receivedWithTracking.length > 0;
 
-            {/* Needs redemption callout */}
-            {unclaimedGifts.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="border border-primary/25 rounded-xl bg-primary/5 overflow-hidden"
-              >
-                <div className="px-5 py-4 border-b border-primary/15">
-                  <div className="flex items-center justify-between">
+          const visibleReceived = showAllReceived
+            ? (receivedGifts ?? [])
+            : (receivedGifts ?? []).slice(0, INBOX_PREVIEW_COUNT);
+          const hiddenCount = Math.max(0, (receivedGifts?.length ?? 0) - INBOX_PREVIEW_COUNT);
+
+          return (
+            <div className="space-y-6">
+              {/* ── 1. Redemption callout — always at top ── */}
+              {!receivedLoading && unclaimedGifts.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="border border-primary/25 rounded-xl bg-primary/5 overflow-hidden"
+                >
+                  <div className="px-5 py-4 border-b border-primary/15 flex items-center justify-between">
                     <p className="text-sm font-semibold text-foreground">
                       You have ${totalUnclaimedBalance.toFixed(0)} to collect
                     </p>
-                    <span className="text-xs text-muted-foreground">{unclaimedGifts.length} gift{unclaimedGifts.length !== 1 ? "s" : ""}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {unclaimedGifts.length} gift{unclaimedGifts.length !== 1 ? "s" : ""}
+                    </span>
                   </div>
-                </div>
-                {unclaimedGifts.map((gift, i) => (
-                  <div
-                    key={gift.id}
-                    className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-primary/10 last:border-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{gift.giftTitle || "A gift for you"}</p>
-                      <p className="text-xs text-muted-foreground">From {gift.senderName}</p>
-                    </div>
-                    <button
-                      onClick={() => setLocation(`/open/${gift.id}`)}
-                      className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors shrink-0 whitespace-nowrap"
+                  {unclaimedGifts.map((gift) => (
+                    <div
+                      key={gift.id}
+                      className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-primary/10 last:border-0"
                     >
-                      Collect ${parseFloat(gift.amount!).toFixed(0)}
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </motion.div>
-            )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{gift.giftTitle || "A gift for you"}</p>
+                        <p className="text-xs text-muted-foreground">From {gift.senderName}</p>
+                      </div>
+                      <button
+                        onClick={() => setLocation(`/open/${gift.id}`)}
+                        className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors shrink-0 whitespace-nowrap"
+                      >
+                        Collect ${parseFloat(gift.amount!).toFixed(0)}
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
 
-            {/* Physical packages */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Physical packages</p>
-                  <p className="text-xs text-muted-foreground">Track gifts you've sent or received by mail</p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowAddPhysical(true)}
-                  className="rounded-full gap-1.5 h-8 text-xs"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add
-                </Button>
+              {/* ── 2. Received digital gifts ── */}
+              <div>
+                {receivedLoading ? (
+                  <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
+                        <div className="h-3 w-48 bg-muted/50 rounded animate-pulse mb-2" />
+                        <div className="h-2.5 w-32 bg-muted/30 rounded animate-pulse" />
+                      </div>
+                    ))}
+                  </div>
+                ) : !receivedGifts || receivedGifts.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center py-16 bg-card border border-border/60 rounded-2xl px-6"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <Inbox className="w-7 h-7 text-primary" />
+                    </div>
+                    <h2 className="font-serif text-xl font-medium mb-2">No received gifts yet</h2>
+                    <p className="text-muted-foreground max-w-xs mx-auto text-sm">
+                      When someone sends you a gift and you save it to your account, it will appear here.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {totalReceived} gift{totalReceived !== 1 ? "s" : ""} received
+                    </p>
+                    <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                      {visibleReceived.map((gift, i) => (
+                        <ReceivedGiftCard key={gift.id} gift={gift} idx={i} />
+                      ))}
+                    </div>
+                    {hiddenCount > 0 && !showAllReceived && (
+                      <button
+                        onClick={() => setShowAllReceived(true)}
+                        className="w-full mt-2 py-2.5 text-sm text-muted-foreground hover:text-foreground border border-border/50 rounded-xl bg-card hover:bg-secondary/30 transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <ChevronRight className="w-4 h-4 rotate-90" />
+                        Show {hiddenCount} more gift{hiddenCount !== 1 ? "s" : ""}
+                      </button>
+                    )}
+                    {showAllReceived && totalReceived > INBOX_PREVIEW_COUNT && (
+                      <button
+                        onClick={() => setShowAllReceived(false)}
+                        className="w-full mt-2 py-2.5 text-sm text-muted-foreground hover:text-foreground border border-border/50 rounded-xl bg-card hover:bg-secondary/30 transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <ChevronRight className="w-4 h-4 -rotate-90" />
+                        Show less
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
 
-              <AnimatePresence>
-                {showAddPhysical && (
-                  <motion.div key="add-physical" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-4">
-                    <AddPhysicalGiftForm
-                      onSaved={() => { setShowAddPhysical(false); refetchPhysical(); queryClient.invalidateQueries({ queryKey: ["physical-gifts"] }); }}
-                      onCancel={() => setShowAddPhysical(false)}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {physicalLoading ? (
-                <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
-                      <div className="h-3 w-36 bg-muted/50 rounded animate-pulse mb-2" />
-                      <div className="h-2.5 w-52 bg-muted/30 rounded animate-pulse" />
-                    </div>
-                  ))}
-                </div>
-              ) : !physicalGiftsData || physicalGiftsData.length === 0 ? (
-                !showAddPhysical && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-12 bg-card border border-border/60 rounded-xl px-6"
+              {/* ── 3. Physical packages ── */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Physical packages</p>
+                    <p className="text-xs text-muted-foreground">Packages and shipments attached to your gifts</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowAddPhysical(v => !v)}
+                    className="rounded-full gap-1.5 h-8 text-xs"
                   >
-                    <Truck className="w-7 h-7 text-muted-foreground/40 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">No packages yet</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">Add a tracking number to follow a gift in the mail</p>
-                    <button
-                      onClick={() => setShowAddPhysical(true)}
-                      className="mt-4 text-xs text-primary font-medium hover:opacity-80 transition-opacity"
-                    >
-                      + Add a package
-                    </button>
-                  </motion.div>
-                )
-              ) : (
-                <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
-                  {physicalGiftsData.map((pg, i) => (
-                    <PhysicalGiftCard
-                      key={pg.id}
-                      gift={pg}
-                      idx={i}
-                      onRefresh={() => refetchPhysical()}
-                      onHide={() => { queryClient.invalidateQueries({ queryKey: ["physical-gifts"] }); refetchPhysical(); }}
-                    />
-                  ))}
+                    <Plus className="w-3.5 h-3.5" />
+                    Add
+                  </Button>
                 </div>
-              )}
+
+                <AnimatePresence>
+                  {showAddPhysical && (
+                    <motion.div key="add-physical" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-4 overflow-hidden">
+                      <AddPhysicalGiftForm
+                        onSaved={() => { setShowAddPhysical(false); refetchPhysical(); queryClient.invalidateQueries({ queryKey: ["physical-gifts"] }); }}
+                        onCancel={() => setShowAddPhysical(false)}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {physicalLoading ? (
+                  <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
+                        <div className="h-3 w-36 bg-muted/50 rounded animate-pulse mb-2" />
+                        <div className="h-2.5 w-52 bg-muted/30 rounded animate-pulse" />
+                      </div>
+                    ))}
+                  </div>
+                ) : !hasAnyPackages ? (
+                  !showAddPhysical && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center py-12 bg-card border border-border/60 rounded-xl px-6"
+                    >
+                      <Truck className="w-7 h-7 text-muted-foreground/40 mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">No packages yet</p>
+                      <p className="text-xs text-muted-foreground/60 mt-1">
+                        Packages linked during a gift moment appear here automatically
+                      </p>
+                      <button
+                        onClick={() => setShowAddPhysical(true)}
+                        className="mt-4 text-xs text-primary font-medium hover:opacity-80 transition-opacity"
+                      >
+                        + Add a package manually
+                      </button>
+                    </motion.div>
+                  )
+                ) : (
+                  <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                    {/* Standalone physical gifts */}
+                    {(physicalGiftsData ?? []).map((pg, i) => (
+                      <PhysicalGiftCard
+                        key={pg.id}
+                        gift={pg}
+                        idx={i}
+                        onRefresh={() => refetchPhysical()}
+                        onHide={() => { queryClient.invalidateQueries({ queryKey: ["physical-gifts"] }); refetchPhysical(); }}
+                      />
+                    ))}
+                    {/* Tracking from received digital gifts (added during moment creation) */}
+                    {receivedWithTracking.map((g, i) => (
+                      <LinkedGiftTracking
+                        key={`linked-${g.id}`}
+                        gift={g}
+                        idx={(physicalGiftsData?.length ?? 0) + i}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── People tab ── */}
         {activeTab === "people" && (
