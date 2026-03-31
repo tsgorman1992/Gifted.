@@ -1881,16 +1881,36 @@ export default function MyGiftsPage() {
                   <p className="text-xs text-muted-foreground">{totalSent} gift{totalSent !== 1 ? "s" : ""} sent · most recent first</p>
                 )}
               </motion.div>
-              <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
-                {(activeStatFilter
+              {(() => {
+                const filtered = activeStatFilter
                   ? myGifts.filter(g =>
                       activeStatFilter === "opened" ? !!g.openedAt && !g.redeemedAt : !!g.redeemedAt
                     )
-                  : myGifts
-                ).map((gift, i) => (
-                  <GiftCard key={gift.id} gift={gift} idx={i} />
-                ))}
-              </div>
+                  : myGifts;
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="border border-border/60 rounded-xl bg-card px-6 py-10 text-center">
+                      <p className="text-sm font-medium text-foreground mb-1">
+                        {activeStatFilter === "redeemed" ? "No moments redeemed yet" : "No gifts in this view"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {activeStatFilter === "redeemed"
+                          ? "When a recipient redeems their gift balance, it'll appear here."
+                          : "Nothing matches this filter right now."}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
+                    {filtered.map((gift, i) => (
+                      <GiftCard key={gift.id} gift={gift} idx={i} />
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )
         )}
