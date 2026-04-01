@@ -123,9 +123,10 @@ export default function OpenPage() {
   }, [id]);
 
   // Auto-save when gift loads for authenticated users (no reveal action required)
-  // Skip if the authenticated user is the sender — they don't receive their own gift
+  // Skip if the authenticated user is the sender, or if this is a preview (e.g. admin viewing)
   useEffect(() => {
     if (!giftId || authLoading || !isAuthenticated) return;
+    if (new URLSearchParams(window.location.search).get("preview") === "true") return;
     if (user && giftSenderUserId && user.id === giftSenderUserId) return;
     setSaveStatus("saving");
     saveReceivedGift(giftId)

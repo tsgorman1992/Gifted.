@@ -858,7 +858,7 @@ export default function AdminPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <a
-                          href={`/open/${c.id}`}
+                          href={`/open/${c.id}?preview=true`}
                           target="_blank"
                           rel="noreferrer"
                           className="p-2 rounded-lg border border-border hover:bg-muted transition-colors"
@@ -975,7 +975,7 @@ export default function AdminPage() {
                       <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{EXP_LABELS[g.experience] ?? g.experience}</td>
                       <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{fmtDate(g.createdAt)}</td>
                       <td className="px-3 sm:px-4 py-3">
-                        <a href={`/open/${g.id}`} target="_blank" rel="noreferrer"
+                        <a href={`/open/${g.id}?preview=true`} target="_blank" rel="noreferrer"
                           className="text-muted-foreground hover:text-primary transition-colors p-1 block">
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
