@@ -1504,9 +1504,32 @@ export default function PreviewPage() {
                       : <><Gift className="w-5 h-5" /> Pay ${displayAmt} — get the gift link</>
                   }
                 </Button>
-                <p className="text-center text-xs text-muted-foreground">
-                  Gift balance ${displayAmt} + 5% platform fee (${(parseFloat(displayAmt || "0") * 0.05).toFixed(2)}) = ${(parseFloat(displayAmt || "0") * 1.05).toFixed(2)} total
-                </p>
+                {(() => {
+                  const amt = parseFloat(displayAmt || "0");
+                  const platformFee = amt * 0.08;
+                  const total = (amt * 1.08 + 0.30) / 0.971;
+                  const processingFee = total - amt - platformFee;
+                  return (
+                    <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 text-xs space-y-1.5">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Gift balance</span>
+                        <span>${amt.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>gifted. service fee (8%)</span>
+                        <span>${platformFee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Card processing</span>
+                        <span>${processingFee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1.5">
+                        <span>Total</span>
+                        <span>${total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

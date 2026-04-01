@@ -73,8 +73,13 @@ router.post("/gifted/checkout-session", async (req, res) => {
     }
 
     const stripe = getStripe();
-    const amountCents = Math.round(parseFloat(gift.amount) * 100);
-    const feeCents    = Math.round(amountCents * 0.05);
+    const giftAmount     = parseFloat(gift.amount);
+    const amountCents    = Math.round(giftAmount * 100);
+    const platformFee    = giftAmount * 0.08;
+    const platformCents  = Math.round(platformFee * 100);
+    const totalDollars   = (giftAmount * 1.08 + 0.30) / 0.971;
+    const totalCents     = Math.round(totalDollars * 100);
+    const processingCents = totalCents - amountCents - platformCents;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -97,10 +102,21 @@ router.post("/gifted/checkout-session", async (req, res) => {
           price_data: {
             currency: "usd",
             product_data: {
-              name: "gifted. platform fee",
-              description: "5% service fee for premium gifting experience",
+              name: "gifted. service fee",
+              description: "8% platform fee — covers premium gifting experience and same-day payouts",
             },
-            unit_amount: feeCents,
+            unit_amount: platformCents,
+          },
+          quantity: 1,
+        },
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Card processing",
+              description: "Stripe payment processing fee passed through at cost",
+            },
+            unit_amount: processingCents,
           },
           quantity: 1,
         },

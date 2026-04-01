@@ -402,7 +402,7 @@ function DrilldownModal({
     [giftRows]
   );
   const totalVolume = feeRows.reduce((s, g) => s + amt(g), 0);
-  const totalFee    = totalVolume * 0.05;
+  const totalFee    = totalVolume * 0.08;
 
   // Repeat senders — senders with > 1 paid gift
   const repeatRows = React.useMemo(() => {
@@ -433,7 +433,7 @@ function DrilldownModal({
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {type === "fee"
-                ? `${feeRows.length} paid gift${feeRows.length !== 1 ? "s" : ""} · 5% platform fee`
+                ? `${feeRows.length} paid gift${feeRows.length !== 1 ? "s" : ""} · 8% platform fee`
                 : `${repeatRows.length} sender${repeatRows.length !== 1 ? "s" : ""} sent more than once`}
             </p>
           </div>
@@ -455,7 +455,7 @@ function DrilldownModal({
                   <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Recipient</th>
                   <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap hidden sm:table-cell">Sender</th>
                   <th className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Amount</th>
-                  <th className="text-right text-[11px] font-semibold text-green-700 uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Fee (5%)</th>
+                  <th className="text-right text-[11px] font-semibold text-green-700 uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Fee (8%)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -465,7 +465,7 @@ function DrilldownModal({
                     <td className="px-4 py-3 font-medium max-w-[140px] truncate">{g.recipientName}</td>
                     <td className="px-4 py-3 text-muted-foreground max-w-[120px] truncate hidden sm:table-cell">{g.senderName}</td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">{fmt(amt(g))}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-green-600 tabular-nums">{fmt(amt(g) * 0.05)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-green-600 tabular-nums">{fmt(amt(g) * 0.08)}</td>
                   </tr>
                 ))}
                 {feeRows.length === 0 && (
@@ -735,7 +735,7 @@ export default function AdminPage() {
               <StatCard label="Accounts"     value={`${stats.totalUsers}`}             sub={`+${stats.newUsersWeek} this week`}        icon={Users}       color="text-violet-600" onClick={() => setTab("users")} />
               <StatCard label="Total gifts"  value={`${stats.total}`}                  sub={`${stats.paid} paid`}                       icon={Gift}        color="text-foreground" onClick={() => setTab("all")} />
               <StatCard label="Gross volume" value={`$${stats.volume.toFixed(2)}`}      sub={`avg $${stats.avgAmount.toFixed(0)} / gift`} icon={DollarSign}  color="text-primary"    onClick={() => setDrilldown("fee")} />
-              <StatCard label="Fee revenue"  value={`$${stats.feeRevenue.toFixed(2)}`}  sub="5% of gross"                                icon={TrendingUp}  color="text-green-600"  onClick={() => setDrilldown("fee")} />
+              <StatCard label="Fee revenue"  value={`$${stats.feeRevenue.toFixed(2)}`}  sub="8% of gross"                                icon={TrendingUp}  color="text-green-600"  onClick={() => setDrilldown("fee")} />
             </div>
             {/* Insights row — 4 cards, same grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

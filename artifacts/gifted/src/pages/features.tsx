@@ -691,7 +691,7 @@ function PayoutSection() {
           <div className="flex flex-col gap-3">
             {[
               "They choose their preferred payout method — you don't need to know it in advance",
-              "5% platform fee, shown upfront at checkout. No subscriptions, no surprises",
+              "8% platform fee + card processing shown upfront. No subscriptions, no surprises",
               "Payments processed securely by Stripe — PCI-compliant, bank-grade security",
               "Balances never expire. They can redeem when they're ready",
             ].map((t, i) => (

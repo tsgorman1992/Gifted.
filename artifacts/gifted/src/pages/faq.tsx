@@ -28,7 +28,7 @@ const FAQS = [
   {
     question: "Is there a fee?",
     answer:
-      "gifted. charges a 5% platform fee on top of the gift amount, shown as a separate line item at checkout. This covers card processing, SMS delivery, and platform operations. There are no monthly fees, subscriptions, or hidden charges.",
+      "gifted. charges an 8% platform service fee on top of the gift amount. Card processing costs are also passed through transparently at cost — both are shown as separate line items before you check out. There are no monthly fees, subscriptions, or hidden charges.",
   },
   {
     question: "Do gifts expire?",

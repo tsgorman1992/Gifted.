@@ -58,7 +58,7 @@ export default function TermsPage() {
 
           <Section title="4. Payments and Balances">
             <p>
-              When you add a cash balance to a gift, you authorize gifted. to charge your payment method for the stated gift amount plus a 5% platform service fee. The minimum gift balance is $10. Payment is collected at the time of sending. The platform fee is non-refundable and covers premium delivery, experience design, and secure payout processing.
+              When you add a cash balance to a gift, you authorize gifted. to charge your payment method for the stated gift amount plus an 8% platform service fee and a card processing fee passed through at cost. Both fees are shown as separate line items before checkout. The minimum gift balance is $10. Payment is collected at the time of sending. The platform and processing fees are non-refundable and cover premium delivery, experience design, and secure payout processing.
             </p>
             <p>
               gifted. holds gift balances on behalf of senders until recipients redeem them. Once a recipient submits valid payout information, the gifted. team processes the transfer same day.
@@ -73,7 +73,7 @@ export default function TermsPage() {
 
           <Section title="5. Refunds">
             <p>
-              If a gift balance has not been redeemed, you may request a refund within 90 days of sending by emailing help@gifted.page. Refunds are processed to the original payment method within 5–10 business days. The 5% platform fee is not refundable.
+              If a gift balance has not been redeemed, you may request a refund within 90 days of sending by emailing help@gifted.page. Refunds are processed to the original payment method within 5–10 business days. The platform service fee and card processing fee are not refundable.
             </p>
             <p>
               Unredeemed gift balances are automatically refunded after 90 days. Once a recipient has redeemed a gift balance, the transaction is final and cannot be reversed.
