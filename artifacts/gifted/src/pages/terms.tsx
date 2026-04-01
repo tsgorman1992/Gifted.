@@ -64,7 +64,7 @@ export default function TermsPage() {
               gifted. holds gift balances on behalf of senders until recipients redeem them. Once a recipient submits valid payout information, the gifted. team processes the transfer same day.
             </p>
             <p>
-              Gift balances do not expire during the 90-day redemption window. If a gift balance has not been redeemed within 90 days of sending, gifted. will automatically refund the gift balance (not the platform fee) to the original payment method. We will make reasonable efforts to notify you before processing the refund.
+              Gift balances do not expire during the 90-day redemption window. If a gift balance has not been redeemed within 90 days of sending, gifted. will automatically refund the gift balance (excluding the platform service fee and card processing fee) to the original payment method. We will make reasonable efforts to notify you before processing the refund.
             </p>
             <p>
               We do not guarantee the availability of any specific payout method. The maximum gift balance is $500 per gift.
