@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           transition={{ duration: 0.6 }}
           className="mb-12"
         >
-          <p className="text-sm text-muted-foreground mb-3">Last updated: March 2026</p>
+          <p className="text-sm text-muted-foreground mb-3">Last updated: April 2026</p>
           <h1 className="font-serif text-5xl md:text-6xl font-medium mb-4">Privacy Policy</h1>
           <p className="text-lg text-muted-foreground">
             Your privacy matters to us. This policy explains what data we collect, how we use it, and your rights around it.
@@ -83,10 +83,14 @@ export default function PrivacyPage() {
 
         <Section title="Data Retention">
           <p>
-            We retain your gift content (videos, photos, notes) for as long as your account is active or until you delete the gift. Gift links remain active indefinitely unless you request removal.
+            <strong className="text-foreground">Uploaded media (videos and photos)</strong> — Videos and photos you upload are automatically deleted from our servers 90 days after the gift is redeemed. For paid gifts that are never redeemed, media is deleted 1 year after the gift was created. Personal notes and gift details are retained as part of your gift history.
           </p>
           <p>
-            Account data is retained until you delete your account. You can request account deletion by emailing privacy@gifted.page.
+            <strong className="text-foreground">Gift links</strong> — Gift links remain accessible indefinitely unless you request removal, even after media has been purged. The gift record (recipient name, occasion, amount) is retained for your records.
+          </p>
+          <p>
+            <strong className="text-foreground">Account data</strong> — Retained until you delete your account. You can request account deletion by emailing{" "}
+            <a href="mailto:privacy@gifted.page" className="text-primary hover:underline">privacy@gifted.page</a>.
           </p>
         </Section>
 

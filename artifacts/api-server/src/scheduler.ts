@@ -1,8 +1,9 @@
 import { db } from "@workspace/db";
 import { gifts, contactOccasions, contacts, usersTable } from "@workspace/db/schema";
-import { and, isNotNull, isNull, lte, eq, sql } from "drizzle-orm";
+import { and, isNotNull, isNull, lte, eq, sql, or } from "drizzle-orm";
 import twilio from "twilio";
 import { sendSenderNudgeEmail, sendSenderSecondNudgeEmail, sendUnredeemedSenderEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail } from "./lib/email";
+import { ObjectStorageService } from "./lib/objectStorage";
 
 // ─── Floating occasion date helpers (server-side) ─────────────────────────────
 
@@ -544,19 +545,75 @@ async function sendOccasionReminders() {
   }
 }
 
+async function deleteExpiredMedia() {
+  const storage = new ObjectStorageService();
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const oneYearAgo    = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+
+  try {
+    // Case A: redeemed 90+ days ago and still has media
+    // Case B: paid, never redeemed, created 365+ days ago and still has media
+    const expired = await db
+      .select({ id: gifts.id, videoPath: gifts.videoPath, photoPaths: gifts.photoPaths })
+      .from(gifts)
+      .where(
+        and(
+          or(
+            isNotNull(gifts.videoPath),
+            isNotNull(gifts.photoPaths),
+          ),
+          or(
+            and(isNotNull(gifts.redeemedAt), lte(gifts.redeemedAt, ninetyDaysAgo)),
+            and(eq(gifts.paid, true), isNull(gifts.redeemedAt), lte(gifts.createdAt, oneYearAgo)),
+          ),
+        ),
+      );
+
+    if (!expired.length) return;
+
+    for (const gift of expired) {
+      try {
+        if (gift.videoPath) {
+          await storage.deleteObjectEntity(gift.videoPath).catch((err: unknown) => {
+            console.error(`[scheduler] Failed to delete video for gift ${gift.id}:`, err);
+          });
+        }
+        if (gift.photoPaths && gift.photoPaths.length > 0) {
+          for (const photoPath of gift.photoPaths) {
+            await storage.deleteObjectEntity(photoPath).catch((err: unknown) => {
+              console.error(`[scheduler] Failed to delete photo ${photoPath} for gift ${gift.id}:`, err);
+            });
+          }
+        }
+        await db
+          .update(gifts)
+          .set({ videoPath: null, photoPaths: null })
+          .where(eq(gifts.id, gift.id));
+        console.log(`[scheduler] Media deleted for gift ${gift.id}`);
+      } catch (err) {
+        console.error(`[scheduler] Error cleaning up media for gift ${gift.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] deleteExpiredMedia error:", err);
+  }
+}
+
 export function startScheduler() {
   const INTERVAL_MS = 10 * 60 * 1000;
-  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, and occasion reminders.");
+  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, occasion reminders, and expired media cleanup.");
   setInterval(async () => {
     await sendScheduledGifts();
     await pollAfterShipTrackings();
     await nudgeStaleGifts();
     await sendUnredeemedReminders();
     await sendOccasionReminders();
+    await deleteExpiredMedia();
   }, INTERVAL_MS);
   sendScheduledGifts();
   pollAfterShipTrackings();
   nudgeStaleGifts();
   sendUnredeemedReminders();
   sendOccasionReminders();
+  deleteExpiredMedia();
 }
