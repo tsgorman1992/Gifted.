@@ -1490,6 +1490,7 @@ export default function CreatePage() {
                       <Input
                         id="sender"
                         placeholder="Your name"
+                        autoComplete="given-name"
                         value={senderName}
                         onChange={(e) => setSenderName(e.target.value)}
                         className="h-11 rounded-xl text-base"
