@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone, Play,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone, Play, Users,
 } from "lucide-react";
 import QRCodeLib from "qrcode";
 import { useUpload } from "@workspace/object-storage-web";
@@ -817,6 +817,7 @@ export default function CreatePage() {
   const [occasion, setOccasion] = useState("Birthday");
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
+  const [quickContacts, setQuickContacts] = useState<Array<{ id: string; name: string; phone: string | null }>>([]);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [phoneValidating, setPhoneValidating] = useState(false);
   const [senderName, setSenderName] = useState("");
@@ -958,6 +959,18 @@ export default function CreatePage() {
       } catch { /* ignore */ }
     }
   }, []);
+
+  // Fetch contacts for quick-pick chips when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${base}/api/gifted/contacts`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then((rows: Array<{ id: string; name: string; phone?: string | null }>) => {
+        setQuickContacts(rows.map(c => ({ id: c.id, name: c.name, phone: c.phone ?? null })));
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
 
   // Pre-fill sender name from saved profile (only when the field is still empty)
@@ -1446,6 +1459,31 @@ export default function CreatePage() {
                         onChange={(e) => setRecipientName(e.target.value)}
                         className="h-11 rounded-xl text-base"
                       />
+                      {quickContacts.length > 0 && (
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+                          <Users className="w-3 h-3 text-muted-foreground shrink-0" />
+                          {quickContacts.map(c => {
+                            const isActive = recipientName.trim().toLowerCase() === c.name.trim().toLowerCase();
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setRecipientName(c.name);
+                                  if (c.phone && !recipientPhone) setRecipientPhone(c.phone);
+                                }}
+                                className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                                  isActive
+                                    ? "bg-primary text-white border-primary"
+                                    : "bg-muted/60 text-foreground border-border hover:bg-primary/10 hover:border-primary/40"
+                                }`}
+                              >
+                                {c.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="sender">Who is it from?</Label>
