@@ -573,23 +573,37 @@ async function deleteExpiredMedia() {
 
     for (const gift of expired) {
       try {
+        let allDeleted = true;
+
         if (gift.videoPath) {
-          await storage.deleteObjectEntity(gift.videoPath).catch((err: unknown) => {
+          try {
+            await storage.deleteObjectEntity(gift.videoPath);
+          } catch (err) {
             console.error(`[scheduler] Failed to delete video for gift ${gift.id}:`, err);
-          });
-        }
-        if (gift.photoPaths && gift.photoPaths.length > 0) {
-          for (const photoPath of gift.photoPaths) {
-            await storage.deleteObjectEntity(photoPath).catch((err: unknown) => {
-              console.error(`[scheduler] Failed to delete photo ${photoPath} for gift ${gift.id}:`, err);
-            });
+            allDeleted = false;
           }
         }
-        await db
-          .update(gifts)
-          .set({ videoPath: null, photoPaths: null })
-          .where(eq(gifts.id, gift.id));
-        console.log(`[scheduler] Media deleted for gift ${gift.id}`);
+
+        if (gift.photoPaths && gift.photoPaths.length > 0) {
+          for (const photoPath of gift.photoPaths) {
+            try {
+              await storage.deleteObjectEntity(photoPath);
+            } catch (err) {
+              console.error(`[scheduler] Failed to delete photo ${photoPath} for gift ${gift.id}:`, err);
+              allDeleted = false;
+            }
+          }
+        }
+
+        if (allDeleted) {
+          await db
+            .update(gifts)
+            .set({ videoPath: null, photoPaths: null })
+            .where(eq(gifts.id, gift.id));
+          console.log(`[scheduler] Media deleted for gift ${gift.id}`);
+        } else {
+          console.warn(`[scheduler] Media cleanup incomplete for gift ${gift.id} — will retry next tick`);
+        }
       } catch (err) {
         console.error(`[scheduler] Error cleaning up media for gift ${gift.id}:`, err);
       }
