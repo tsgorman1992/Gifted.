@@ -1455,6 +1455,7 @@ export default function CreatePage() {
                       <Input
                         id="recipient"
                         placeholder="Their name"
+                        autoComplete="off"
                         value={recipientName}
                         onChange={(e) => setRecipientName(e.target.value)}
                         className="h-11 rounded-xl text-base"
