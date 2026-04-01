@@ -1502,7 +1502,7 @@ function TrackingTimeline({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function RevealPage({ onRevealComplete }: { onRevealComplete?: () => void } = {}) {
+export default function RevealPage({ onRevealComplete, senderPreview = false }: { onRevealComplete?: () => void; senderPreview?: boolean } = {}) {
   const [isOpen, setIsOpen]               = useState(false);
   const [videoUrl, setVideoUrl]           = useState<string | null>(null);
   const [videoError, setVideoError]       = useState(false);
@@ -1528,6 +1528,7 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
   const [giftPaid, setGiftPaid]           = useState<boolean>(true);
   const [isPreview, setIsPreview]         = useState(false);
+  const [senderBannerDismissed, setSenderBannerDismissed] = useState(false);
   const [previewBarCopied, setPreviewBarCopied] = useState(false);
   const [isOpening, setIsOpening]         = useState(false);
   const [openPhase, setOpenPhase]         = useState(0);
@@ -1634,8 +1635,8 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
         } catch { /* ignore */ }
       }
 
-      // Mark as opened (only for real opens, not preview mode)
-      if (!isPreviewMode) {
+      // Mark as opened — skip for preview mode and sender previewing their own gift
+      if (!isPreviewMode && !senderPreview) {
         fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}/opened`, {
           method: "PATCH",
           credentials: "include",
@@ -1926,6 +1927,25 @@ export default function RevealPage({ onRevealComplete }: { onRevealComplete?: ()
 
   return (
     <div className="w-full min-h-screen relative" style={pageStyle}>
+
+      {/* Sender preview banner */}
+      {senderPreview && !senderBannerDismissed && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-white text-sm flex items-center justify-between px-4 py-2.5 gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Gift className="w-4 h-4 shrink-0 opacity-80" />
+            <span className="truncate">
+              Previewing your moment for <span className="font-semibold">{recipientName}</span> — their surprise is still intact.
+            </span>
+          </div>
+          <button
+            onClick={() => setSenderBannerDismissed(true)}
+            className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Midnight Stars starfield */}
       {isOpen && isDark && <StarfieldBg />}
