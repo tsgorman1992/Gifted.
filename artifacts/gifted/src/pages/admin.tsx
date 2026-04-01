@@ -151,13 +151,33 @@ function StatusBadge({ gift }: { gift: GiftRow }) {
 }
 
 function StatCard({
-  label, value, sub, icon: Icon, color,
-}: { label: string; value: string; sub: string; icon: React.ElementType; color: string }) {
+  label, value, sub, icon: Icon, color, onClick,
+}: {
+  label: string; value: string; sub: string;
+  icon: React.ElementType; color: string;
+  onClick?: () => void;
+}) {
+  const isClickable = !!onClick;
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 sm:p-5">
+    <div
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={isClickable ? (e) => { if (e.key === "Enter" || e.key === " ") onClick?.(); } : undefined}
+      className={`bg-card border border-border rounded-2xl p-4 sm:p-5 transition-all ${
+        isClickable
+          ? "cursor-pointer hover:border-primary/40 hover:shadow-sm hover:bg-card/80 group"
+          : ""
+      }`}
+    >
       <div className="flex items-center justify-between mb-2">
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-tight">{label}</p>
-        <Icon className={`w-4 h-4 shrink-0 ${color}`} />
+        <div className="flex items-center gap-1">
+          <Icon className={`w-4 h-4 shrink-0 ${color}`} />
+          {isClickable && (
+            <ExternalLink className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+          )}
+        </div>
       </div>
       <p className={`text-xl sm:text-2xl font-bold ${color} leading-none`}>{value}</p>
       <p className="text-[11px] text-muted-foreground mt-1.5 leading-tight">{sub}</p>
@@ -359,6 +379,147 @@ function TrendsPanel({
   );
 }
 
+// ── Drilldown modal ────────────────────────────────────────────────────────────
+function DrilldownModal({
+  type, onClose, giftRows,
+}: {
+  type: "fee" | "repeats";
+  onClose: () => void;
+  giftRows: GiftRow[];
+}) {
+  const fmt = (n: number) => `$${n.toFixed(2)}`;
+  const fmtDate = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" }) : "—";
+
+  const amt = (g: GiftRow) => parseFloat(g.amount ?? "0") || 0;
+
+  // Fee breakdown — paid gifts only, newest first
+  const feeRows = React.useMemo(
+    () =>
+      giftRows
+        .filter(g => g.paid && g.amount != null)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [giftRows]
+  );
+  const totalVolume = feeRows.reduce((s, g) => s + amt(g), 0);
+  const totalFee    = totalVolume * 0.05;
+
+  // Repeat senders — senders with > 1 paid gift
+  const repeatRows = React.useMemo(() => {
+    const map: Record<string, { name: string; email: string; count: number; total: number }> = {};
+    for (const g of giftRows) {
+      if (!g.paid) continue;
+      const key = g.senderEmail ?? g.senderName;
+      if (!map[key]) map[key] = { name: g.senderName, email: g.senderEmail ?? "—", count: 0, total: 0 };
+      map[key].count++;
+      map[key].total += amt(g);
+    }
+    return Object.values(map)
+      .filter(r => r.count > 1)
+      .sort((a, b) => b.count - a.count || b.total - a.total);
+  }, [giftRows]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-card border border-border rounded-t-3xl sm:rounded-2xl w-full sm:max-w-2xl shadow-2xl flex flex-col max-h-[85vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border shrink-0">
+          <div>
+            <h2 className="font-semibold text-base">
+              {type === "fee" ? "Revenue Breakdown" : "Repeat Senders"}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {type === "fee"
+                ? `${feeRows.length} paid gift${feeRows.length !== 1 ? "s" : ""} · 5% platform fee`
+                : `${repeatRows.length} sender${repeatRows.length !== 1 ? "s" : ""} sent more than once`}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-auto flex-1">
+          {type === "fee" && (
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-muted/50 backdrop-blur">
+                <tr>
+                  <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Date</th>
+                  <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Recipient</th>
+                  <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap hidden sm:table-cell">Sender</th>
+                  <th className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Amount</th>
+                  <th className="text-right text-[11px] font-semibold text-green-700 uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Fee (5%)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {feeRows.map(g => (
+                  <tr key={g.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{fmtDate(g.createdAt)}</td>
+                    <td className="px-4 py-3 font-medium max-w-[140px] truncate">{g.recipientName}</td>
+                    <td className="px-4 py-3 text-muted-foreground max-w-[120px] truncate hidden sm:table-cell">{g.senderName}</td>
+                    <td className="px-4 py-3 text-right font-medium tabular-nums">{fmt(amt(g))}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-green-600 tabular-nums">{fmt(amt(g) * 0.05)}</td>
+                  </tr>
+                ))}
+                {feeRows.length === 0 && (
+                  <tr><td colSpan={5} className="px-4 py-12 text-center text-muted-foreground text-sm">No paid gifts yet</td></tr>
+                )}
+              </tbody>
+              {feeRows.length > 0 && (
+                <tfoot className="sticky bottom-0 bg-card border-t border-border">
+                  <tr>
+                    <td colSpan={3} className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Total</td>
+                    <td colSpan={3} className="px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide sm:hidden">Total</td>
+                    <td className="px-4 py-3 text-right font-bold tabular-nums text-primary">{fmt(totalVolume)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-green-600 tabular-nums">{fmt(totalFee)}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          )}
+
+          {type === "repeats" && (
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-muted/50 backdrop-blur">
+                <tr>
+                  <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5">Sender</th>
+                  <th className="text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 hidden sm:table-cell">Email</th>
+                  <th className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Moments</th>
+                  <th className="text-right text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-4 py-2.5 whitespace-nowrap">Total Sent</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {repeatRows.map((r, i) => (
+                  <tr key={i} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 font-medium max-w-[160px] truncate">{r.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs max-w-[180px] truncate hidden sm:table-cell">{r.email}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                        {r.count}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-primary tabular-nums">{fmt(r.total)}</td>
+                  </tr>
+                ))}
+                {repeatRows.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-12 text-center text-muted-foreground text-sm">No repeat senders yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [key, setKey]           = useState(() => sessionStorage.getItem("admin_key") ?? "");
   const [authed, setAuthed]     = useState(false);
@@ -376,6 +537,9 @@ export default function AdminPage() {
   const [showPaidHistory, setShowPaidHistory] = useState(false);
 
   const [giftSearch, setGiftSearch] = useState("");
+
+  // Drilldown modal
+  const [drilldown, setDrilldown] = useState<"fee" | "repeats" | null>(null);
 
   // Trends tab — lazy loaded
   const [trends, setTrends]           = useState<TrendsData | null>(null);
@@ -568,22 +732,23 @@ export default function AdminPage() {
           <div className="space-y-3">
             {/* Primary row — 4 cards, clean 2×2 on mobile */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard label="Accounts"     value={`${stats.totalUsers}`}             sub={`+${stats.newUsersWeek} this week`}        icon={Users}       color="text-violet-600" />
-              <StatCard label="Total gifts"  value={`${stats.total}`}                  sub={`${stats.paid} paid`}                       icon={Gift}        color="text-foreground" />
-              <StatCard label="Gross volume" value={`$${stats.volume.toFixed(2)}`}      sub={`avg $${stats.avgAmount.toFixed(0)} / gift`} icon={DollarSign}  color="text-primary"    />
-              <StatCard label="Fee revenue"  value={`$${stats.feeRevenue.toFixed(2)}`}  sub="5% of gross"                                icon={TrendingUp}  color="text-green-600"  />
+              <StatCard label="Accounts"     value={`${stats.totalUsers}`}             sub={`+${stats.newUsersWeek} this week`}        icon={Users}       color="text-violet-600" onClick={() => setTab("users")} />
+              <StatCard label="Total gifts"  value={`${stats.total}`}                  sub={`${stats.paid} paid`}                       icon={Gift}        color="text-foreground" onClick={() => setTab("all")} />
+              <StatCard label="Gross volume" value={`$${stats.volume.toFixed(2)}`}      sub={`avg $${stats.avgAmount.toFixed(0)} / gift`} icon={DollarSign}  color="text-primary"    onClick={() => setDrilldown("fee")} />
+              <StatCard label="Fee revenue"  value={`$${stats.feeRevenue.toFixed(2)}`}  sub="5% of gross"                                icon={TrendingUp}  color="text-green-600"  onClick={() => setDrilldown("fee")} />
             </div>
             {/* Insights row — 4 cards, same grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard label="Open rate"      value={`${stats.openRate}%`}    sub="of paid gifts opened"       icon={Percent}  color="text-blue-600"   />
               <StatCard label="Redeem rate"    value={`${stats.redeemRate}%`}  sub="of opened gifts redeemed"   icon={Percent}  color="text-green-600"  />
-              <StatCard label="Repeat senders" value={`${stats.repeatSenders}`} sub="sent more than once"       icon={Repeat2}  color="text-primary"    />
+              <StatCard label="Repeat senders" value={`${stats.repeatSenders}`} sub="sent more than once"       icon={Repeat2}  color="text-primary"    onClick={() => setDrilldown("repeats")} />
               <StatCard
                 label="Top theme"
                 value={stats.topExperience ? (EXP_LABELS[stats.topExperience] ?? stats.topExperience) : "—"}
                 sub="most chosen experience"
                 icon={Sparkles}
                 color="text-violet-600"
+                onClick={() => setTab("trends")}
               />
             </div>
           </div>
@@ -943,6 +1108,15 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Drilldown modals ─────────────────────────────────────────────── */}
+      {drilldown && (
+        <DrilldownModal
+          type={drilldown}
+          onClose={() => setDrilldown(null)}
+          giftRows={giftRows}
+        />
       )}
     </div>
   );
