@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { gifts, contactOccasions, contacts, usersTable } from "@workspace/db/schema";
 import { and, isNotNull, isNull, lte, eq, sql, or } from "drizzle-orm";
 import twilio from "twilio";
+import Stripe from "stripe";
 import { sendSenderNudgeEmail, sendSenderSecondNudgeEmail, sendUnredeemedSenderEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail } from "./lib/email";
 import { ObjectStorageService } from "./lib/objectStorage";
 
@@ -545,6 +546,55 @@ async function sendOccasionReminders() {
   }
 }
 
+async function autoRefund90Days() {
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    console.warn("[scheduler] autoRefund90Days: STRIPE_SECRET_KEY not set — skipping");
+    return;
+  }
+
+  const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+  try {
+    const unredeemed = await db
+      .select({
+        id:                   gifts.id,
+        stripePaymentIntentId: gifts.stripePaymentIntentId,
+        recipientName:        gifts.recipientName,
+        senderName:           gifts.senderName,
+        amount:               gifts.amount,
+      })
+      .from(gifts)
+      .where(
+        and(
+          eq(gifts.paid, true),
+          isNull(gifts.redeemedAt),
+          isNull(gifts.autoRefundedAt),
+          isNotNull(gifts.stripePaymentIntentId),
+          lte(gifts.createdAt, ninetyDaysAgo),
+        ),
+      );
+
+    if (!unredeemed.length) return;
+
+    for (const gift of unredeemed) {
+      try {
+        await stripe.refunds.create({ payment_intent: gift.stripePaymentIntentId! });
+        await db
+          .update(gifts)
+          .set({ autoRefundedAt: new Date() })
+          .where(eq(gifts.id, gift.id));
+        console.log(`[scheduler] Auto-refunded gift ${gift.id} (${gift.amount ?? "unknown"}) for ${gift.recipientName} — 90-day unredeemed`);
+      } catch (err) {
+        console.error(`[scheduler] autoRefund90Days failed for gift ${gift.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] autoRefund90Days error:", err);
+  }
+}
+
 async function deleteExpiredMedia() {
   const storage = new ObjectStorageService();
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
@@ -615,7 +665,7 @@ async function deleteExpiredMedia() {
 
 export function startScheduler() {
   const INTERVAL_MS = 10 * 60 * 1000;
-  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, occasion reminders, and expired media cleanup.");
+  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, occasion reminders, expired media cleanup, and 90-day auto-refunds.");
   setInterval(async () => {
     await sendScheduledGifts();
     await pollAfterShipTrackings();
@@ -623,6 +673,7 @@ export function startScheduler() {
     await sendUnredeemedReminders();
     await sendOccasionReminders();
     await deleteExpiredMedia();
+    await autoRefund90Days();
   }, INTERVAL_MS);
   sendScheduledGifts();
   pollAfterShipTrackings();
@@ -630,4 +681,5 @@ export function startScheduler() {
   sendUnredeemedReminders();
   sendOccasionReminders();
   deleteExpiredMedia();
+  autoRefund90Days();
 }

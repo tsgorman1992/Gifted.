@@ -524,15 +524,52 @@ export default function RedeemPage() {
           {!displayAmount && screen !== "success" && (
             <motion.div
               key="no-balance"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center space-y-6 mt-12"
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-lg mx-auto mt-4"
             >
-              <h1 className="font-serif text-5xl font-medium">Enjoy the moment!</h1>
-              <p className="text-xl text-muted-foreground">No balance attached — nothing to collect here.</p>
-              <Link href="/">
-                <Button variant="outline" className="rounded-full h-12 px-8">Back to home</Button>
-              </Link>
+              <div className="bg-card border border-border rounded-[2.5rem] p-10 shadow-xl flex flex-col items-center text-center gap-6">
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.15, duration: 0.5, type: "spring", stiffness: 200, damping: 14 }}
+                >
+                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Gift className="w-12 h-12 text-primary" />
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25, duration: 0.4 }}
+                  className="space-y-3"
+                >
+                  <h1 className="font-serif text-4xl font-medium">This one was all love.</h1>
+                  <p className="text-base text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                    No balance to collect — just a moment someone built for you. That's the whole gift.
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  className="flex flex-col sm:flex-row gap-3 w-full"
+                >
+                  <Link href={giftId ? `/open/${giftId}` : "/"} className="flex-1">
+                    <Button className="w-full rounded-full h-12">
+                      Back to my moment
+                    </Button>
+                  </Link>
+                  <Link href="/" className="flex-1">
+                    <Button variant="outline" className="w-full rounded-full h-12">
+                      Go home
+                    </Button>
+                  </Link>
+                </motion.div>
+              </div>
             </motion.div>
           )}
 
