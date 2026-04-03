@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles, House } from "lucide-react";
+import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles, House, ShieldCheck } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -257,6 +257,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <DropdownMenuSeparator className="sm:hidden" />
 
                       {/* Always visible */}
+                      {user.isAdmin && (
+                        <>
+                          <DropdownMenuItem asChild>
+                            <Link href="/admin" className="flex items-center gap-2 cursor-pointer text-primary font-medium">
+                              <ShieldCheck className="w-4 h-4" />
+                              Admin dashboard
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+
                       <DropdownMenuItem asChild>
                         <Link href="/account" className="flex items-center gap-2 cursor-pointer">
                           <Settings className="w-4 h-4" />

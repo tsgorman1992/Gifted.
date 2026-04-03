@@ -5,9 +5,16 @@ import { passport, hashPassword, googleEnabled } from "../lib/auth";
 
 const router = Router();
 
+const ADMIN_EMAILS = new Set([
+  "tsgorman1992@gmail.com",
+  "brianreadnour2020@gmail.com",
+]);
+
 router.get("/auth/me", (req: Request, res: Response) => {
-  if (req.isAuthenticated()) {
-    res.json({ user: req.user });
+  if (req.isAuthenticated() && req.user) {
+    const email = (req.user as any).email as string | null;
+    const isAdmin = !!(email && ADMIN_EMAILS.has(email.toLowerCase()));
+    res.json({ user: { ...req.user, isAdmin } });
   } else {
     res.json({ user: null });
   }
