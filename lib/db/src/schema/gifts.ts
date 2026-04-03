@@ -56,6 +56,7 @@ export const gifts = pgTable("gifts", {
   unredeemedReminderSentAt: timestamp("unredeemed_reminder_sent_at", { withTimezone: true }),
   unredeemedFinalReminderSentAt: timestamp("unredeemed_final_reminder_sent_at", { withTimezone: true }),
   cashoutPaidAt: timestamp("cashout_paid_at", { withTimezone: true }),
+  autoRefundedAt: timestamp("auto_refunded_at", { withTimezone: true }),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({

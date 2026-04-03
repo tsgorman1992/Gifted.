@@ -529,6 +529,58 @@ export async function sendGiftLinkEmail(params: GiftLinkEmailParams): Promise<vo
   }
 }
 
+// ─── 11. Recipient payout confirmation ────────────────────────────────────────
+
+interface RecipientPayoutParams {
+  to: string;
+  recipientName: string;
+  senderName: string;
+  amount: string;
+  payoutMethod: string;
+  payoutHandle: string;
+}
+
+export async function sendRecipientPayoutConfirmation(params: RecipientPayoutParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, recipientName, senderName, amount, payoutMethod, payoutHandle } = params;
+  const amtStr = `$${parseFloat(amount).toFixed(2)}`;
+  const methodLabel = payoutMethod.charAt(0).toUpperCase() + payoutMethod.slice(1);
+  const firstName = recipientName.split(" ")[0];
+
+  const body = `
+    ${h1(`Your payout is on its way, ${firstName}!`)}
+    ${p(`We've received your redemption request and the gifted. team is processing your payout now.`)}
+    ${divider()}
+    <table cellpadding="0" cellspacing="0" width="100%">
+      ${detail("Amount", amtStr)}
+      ${detail("Sending via", methodLabel)}
+      ${detail("To", payoutHandle)}
+      ${detail("From", senderName)}
+    </table>
+    ${divider()}
+    ${p(`Payouts are typically sent same day. If you haven't received your ${amtStr} within 24 hours, reach out and we'll sort it out right away.`)}
+    <div style="text-align:center;padding:8px 0 4px;">
+      <a href="mailto:help@gifted.page" style="display:inline-block;background:#f5f0ea;color:#7c4a1e;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:100px;margin-top:8px;">Contact support</a>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Your ${amtStr} payout is on its way`,
+      html: layout(`Payout confirmed — gifted.`, body),
+    });
+    if (error) console.error("[email] sendRecipientPayoutConfirmation error:", error);
+    else console.log(`[email] Recipient payout confirmation sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendRecipientPayoutConfirmation exception:", err);
+  }
+}
+
 // ─── Occasion reminder ────────────────────────────────────────────────────────
 
 export async function sendOccasionReminderEmail({

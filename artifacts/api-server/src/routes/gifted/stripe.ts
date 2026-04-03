@@ -1,12 +1,13 @@
 import { Router } from "express";
 import Stripe from "stripe";
 import twilio from "twilio";
-import { db, gifts } from "@workspace/db";
+import { db, gifts, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
   sendSenderReceipt,
   sendSenderRedemptionNotice,
   sendOperatorCashoutAlert,
+  sendRecipientPayoutConfirmation,
 } from "../../lib/email";
 
 function getTwilioClient() {
@@ -280,6 +281,39 @@ router.post("/gifted/redeem", async (req, res) => {
         gift.recipientPhone,
         `gifted. 🎁\nYour ${amount || "gift"} payout has been confirmed! We'll send it via ${methodLabelSms} today.\n\nQuestions? help@gifted.page — Reply STOP to opt out.`
       );
+
+      // Confirmation email to recipient — look up via session or recipientUserId
+      if (gift.amount && parseFloat(gift.amount) > 0) {
+        try {
+          let recipientEmail: string | null = null;
+
+          // Prefer authenticated session user
+          const sessionEmail = (req as any).user?.email as string | undefined;
+          if (sessionEmail) {
+            recipientEmail = sessionEmail;
+          } else if (gift.recipientUserId) {
+            const [ru] = await db
+              .select({ email: usersTable.email })
+              .from(usersTable)
+              .where(eq(usersTable.id, gift.recipientUserId))
+              .limit(1);
+            if (ru?.email) recipientEmail = ru.email;
+          }
+
+          if (recipientEmail) {
+            sendRecipientPayoutConfirmation({
+              to:            recipientEmail,
+              recipientName: gift.recipientName,
+              senderName:    gift.senderName,
+              amount:        gift.amount,
+              payoutMethod,
+              payoutHandle,
+            }).catch(() => {});
+          }
+        } catch {
+          // non-fatal — operator and sender are already notified
+        }
+      }
     }
 
     res.json({ success: true });
