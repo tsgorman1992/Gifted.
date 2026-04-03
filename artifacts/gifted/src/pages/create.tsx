@@ -1464,13 +1464,14 @@ export default function CreatePage() {
                         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
                           <Users className="w-3 h-3 text-muted-foreground shrink-0" />
                           {quickContacts.map(c => {
-                            const isActive = recipientName.trim().toLowerCase() === c.name.trim().toLowerCase();
+                            const firstName = c.name.trim().split(" ")[0];
+                            const isActive = recipientName.trim().toLowerCase() === firstName.toLowerCase();
                             return (
                               <button
                                 key={c.id}
                                 type="button"
                                 onClick={() => {
-                                  setRecipientName(c.name);
+                                  setRecipientName(firstName);
                                   if (c.phone && !recipientPhone) setRecipientPhone(c.phone);
                                 }}
                                 className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
