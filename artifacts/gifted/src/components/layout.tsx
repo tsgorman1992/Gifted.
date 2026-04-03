@@ -274,14 +274,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </>
               ) : (
                 <Link href="/sign-in"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
                 >
                   Sign in
                 </Link>
               )
             )}
 
-            <Button onClick={handleSendGift} className="rounded-full px-4 text-sm shadow-md hover:-translate-y-0.5 transition-transform duration-300">
+            <Button onClick={handleSendGift} className="rounded-full px-4 text-sm shadow-md hover:-translate-y-0.5 transition-transform duration-300 whitespace-nowrap">
               Build a moment
             </Button>
           </nav>
