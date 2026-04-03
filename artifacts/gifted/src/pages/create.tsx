@@ -833,6 +833,8 @@ export default function CreatePage() {
   const [trackingCarrier, setTrackingCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingOpen, setTrackingOpen] = useState(false);
+  const [trackingStatus, setTrackingStatus] = useState<"idle" | "checking" | "valid" | "invalid" | "warn">("idle");
+  const [trackingMessage, setTrackingMessage] = useState("");
 
   // Media state
   const [videoObjectPath, setVideoObjectPath] = useState<string | null>(null);
@@ -1092,6 +1094,35 @@ export default function CreatePage() {
   };
 
   const handleRemovePhoto = (id: string) => setPhotos((prev) => prev.filter((p) => p.id !== id));
+
+  // Debounced tracking number verification
+  useEffect(() => {
+    if (!trackingCarrier || !trackingNumber || trackingNumber.length < 6) {
+      setTrackingStatus("idle");
+      setTrackingMessage("");
+      return;
+    }
+    setTrackingStatus("checking");
+    const timer = setTimeout(async () => {
+      try {
+        const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+        const res = await fetch(`${base}/api/gifted/tracking/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ carrier: trackingCarrier, trackingNumber }),
+        });
+        const data = await res.json() as { valid: boolean | null; message: string };
+        if (data.valid === true) setTrackingStatus("valid");
+        else if (data.valid === false) setTrackingStatus("invalid");
+        else setTrackingStatus("warn");
+        setTrackingMessage(data.message ?? "");
+      } catch {
+        setTrackingStatus("warn");
+        setTrackingMessage("Couldn't verify right now — you can still save the gift.");
+      }
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [trackingCarrier, trackingNumber]);
 
   const saveToLocalStorage = () => {
     localStorage.removeItem("gifted_paid_id");
@@ -2260,14 +2291,29 @@ export default function CreatePage() {
                         />
                       </div>
 
-                      {trackingCarrier && trackingNumber && (
-                        <motion.p
+                      {trackingCarrier && trackingNumber && trackingNumber.length >= 6 && (
+                        <motion.div
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="text-xs text-muted-foreground px-1"
+                          className={`flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs ${
+                            trackingStatus === "valid"   ? "bg-green-50 text-green-700 border border-green-200" :
+                            trackingStatus === "invalid" ? "bg-red-50 text-red-700 border border-red-200" :
+                            trackingStatus === "warn"    ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                            "bg-muted/60 text-muted-foreground border border-border"
+                          }`}
                         >
-                          A live tracking timeline will appear in their gift reveal — no carrier branding, no redirects.
-                        </motion.p>
+                          <span className="shrink-0 mt-0.5">
+                            {trackingStatus === "checking" ? "⏳" :
+                             trackingStatus === "valid"    ? "✓" :
+                             trackingStatus === "invalid"  ? "✗" :
+                             trackingStatus === "warn"     ? "⚠️" : "📦"}
+                          </span>
+                          <span>
+                            {trackingStatus === "checking"
+                              ? "Verifying tracking number…"
+                              : trackingMessage || "A live tracking timeline will appear in their gift reveal."}
+                          </span>
+                        </motion.div>
                       )}
                     </motion.div>
                   )}

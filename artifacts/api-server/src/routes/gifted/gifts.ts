@@ -104,6 +104,56 @@ async function registerAfterShipTracking(carrier: string, trackingNumber: string
   }
 }
 
+router.post("/gifted/tracking/verify", async (req, res) => {
+  const { carrier, trackingNumber } = req.body as { carrier?: string; trackingNumber?: string };
+  if (!carrier || !trackingNumber) {
+    res.status(400).json({ valid: false, message: "Carrier and tracking number are required." });
+    return;
+  }
+  const apiKey = process.env.AFTERSHIP_API_KEY;
+  if (!apiKey) {
+    res.json({ valid: true, message: "Tracking lookup unavailable — number saved." });
+    return;
+  }
+  try {
+    // First try GET — if already registered, it's definitely valid
+    const getRes = await fetch(
+      `https://api.aftership.com/tracking/2024-07/trackings/${encodeURIComponent(carrier)}/${encodeURIComponent(trackingNumber)}`,
+      { headers: { "as-api-key": apiKey } },
+    );
+    if (getRes.ok) {
+      res.json({ valid: true, message: "Tracking number confirmed." });
+      return;
+    }
+
+    // Not registered yet — try creating it to validate the format
+    const postRes = await fetch("https://api.aftership.com/tracking/2024-07/trackings", {
+      method: "POST",
+      headers: { "as-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ tracking_number: trackingNumber, slug: carrier }),
+    });
+    const json = await postRes.json().catch(() => null) as Record<string, unknown> | null;
+    const meta = json?.meta as Record<string, unknown> | undefined;
+
+    if (postRes.ok || meta?.code === 4003) {
+      // 4003 = already exists, still valid
+      res.json({ valid: true, message: "Tracking number confirmed." });
+      return;
+    }
+
+    // AfterShip error codes for bad tracking numbers
+    const code = Number(meta?.code ?? 0);
+    if (code === 4014 || code === 4016 || code === 4031) {
+      res.json({ valid: false, message: "This tracking number doesn't look right. Double-check the carrier and number." });
+    } else {
+      // Unknown error — don't block the user, just warn
+      res.json({ valid: null, message: "Couldn't verify right now — you can still save the gift." });
+    }
+  } catch {
+    res.json({ valid: null, message: "Couldn't verify right now — you can still save the gift." });
+  }
+});
+
 router.post("/gifted/gifts", async (req, res) => {
   try {
     const {
