@@ -1036,7 +1036,7 @@ router.get("/gifted/profile", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
   try {
     const [user] = await db
-      .select({ displayName: usersTable.displayName, payoutMethod: usersTable.payoutMethod, payoutHandle: usersTable.payoutHandle })
+      .select({ displayName: usersTable.displayName, payoutMethod: usersTable.payoutMethod, payoutHandle: usersTable.payoutHandle, birthday: usersTable.birthday })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1);
@@ -1053,14 +1053,21 @@ const VALID_PAYOUT_METHODS = new Set(["venmo", "cashapp", "zelle"]);
 router.patch("/gifted/profile", async (req, res) => {
   const userId = (req as any).user?.id;
   if (!userId) return res.status(401).json({ error: "Not authenticated" });
-  const { displayName, payoutMethod, payoutHandle } = req.body as Record<string, string | null | undefined>;
+  const { displayName, payoutMethod, payoutHandle, birthday } = req.body as Record<string, string | null | undefined>;
   if (payoutMethod !== undefined && payoutMethod !== "" && payoutMethod !== null && !VALID_PAYOUT_METHODS.has(payoutMethod)) {
     return res.status(400).json({ error: "Invalid payoutMethod. Must be one of: venmo, cashapp, zelle" });
+  }
+  // Validate birthday format MM-DD if provided
+  if (birthday !== undefined && birthday !== null && birthday !== "") {
+    if (!/^\d{2}-\d{2}$/.test(birthday)) {
+      return res.status(400).json({ error: "birthday must be in MM-DD format" });
+    }
   }
   const updates: Record<string, string | null> = {};
   if (displayName !== undefined) updates.displayName = typeof displayName === "string" ? displayName.trim() || null : null;
   if (payoutMethod !== undefined) updates.payoutMethod = typeof payoutMethod === "string" ? payoutMethod || null : null;
   if (payoutHandle !== undefined) updates.payoutHandle = typeof payoutHandle === "string" ? payoutHandle.trim() || null : null;
+  if (birthday !== undefined) updates.birthday = typeof birthday === "string" ? birthday.trim() || null : null;
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: "No fields to update" });
   try {
     await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
-import { Loader2, CheckCircle2, User, Wallet, ArrowLeft, LogOut } from "lucide-react";
+import { Loader2, CheckCircle2, User, Wallet, ArrowLeft, LogOut, Cake } from "lucide-react";
 
 type PayoutMethod = "venmo" | "cashapp" | "zelle" | "";
 
@@ -13,6 +13,7 @@ interface Profile {
   displayName: string | null;
   payoutMethod: string | null;
   payoutHandle: string | null;
+  birthday: string | null;
 }
 
 const PAYOUT_OPTIONS: { value: PayoutMethod; label: string; placeholder: string }[] = [
@@ -21,21 +22,44 @@ const PAYOUT_OPTIONS: { value: PayoutMethod; label: string; placeholder: string 
   { value: "zelle",   label: "Zelle",    placeholder: "Phone or email"      },
 ];
 
+const MONTHS = [
+  { value: "01", label: "January" },
+  { value: "02", label: "February" },
+  { value: "03", label: "March" },
+  { value: "04", label: "April" },
+  { value: "05", label: "May" },
+  { value: "06", label: "June" },
+  { value: "07", label: "July" },
+  { value: "08", label: "August" },
+  { value: "09", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
+
+function daysInMonth(month: string): number {
+  const m = parseInt(month, 10);
+  if ([1, 3, 5, 7, 8, 10, 12].includes(m)) return 31;
+  if ([4, 6, 9, 11].includes(m)) return 30;
+  return 29; // February — allow 29 for leap years
+}
+
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function AccountPage() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading, user, logout } = useAuth();
 
-  const [profile, setProfile] = useState<Profile>({ displayName: null, payoutMethod: null, payoutHandle: null });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]       = useState(true);
+  const [saving, setSaving]         = useState(false);
+  const [saved, setSaved]           = useState(false);
+  const [error, setError]           = useState<string | null>(null);
 
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName]   = useState("");
   const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>("");
   const [payoutHandle, setPayoutHandle] = useState("");
+  const [bdMonth, setBdMonth]           = useState("");
+  const [bdDay, setBdDay]               = useState("");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -48,29 +72,45 @@ export default function AccountPage() {
     fetch(`${base}/api/gifted/profile`, { credentials: "include" })
       .then(r => r.json())
       .then((data: Profile) => {
-        setProfile(data);
         setDisplayName(data.displayName || "");
         setPayoutMethod((data.payoutMethod as PayoutMethod) || "");
         setPayoutHandle(data.payoutHandle || "");
+        if (data.birthday) {
+          const [mm, dd] = data.birthday.split("-");
+          setBdMonth(mm || "");
+          setBdDay(dd || "");
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [isAuthenticated]);
+
+  // Keep day in range when month changes
+  useEffect(() => {
+    if (bdMonth && bdDay) {
+      const max = daysInMonth(bdMonth);
+      if (parseInt(bdDay, 10) > max) setBdDay(String(max).padStart(2, "0"));
+    }
+  }, [bdMonth]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
     setSaved(false);
+
+    const birthday = bdMonth && bdDay ? `${bdMonth}-${bdDay}` : null;
+
     try {
       const res = await fetch(`${base}/api/gifted/profile`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          displayName: displayName.trim() || null,
+          displayName:  displayName.trim() || null,
           payoutMethod: payoutMethod || null,
           payoutHandle: payoutHandle.trim() || null,
+          birthday,
         }),
       });
       if (!res.ok) {
@@ -87,6 +127,9 @@ export default function AccountPage() {
   }
 
   const selectedPayout = PAYOUT_OPTIONS.find(o => o.value === payoutMethod);
+  const dayOptions = bdMonth
+    ? Array.from({ length: daysInMonth(bdMonth) }, (_, i) => String(i + 1).padStart(2, "0"))
+    : Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0"));
 
   if (isLoading || loading) {
     return (
@@ -140,6 +183,64 @@ export default function AccountPage() {
                 maxLength={60}
               />
             </div>
+          </section>
+
+          {/* Birthday */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <Cake className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold">Your birthday</h2>
+                <p className="text-xs text-muted-foreground">We'll celebrate you — no birth year needed</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <div className="flex-1 space-y-1.5">
+                <Label className="text-sm text-muted-foreground">Month</Label>
+                <select
+                  value={bdMonth}
+                  onChange={e => { setBdMonth(e.target.value); setBdDay(""); }}
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Month</option>
+                  {MONTHS.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-28 space-y-1.5">
+                <Label className="text-sm text-muted-foreground">Day</Label>
+                <select
+                  value={bdDay}
+                  onChange={e => setBdDay(e.target.value)}
+                  disabled={!bdMonth}
+                  className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-40"
+                >
+                  <option value="">Day</option>
+                  {dayOptions.map(d => (
+                    <option key={d} value={d}>{parseInt(d, 10)}</option>
+                  ))}
+                </select>
+              </div>
+              {(bdMonth || bdDay) && (
+                <div className="flex items-end pb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => { setBdMonth(""); setBdDay(""); }}
+                    className="h-11 px-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              We'll send you a little something on your birthday — no spam, just a moment from us.
+            </p>
           </section>
 
           {/* Payout preference */}

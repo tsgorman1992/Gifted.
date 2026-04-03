@@ -581,6 +581,49 @@ export async function sendRecipientPayoutConfirmation(params: RecipientPayoutPar
   }
 }
 
+// ─── 12. Happy birthday email ─────────────────────────────────────────────────
+
+interface HappyBirthdayParams {
+  to: string;
+  firstName: string;
+}
+
+export async function sendHappyBirthdayEmail(params: HappyBirthdayParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const { to, firstName } = params;
+  const name = firstName || "you";
+
+  const body = `
+    ${h1(`Happy birthday, ${name}! 🎂`)}
+    ${p(`Today is your day — and we just wanted to take a moment to celebrate you.`)}
+    ${p(`You've been a part of the gifted. community, and that means something. The people who use gifted. are the ones who believe a thoughtful gesture is worth more than a gift card — and we think that says a lot about you.`)}
+    ${divider()}
+    ${p(`If someone special is building you a moment today, it should be arriving soon. And if you want to treat yourself or someone else, you know where to find us.`)}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Build a moment", `${BASE_URL}/create`)}
+    </div>
+    <p style="margin:24px 0 0;font-size:13px;color:#9e9087;text-align:center;">
+      Have a wonderful day. You deserve it.
+    </p>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Happy birthday, ${name}! 🎂`,
+      html: layout(`Happy birthday — gifted.`, body),
+    });
+    if (error) console.error("[email] sendHappyBirthdayEmail error:", error);
+    else console.log(`[email] Birthday email sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendHappyBirthdayEmail exception:", err);
+  }
+}
+
 // ─── Occasion reminder ────────────────────────────────────────────────────────
 
 export async function sendOccasionReminderEmail({

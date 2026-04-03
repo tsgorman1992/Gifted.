@@ -3,7 +3,7 @@ import { gifts, contactOccasions, contacts, usersTable } from "@workspace/db/sch
 import { and, isNotNull, isNull, lte, eq, sql, or } from "drizzle-orm";
 import twilio from "twilio";
 import Stripe from "stripe";
-import { sendSenderNudgeEmail, sendSenderSecondNudgeEmail, sendUnredeemedSenderEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail } from "./lib/email";
+import { sendSenderNudgeEmail, sendSenderSecondNudgeEmail, sendUnredeemedSenderEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail, sendHappyBirthdayEmail } from "./lib/email";
 import { ObjectStorageService } from "./lib/objectStorage";
 
 // ─── Floating occasion date helpers (server-side) ─────────────────────────────
@@ -546,6 +546,43 @@ async function sendOccasionReminders() {
   }
 }
 
+// Track users emailed today to avoid duplicates across scheduler ticks
+const _birthdayEmailedToday = new Map<string, string>(); // userId → "YYYY-MM-DD"
+
+async function sendBirthdayEmails() {
+  try {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const todayMD = `${mm}-${dd}`; // "MM-DD"
+
+    const matches = await db
+      .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName })
+      .from(usersTable)
+      .where(eq(usersTable.birthday, todayMD));
+
+    for (const user of matches) {
+      if (!user.email) continue;
+      // Skip if already sent today
+      if (_birthdayEmailedToday.get(user.id) === todayStr) continue;
+
+      await sendHappyBirthdayEmail({
+        to:        user.email,
+        firstName: user.firstName ?? "",
+      });
+      _birthdayEmailedToday.set(user.id, todayStr);
+    }
+
+    // Prune old entries (keep map small)
+    for (const [uid, date] of _birthdayEmailedToday) {
+      if (date !== todayStr) _birthdayEmailedToday.delete(uid);
+    }
+  } catch (err) {
+    console.error("[scheduler] sendBirthdayEmails error:", err);
+  }
+}
+
 async function autoRefund90Days() {
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeKey) {
@@ -665,13 +702,14 @@ async function deleteExpiredMedia() {
 
 export function startScheduler() {
   const INTERVAL_MS = 10 * 60 * 1000;
-  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, occasion reminders, expired media cleanup, and 90-day auto-refunds.");
+  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, occasion reminders, expired media cleanup, 90-day auto-refunds, and birthday emails.");
   setInterval(async () => {
     await sendScheduledGifts();
     await pollAfterShipTrackings();
     await nudgeStaleGifts();
     await sendUnredeemedReminders();
     await sendOccasionReminders();
+    await sendBirthdayEmails();
     await deleteExpiredMedia();
     await autoRefund90Days();
   }, INTERVAL_MS);
@@ -680,6 +718,7 @@ export function startScheduler() {
   nudgeStaleGifts();
   sendUnredeemedReminders();
   sendOccasionReminders();
+  sendBirthdayEmails();
   deleteExpiredMedia();
   autoRefund90Days();
 }
