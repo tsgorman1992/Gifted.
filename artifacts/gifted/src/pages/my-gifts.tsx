@@ -1026,6 +1026,13 @@ function OccasionDateFields({ label, month, day, onMonthChange, onDayChange }: {
   );
 }
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length < 4) return digits;
+  if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -1105,7 +1112,7 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
         </div>
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name*" className="rounded-xl h-10" autoFocus />
         <div className="grid grid-cols-2 gap-3">
-          <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-10" />
+          <Input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="Phone (optional)" className="rounded-xl h-10" />
           <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-10" type="email" />
         </div>
         {pendingOccasions.length > 0 && (
@@ -1320,7 +1327,7 @@ function ContactCard({ contact, idx, onRefresh }: { contact: Contact; idx: numbe
           </div>
           <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Name*" className="rounded-xl h-9 text-sm" autoFocus />
           <div className="grid grid-cols-2 gap-2">
-            <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl h-9 text-sm" />
+            <Input value={editPhone} onChange={e => setEditPhone(formatPhone(e.target.value))} placeholder="Phone (optional)" className="rounded-xl h-9 text-sm" />
             <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-9 text-sm" type="email" />
           </div>
           {editOccasions.filter(r => !r.deleted).length > 0 && (
