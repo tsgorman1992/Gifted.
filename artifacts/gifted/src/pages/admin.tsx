@@ -4,7 +4,7 @@ import {
   Gift, DollarSign, Clock, CheckCircle2, RefreshCw, LogOut,
   ExternalLink, Copy, Check, Users, BadgeCheck, X,
   TrendingUp, Percent, Repeat2, Sparkles, Search, Trash2,
-  AlertTriangle, ChevronDown, ChevronUp, BarChart2,
+  AlertTriangle, ChevronDown, ChevronUp, BarChart2, ArrowLeft,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line,
@@ -694,7 +694,14 @@ export default function AdminPage() {
       {/* ── Admin header ───────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 sm:px-6 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <a
+              href="/my-gifts"
+              title="Back to platform"
+              className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </a>
             <h1 className="font-serif text-lg font-medium whitespace-nowrap">gifted.</h1>
             <span className="text-muted-foreground text-xs font-medium px-2 py-0.5 bg-muted rounded-full whitespace-nowrap">operator</span>
           </div>
