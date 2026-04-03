@@ -95,8 +95,8 @@ function HeroSection({ onStart }: { onStart: () => void }) {
             </motion.div>
           </div>
 
-          {/* right — dashboard preview mockup */}
-          <motion.div {...fadeUp(0.15)} className="w-full">
+          {/* right — dashboard preview mockup (desktop only; mobile sees this further down the page) */}
+          <motion.div {...fadeUp(0.15)} className="hidden lg:block w-full">
             <PhoneFrame className="w-full">
               <div className="p-4 space-y-3 pb-6">
                 {/* mini header */}
@@ -712,13 +712,147 @@ function PayoutSection() {
 
 // ─── Mobile: single visual + copy per feature ─────────────────────────────────
 function MobileFeaturesScroll() {
+  const [linkIdx, setLinkIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setLinkIdx(i => (i + 1) % LINK_DEMOS.length), 2600);
+    return () => clearInterval(id);
+  }, []);
+
   const days = ["S","M","T","W","T","F","S"];
   const dates = [null,null,null,null,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31];
 
   return (
     <section className="lg:hidden w-full bg-background">
 
-      {/* ── 1. Dashboard ── */}
+      {/* ── 1. The Gift Moment ── */}
+      <div className="px-5 py-10 border-b border-border">
+        <motion.div {...fadeUp(0)}>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+            <Heart className="w-3 h-3" /> The gift itself
+          </div>
+          <h2 className="font-serif text-2xl font-medium leading-snug mb-2">
+            Every layer of the moment — in one gift.
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            Not a gift card. A full experience: your words, your face, your memories, and real money they can actually spend.
+          </p>
+        </motion.div>
+
+        <motion.div {...fadeUp(0.1)}>
+          <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-3">
+            {/* gift header */}
+            <div className="rounded-2xl overflow-hidden aspect-video relative" style={{ background: "linear-gradient(160deg, #E8A87C, #c06b2a)" }}>
+              <div className="absolute inset-0 bg-black/10" />
+              <div className="absolute bottom-3 left-4 text-white">
+                <p className="text-[10px] opacity-70">A gift for</p>
+                <p className="font-serif text-2xl">Sarah</p>
+              </div>
+            </div>
+            {/* note */}
+            <div>
+              <p className="font-serif text-sm font-medium leading-snug">Happy Birthday, Sarah 🎂</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">You deserve something wonderful today. Here's a little something from the heart.</p>
+            </div>
+            {/* photos */}
+            <div className="flex gap-1.5">
+              {["photo-1464349153735-7db50ed83c84","photo-1527529482837-4698179dc6ce","photo-1516450360452-9312f5e86fc7"].map(id => (
+                <div key={id} className="flex-1 aspect-square rounded-lg overflow-hidden bg-muted">
+                  <img src={`https://images.unsplash.com/${id}?w=80&h=80&fit=crop&auto=format`} alt="" className="w-full h-full object-cover" loading="lazy" />
+                </div>
+              ))}
+            </div>
+            {/* video */}
+            <div className="relative rounded-xl overflow-hidden" style={{ height: 72, background: "linear-gradient(135deg,#1a1a2e,#2d1b4e)" }}>
+              <img src="https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?w=320&h=160&fit=crop&auto=format" alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" loading="lazy" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-white/25 flex items-center justify-center backdrop-blur-sm">
+                  <Play className="w-3.5 h-3.5 text-white ml-0.5" />
+                </div>
+              </div>
+              <p className="absolute bottom-2 left-3 text-white/70 text-[9px]">Video message · 0:42</p>
+            </div>
+            {/* link */}
+            <div className="flex items-center gap-2 p-2.5 rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: "hsl(28,62%,36%)" }}>
+                <Link2 className="w-3 h-3 text-white" />
+              </div>
+              <div className="relative flex-1 min-w-0 h-8">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={linkIdx}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.25 }}
+                    className="absolute inset-0 flex flex-col justify-center"
+                  >
+                    <p className="text-[10px] font-medium truncate">{LINK_DEMOS[linkIdx].label}</p>
+                    <p className="text-[9px] text-muted-foreground">{LINK_DEMOS[linkIdx].sub}</p>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+            {/* balance */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-secondary/30">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Gift className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">$75.00</p>
+                  <p className="text-[10px] text-muted-foreground">Date night 🌙</p>
+                </div>
+              </div>
+              <button className="text-[10px] px-3 py-1.5 rounded-full font-semibold text-white" style={{ background: "hsl(28,62%,36%)" }}>Redeem</button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── 2. Payout ── */}
+      <div className="px-5 py-10 border-b border-border" style={{ background: "hsl(28,40%,98%)" }}>
+        <motion.div {...fadeUp(0)}>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium border border-green-100 mb-4">
+            <Zap className="w-3 h-3" /> Same-day payouts
+          </div>
+          <h2 className="font-serif text-2xl font-medium leading-snug mb-2">
+            Their balance. Their way. <span className="text-primary italic">Same day.</span>
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            No gift cards, no restrictions. They pick Venmo, Cash App, PayPal, or Zelle — and we send it directly, same day.
+          </p>
+        </motion.div>
+
+        <motion.div {...fadeUp(0.1)}>
+          <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="text-center pb-3 border-b border-border">
+              <p className="text-3xl font-bold">$75.00</p>
+              <p className="text-sm text-muted-foreground">Yours to claim — same day</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { name: "Venmo", color: "#3D95CE", abbr: "V" },
+                { name: "Cash App", color: "#00D632", abbr: "$" },
+                { name: "PayPal", color: "#003087", abbr: "P" },
+                { name: "Zelle", color: "#6B1F7C", abbr: "Z" },
+              ].map(m => (
+                <div key={m.name} className="flex items-center gap-2.5 p-3 rounded-xl border border-border">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: m.color }}>
+                    {m.abbr}
+                  </div>
+                  <span className="text-sm font-medium">{m.name}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 border border-green-100">
+              <Zap className="w-4 h-4 text-green-600 shrink-0" />
+              <p className="text-xs text-green-800 font-medium">Sent same day</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── 3. Dashboard ── */}
       <div className="px-5 py-10 border-b border-border">
         <motion.div {...fadeUp(0)}>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
@@ -783,51 +917,8 @@ function MobileFeaturesScroll() {
         </motion.div>
       </div>
 
-      {/* ── 2. Payout ── */}
+      {/* ── 4. Scheduled / Calendar ── */}
       <div className="px-5 py-10 border-b border-border" style={{ background: "hsl(28,40%,98%)" }}>
-        <motion.div {...fadeUp(0)}>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-medium border border-green-100 mb-4">
-            <Zap className="w-3 h-3" /> Same-day payouts
-          </div>
-          <h2 className="font-serif text-2xl font-medium leading-snug mb-2">
-            Their balance. Their way. <span className="text-primary italic">Same day.</span>
-          </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-            No gift cards, no restrictions. They pick Venmo, Cash App, PayPal, or Zelle — and we send it directly, same day.
-          </p>
-        </motion.div>
-
-        <motion.div {...fadeUp(0.1)}>
-          <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="text-center pb-3 border-b border-border">
-              <p className="text-3xl font-bold">$75.00</p>
-              <p className="text-sm text-muted-foreground">Yours to claim — same day</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { name: "Venmo", color: "#3D95CE", abbr: "V" },
-                { name: "Cash App", color: "#00D632", abbr: "$" },
-                { name: "PayPal", color: "#003087", abbr: "P" },
-                { name: "Zelle", color: "#6B1F7C", abbr: "Z" },
-              ].map(m => (
-                <div key={m.name} className="flex items-center gap-2.5 p-3 rounded-xl border border-border">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0" style={{ background: m.color }}>
-                    {m.abbr}
-                  </div>
-                  <span className="text-sm font-medium">{m.name}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 border border-green-100">
-              <Zap className="w-4 h-4 text-green-600 shrink-0" />
-              <p className="text-xs text-green-800 font-medium">Sent same day</p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ── 3. Scheduled / Calendar ── */}
-      <div className="px-5 py-10 border-b border-border">
         <motion.div {...fadeUp(0)}>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
             <Clock className="w-3 h-3" /> Build ahead
@@ -889,8 +980,8 @@ function MobileFeaturesScroll() {
         </motion.div>
       </div>
 
-      {/* ── 4. Occasion tracking ── */}
-      <div className="px-5 py-10 border-b border-border" style={{ background: "hsl(28,40%,98%)" }}>
+      {/* ── 5. Occasion tracking ── */}
+      <div className="px-5 py-10 border-b border-border">
         <motion.div {...fadeUp(0)}>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
             <Cake className="w-3 h-3" /> Occasion tracking
@@ -942,17 +1033,17 @@ function MobileFeaturesScroll() {
         </motion.div>
       </div>
 
-      {/* ── 5. Compact remaining features ── */}
+      {/* ── 6. Compact remaining features ── */}
       <div className="px-5 py-10">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Also included</p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            { icon: Gift,         title: "Full gift moment", desc: "Note, video, photos, a link, and real cash — one experience." },
-            { icon: Play,         title: "Video message",    desc: "Record or upload a video they can replay forever." },
-            { icon: ImageIcon,    title: "Up to 6 photos",   desc: "Shared memories that put the gift in context." },
-            { icon: Link2,        title: "Any link",         desc: "Tickets, a song, a reservation — anything with a URL." },
-            { icon: Users,        title: "Gifting circle",   desc: "Everyone you gift, their history, and occasions — organized." },
-            { icon: Bell,         title: "Live tracking",    desc: "Know when they open it, redeem it, or react." },
+            { icon: Play,      title: "Video message",  desc: "Record or upload a video they can replay forever." },
+            { icon: ImageIcon, title: "Up to 6 photos", desc: "Shared memories that put the gift in context." },
+            { icon: Link2,     title: "Any link",        desc: "Tickets, a song, a reservation — anything with a URL." },
+            { icon: Users,     title: "Gifting circle",  desc: "Everyone you gift, their history, and occasions — organized." },
+            { icon: Bell,      title: "Live tracking",   desc: "Know when they open it, redeem it, or react." },
+            { icon: Sparkles,  title: "Free to try",     desc: "No account needed to build your first gift." },
           ].map((f, i) => (
             <motion.div key={f.title} {...fadeUp(i * 0.04)} className="p-3.5 rounded-2xl border border-border bg-card">
               <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center mb-2.5">
