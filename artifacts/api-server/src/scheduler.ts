@@ -453,24 +453,35 @@ async function sendUnredeemedReminders() {
   }
 }
 
+/** Convert a UTC Date to its wall-clock components in Eastern Time (handles DST). */
+function getEasternDateParts(utc: Date): { year: number; month: number; day: number; hour: number } {
+  // toLocaleString with timeZone gives us the ET wall clock, parse it back
+  const etStr = utc.toLocaleString("en-US", { timeZone: "America/New_York" });
+  const etDate = new Date(etStr);
+  return {
+    year:  etDate.getFullYear(),
+    month: etDate.getMonth() + 1,
+    day:   etDate.getDate(),
+    hour:  etDate.getHours(),
+  };
+}
+
 async function sendOccasionReminders() {
   try {
     const now = new Date();
-    const currentYear = now.getFullYear();
+    const et = getEasternDateParts(now);
+    const currentYear = et.year;
 
-    // 7-day advance + day-of, both gated to 12–13 UTC (= 7am EST / 8am EDT)
+    // Fire once per day in the 8:00–8:59 AM ET window — uses ET date for correct day boundaries
     const REMINDER_DAYS = [0, 7];
-    const utcHour = now.getUTCHours();
-
-    // All occasion reminders only fire in the 12:00–12:59 UTC window
-    if (utcHour < 12 || utcHour >= 13) return;
+    if (et.hour < 8 || et.hour >= 9) return;
 
     for (const daysAway of REMINDER_DAYS) {
-
-      const target = new Date(now);
-      target.setDate(target.getDate() + daysAway);
-      const targetMonth = target.getMonth() + 1;
-      const targetDay = target.getDate();
+      // Compute target date in ET by advancing the ET wall-clock day
+      const etMidnight = new Date(`${et.year}-${String(et.month).padStart(2, "0")}-${String(et.day).padStart(2, "0")}T00:00:00`);
+      const targetEt = getEasternDateParts(new Date(etMidnight.getTime() + daysAway * 86_400_000));
+      const targetMonth = targetEt.month;
+      const targetDay = targetEt.day;
 
       // Fixed-date occasions matching today/7d
       const fixedUpcoming = await db
@@ -552,10 +563,16 @@ const _birthdayEmailedToday = new Map<string, string>(); // userId → "YYYY-MM-
 async function sendBirthdayEmails() {
   try {
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    const todayMD = `${mm}-${dd}`; // "MM-DD"
+    const et = getEasternDateParts(now);
+
+    // Only send birthday emails between 8:00 AM and 8:59 PM ET so they land
+    // at a sensible time of day and never cross into 11:59 PM ET territory.
+    if (et.hour < 8 || et.hour >= 21) return;
+
+    const mm = String(et.month).padStart(2, "0");
+    const dd = String(et.day).padStart(2, "0");
+    const todayMD = `${mm}-${dd}`; // "MM-DD" in ET
+    const todayStr = `${et.year}-${mm}-${dd}`; // dedup key in ET
 
     const matches = await db
       .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName })
@@ -564,7 +581,7 @@ async function sendBirthdayEmails() {
 
     for (const user of matches) {
       if (!user.email) continue;
-      // Skip if already sent today
+      // Skip if already sent today (ET)
       if (_birthdayEmailedToday.get(user.id) === todayStr) continue;
 
       await sendHappyBirthdayEmail({

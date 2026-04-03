@@ -71,7 +71,15 @@ if (googleClientId && googleClientSecret) {
         }
         if (u) {
           const [updated] = await db.update(usersTable)
-            .set({ googleId: profile.id, profileImageUrl: photo ?? u.profileImageUrl, updatedAt: new Date() })
+            .set({
+              googleId: profile.id,
+              // Preserve custom-uploaded photos (non-Google CDN URLs). Only refresh if stored URL is
+              // a Google lh URL (or nothing), since Google CDN links can change between sessions.
+              profileImageUrl: (u.profileImageUrl && !u.profileImageUrl.startsWith("https://lh"))
+                ? u.profileImageUrl
+                : (photo ?? u.profileImageUrl),
+              updatedAt: new Date(),
+            })
             .where(eq(usersTable.id, u.id)).returning();
           return done(null, toSafe(updated));
         }
