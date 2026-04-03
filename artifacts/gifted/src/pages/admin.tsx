@@ -146,7 +146,7 @@ function StatusBadge({ gift }: { gift: GiftRow }) {
   if (gift.openedAt)
     return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 whitespace-nowrap">Opened</span>;
   if (gift.paid)
-    return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 whitespace-nowrap">Paid · Unsent</span>;
+    return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 whitespace-nowrap">Awaiting recipient</span>;
   return   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground whitespace-nowrap">Draft</span>;
 }
 
