@@ -645,6 +645,8 @@ export default function PreviewPage() {
   // ── Contact save prompt ──────────────────────────────────────────────────────
   const [contactPromptDismissed, setContactPromptDismissed] = useState(false);
   const [contactName,     setContactName]     = useState("");
+  const [contactPhone,    setContactPhone]    = useState("");
+  const [contactEmail,    setContactEmail]    = useState("");
   const [contactOccasion, setContactOccasion] = useState("Birthday");
   const [contactMonth,    setContactMonth]    = useState(1);
   const [contactDay,      setContactDay]      = useState(1);
@@ -652,6 +654,13 @@ export default function PreviewPage() {
   const [contactSaving,   setContactSaving]   = useState(false);
   const [contactSaved,    setContactSaved]    = useState(false);
   const [contactSaveError, setContactSaveError] = useState(false);
+
+  const formatContactPhone = (raw: string) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 10);
+    if (digits.length < 4) return digits;
+    if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
 
   const CONTACT_OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Thanksgiving", "Valentine's Day", "Hanukkah", "Other"];
   const CONTACT_MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -679,7 +688,11 @@ export default function PreviewPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: contactName.trim() || recipientName }),
+        body: JSON.stringify({
+          name: contactName.trim() || recipientName,
+          ...(contactPhone.trim() && { phone: contactPhone.trim() }),
+          ...(contactEmail.trim() && { email: contactEmail.trim() }),
+        }),
       });
       if (!contactRes.ok) throw new Error("contact failed");
       const contact = await contactRes.json() as { id: string };
@@ -1240,13 +1253,29 @@ export default function PreviewPage() {
                         </button>
                       </div>
 
-                      {/* Editable name */}
+                      {/* Name + phone + email */}
                       <input
                         value={contactName}
                         onChange={e => setContactName(e.target.value)}
                         placeholder="Name"
                         className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                       />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={contactPhone}
+                          onChange={e => setContactPhone(formatContactPhone(e.target.value))}
+                          placeholder="Phone (optional)"
+                          type="tel"
+                          className="text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                        <input
+                          value={contactEmail}
+                          onChange={e => setContactEmail(e.target.value)}
+                          placeholder="Email (optional)"
+                          type="email"
+                          className="text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                      </div>
 
                       {/* Primary occasion row */}
                       <div className="flex flex-wrap items-center gap-2">
