@@ -225,7 +225,7 @@ function ResendButton({ url, recipientName, full = false }: { url: string; recip
             </motion.span>
           ) : (
             <motion.span key="idle" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
-              <Send className="w-4 h-4" />Resend link
+              <Send className="w-4 h-4" />Share moment
             </motion.span>
           )}
         </AnimatePresence>
@@ -250,7 +250,7 @@ function ResendButton({ url, recipientName, full = false }: { url: string; recip
           </motion.span>
         ) : (
           <motion.span key="idle" className="flex items-center gap-1.5" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
-            <Send className="w-3 h-3" />Resend link
+            <Send className="w-3 h-3" />Share moment
           </motion.span>
         )}
       </AnimatePresence>
