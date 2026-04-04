@@ -660,7 +660,7 @@ export default function PreviewPage() {
     return !!localStorage.getItem(`gifted_contact_prompt_${giftId}`);
   };
 
-  const handleContactSave = async () => {
+  const handleContactSave = async (withOccasion = true) => {
     if (!giftId) return;
     setContactSaving(true);
     try {
@@ -672,13 +672,15 @@ export default function PreviewPage() {
       });
       if (!contactRes.ok) throw new Error("contact failed");
       const contact = await contactRes.json() as { id: string };
-      const occasionRes = await fetch(`${base}/api/gifted/contacts/${contact.id}/occasions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(buildOccasionPayload(contactOccasion, contactMonth, contactDay)),
-      });
-      if (!occasionRes.ok) throw new Error("occasion failed");
+      if (withOccasion) {
+        const occasionRes = await fetch(`${base}/api/gifted/contacts/${contact.id}/occasions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(buildOccasionPayload(contactOccasion, contactMonth, contactDay)),
+        });
+        if (!occasionRes.ok) throw new Error("occasion failed");
+      }
       localStorage.setItem(`gifted_contact_prompt_${giftId}`, "saved");
       setContactSaved(true);
     } catch {
@@ -1205,9 +1207,10 @@ export default function PreviewPage() {
                   ) : (
                     <>
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium text-foreground">
-                          Remember {recipientName}'s birthday or a special occasion?
-                        </p>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Save {recipientName} to your contacts</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">Add an occasion and we'll remind you every year.</p>
+                        </div>
                         <button
                           type="button"
                           onClick={handleContactSkip}
@@ -1247,7 +1250,7 @@ export default function PreviewPage() {
                         )}
                         <Button
                           size="sm"
-                          onClick={() => { setContactSaveError(false); handleContactSave(); }}
+                          onClick={() => { setContactSaveError(false); handleContactSave(true); }}
                           disabled={contactSaving}
                           className="rounded-xl h-9 px-4 text-xs shrink-0"
                         >
@@ -1257,13 +1260,24 @@ export default function PreviewPage() {
                       {contactSaveError && (
                         <p className="text-[11px] text-destructive">Couldn't save — please try again.</p>
                       )}
-                      <button
-                        type="button"
-                        onClick={handleContactSkip}
-                        className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-                      >
-                        Skip for now
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => { setContactSaveError(false); handleContactSave(false); }}
+                          disabled={contactSaving}
+                          className="text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors disabled:opacity-40"
+                        >
+                          Save without occasion
+                        </button>
+                        <span className="text-muted-foreground/30 text-[11px]">·</span>
+                        <button
+                          type="button"
+                          onClick={handleContactSkip}
+                          className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                        >
+                          Skip
+                        </button>
+                      </div>
                     </>
                   )}
                 </motion.div>
