@@ -644,9 +644,11 @@ export default function PreviewPage() {
 
   // ── Contact save prompt ──────────────────────────────────────────────────────
   const [contactPromptDismissed, setContactPromptDismissed] = useState(false);
+  const [contactName,     setContactName]     = useState("");
   const [contactOccasion, setContactOccasion] = useState("Birthday");
   const [contactMonth,    setContactMonth]    = useState(1);
   const [contactDay,      setContactDay]      = useState(1);
+  const [extraOccasions,  setExtraOccasions]  = useState<{ label: string; month: number; day: number }[]>([]);
   const [contactSaving,   setContactSaving]   = useState(false);
   const [contactSaved,    setContactSaved]    = useState(false);
   const [contactSaveError, setContactSaveError] = useState(false);
@@ -654,6 +656,15 @@ export default function PreviewPage() {
   const CONTACT_OCCASION_LABELS = ["Birthday", "Anniversary", "Christmas", "Mother's Day", "Father's Day", "Thanksgiving", "Valentine's Day", "Hanukkah", "Other"];
   const CONTACT_MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const contactIsFloating = contactOccasion in FLOATING_OCCASION_KEYS;
+
+  // Initialise contactName lazily from recipientName when the prompt first becomes visible
+  const contactNameInitialised = React.useRef(false);
+  React.useEffect(() => {
+    if (recipientName && !contactNameInitialised.current) {
+      setContactName(recipientName);
+      contactNameInitialised.current = true;
+    }
+  }, [recipientName]);
 
   const contactPromptSeen = () => {
     if (!giftId) return false;
@@ -668,18 +679,25 @@ export default function PreviewPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: recipientName }),
+        body: JSON.stringify({ name: contactName.trim() || recipientName }),
       });
       if (!contactRes.ok) throw new Error("contact failed");
       const contact = await contactRes.json() as { id: string };
       if (withOccasion) {
-        const occasionRes = await fetch(`${base}/api/gifted/contacts/${contact.id}/occasions`, {
+        await fetch(`${base}/api/gifted/contacts/${contact.id}/occasions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify(buildOccasionPayload(contactOccasion, contactMonth, contactDay)),
         });
-        if (!occasionRes.ok) throw new Error("occasion failed");
+      }
+      for (const occ of extraOccasions) {
+        await fetch(`${base}/api/gifted/contacts/${contact.id}/occasions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(buildOccasionPayload(occ.label, occ.month, occ.day)),
+        });
       }
       localStorage.setItem(`gifted_contact_prompt_${giftId}`, "saved");
       setContactSaved(true);
@@ -1206,9 +1224,10 @@ export default function PreviewPage() {
                     </div>
                   ) : (
                     <>
+                      {/* Header */}
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <p className="text-sm font-medium text-foreground">Save {recipientName} to your contacts</p>
+                          <p className="text-sm font-medium text-foreground">Save to your contacts</p>
                           <p className="text-[11px] text-muted-foreground mt-0.5">Add an occasion and we'll remind you every year.</p>
                         </div>
                         <button
@@ -1220,6 +1239,16 @@ export default function PreviewPage() {
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
+
+                      {/* Editable name */}
+                      <input
+                        value={contactName}
+                        onChange={e => setContactName(e.target.value)}
+                        placeholder="Name"
+                        className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      />
+
+                      {/* Primary occasion row */}
                       <div className="flex flex-wrap items-center gap-2">
                         <select
                           value={contactOccasion}
@@ -1248,15 +1277,72 @@ export default function PreviewPage() {
                             </select>
                           </>
                         )}
-                        <Button
-                          size="sm"
-                          onClick={() => { setContactSaveError(false); handleContactSave(true); }}
-                          disabled={contactSaving}
-                          className="rounded-xl h-9 px-4 text-xs shrink-0"
-                        >
-                          {contactSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save"}
-                        </Button>
                       </div>
+
+                      {/* Extra occasion rows */}
+                      {extraOccasions.map((occ, i) => {
+                        const isFloating = occ.label in FLOATING_OCCASION_KEYS;
+                        return (
+                          <div key={i} className="flex flex-wrap items-center gap-2">
+                            <select
+                              value={occ.label}
+                              onChange={e => setExtraOccasions(prev => prev.map((o, j) => j === i ? { ...o, label: e.target.value } : o))}
+                              className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                            >
+                              {CONTACT_OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
+                            </select>
+                            {isFloating ? (
+                              <span className="text-xs text-muted-foreground italic">Date computed each year</span>
+                            ) : (
+                              <>
+                                <select
+                                  value={occ.month}
+                                  onChange={e => setExtraOccasions(prev => prev.map((o, j) => j === i ? { ...o, month: Number(e.target.value) } : o))}
+                                  className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                >
+                                  {CONTACT_MONTH_NAMES.map((m, mi) => <option key={m} value={mi + 1}>{m}</option>)}
+                                </select>
+                                <select
+                                  value={occ.day}
+                                  onChange={e => setExtraOccasions(prev => prev.map((o, j) => j === i ? { ...o, day: Number(e.target.value) } : o))}
+                                  className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                >
+                                  {Array.from({ length: 31 }, (_, d) => d + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setExtraOccasions(prev => prev.filter((_, j) => j !== i))}
+                              className="p-1 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {/* + Add occasion */}
+                      {extraOccasions.length < 3 && (
+                        <button
+                          type="button"
+                          onClick={() => setExtraOccasions(prev => [...prev, { label: "Anniversary", month: 1, day: 1 }])}
+                          className="text-[11px] text-primary/70 hover:text-primary transition-colors"
+                        >
+                          + Add another occasion
+                        </button>
+                      )}
+
+                      {/* Save button */}
+                      <Button
+                        size="sm"
+                        onClick={() => { setContactSaveError(false); handleContactSave(true); }}
+                        disabled={contactSaving || !contactName.trim()}
+                        className="w-full rounded-xl h-9 text-xs"
+                      >
+                        {contactSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save contact"}
+                      </Button>
+
                       {contactSaveError && (
                         <p className="text-[11px] text-destructive">Couldn't save — please try again.</p>
                       )}
@@ -1264,7 +1350,7 @@ export default function PreviewPage() {
                         <button
                           type="button"
                           onClick={() => { setContactSaveError(false); handleContactSave(false); }}
-                          disabled={contactSaving}
+                          disabled={contactSaving || !contactName.trim()}
                           className="text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors disabled:opacity-40"
                         >
                           Save without occasion
