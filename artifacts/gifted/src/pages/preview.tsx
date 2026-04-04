@@ -654,7 +654,8 @@ export default function PreviewPage() {
   const [contactSaving,   setContactSaving]   = useState(false);
   const [contactSaved,    setContactSaved]    = useState(false);
   const [contactSaveError, setContactSaveError] = useState(false);
-  const [nonAuthContactDismissed, setNonAuthContactDismissed] = useState(false);
+  const [nonAuthContactDismissed,  setNonAuthContactDismissed]  = useState(false);
+  const [contactAuthFormOpen,      setContactAuthFormOpen]      = useState(false);
 
   const formatContactPhone = (raw: string) => {
     const digits = raw.replace(/\D/g, "").slice(0, 10);
@@ -1438,6 +1439,59 @@ export default function PreviewPage() {
                       Continue with Google
                     </button>
                   )}
+
+                  {/* Collapsible email form */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!contactAuthFormOpen) setNudgeMode("sign-up");
+                      setContactAuthFormOpen(v => !v);
+                    }}
+                    className="w-full text-center text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors underline underline-offset-2"
+                  >
+                    {contactAuthFormOpen ? "Collapse" : (googleEnabled ? "Or continue with email" : "Continue with email")}
+                  </button>
+                  <AnimatePresence>
+                    {contactAuthFormOpen && (
+                      <motion.form
+                        key="contact-auth-form"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.22 }}
+                        onSubmit={handleNudgeSubmit}
+                        className="overflow-hidden space-y-2"
+                      >
+                        {nudgeMode === "sign-up" && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <input type="text" value={nudgeFirstName} onChange={e => setNudgeFirstName(e.target.value)} placeholder="First name"
+                              className="h-9 px-3 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                            <input type="text" value={nudgeLastName} onChange={e => setNudgeLastName(e.target.value)} placeholder="Last name"
+                              className="h-9 px-3 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                          </div>
+                        )}
+                        <input type="email" value={nudgeEmail} onChange={e => { setNudgeEmail(e.target.value); setNudgeError(null); }}
+                          placeholder="Email address" required autoComplete="email"
+                          className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                        <input type="password" value={nudgePassword} onChange={e => setNudgePassword(e.target.value)}
+                          placeholder={nudgeMode === "sign-up" ? "Create a password (min. 8 chars)" : "Password"} required
+                          autoComplete={nudgeMode === "sign-in" ? "current-password" : "new-password"}
+                          className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                        {nudgeError && <p className="text-[11px] text-destructive">{nudgeError}</p>}
+                        <Button type="submit" size="sm" disabled={nudgeSubmitting} className="w-full h-9 rounded-xl text-xs">
+                          {nudgeSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : nudgeMode === "sign-in" ? "Sign in" : "Create account"}
+                        </Button>
+                        <p className="text-[11px] text-center text-muted-foreground/60">
+                          {nudgeMode === "sign-in" ? "New to gifted.? " : "Already have an account? "}
+                          <button type="button" onClick={() => { setNudgeMode(m => m === "sign-in" ? "sign-up" : "sign-in"); setNudgeError(null); }}
+                            className="underline underline-offset-2 hover:text-foreground transition-colors">
+                            {nudgeMode === "sign-in" ? "Sign up free" : "Sign in"}
+                          </button>
+                        </p>
+                      </motion.form>
+                    )}
+                  </AnimatePresence>
+
                   <button
                     type="button"
                     onClick={() => setNonAuthContactDismissed(true)}
