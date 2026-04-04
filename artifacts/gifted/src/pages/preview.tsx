@@ -1495,7 +1495,7 @@ export default function PreviewPage() {
                   <button
                     type="button"
                     onClick={() => setNonAuthContactDismissed(true)}
-                    className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                    className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Skip for now
                   </button>
