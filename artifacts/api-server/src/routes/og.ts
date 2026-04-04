@@ -123,13 +123,13 @@ function buildGiftSvg(
     letter-spacing="0.5"
     fill="${logoColor}">gifted.</text>
 
-  <!-- "A GIFT FOR" label -->
+  <!-- "A MOMENT FOR" label -->
   <text x="72" y="268"
     font-family="Arial, Helvetica, sans-serif"
     font-size="20"
     font-weight="400"
     letter-spacing="4"
-    fill="${textSecondary}">A GIFT FOR</text>
+    fill="${textSecondary}">A MOMENT FOR</text>
 
   <!-- Recipient name — big, adaptive font size -->
   <text x="72" y="${nameY}"
@@ -145,7 +145,7 @@ function buildGiftSvg(
     font-size="19"
     font-weight="600"
     text-anchor="middle"
-    fill="${ctaText}">Tap to open your gift</text>
+    fill="${ctaText}">Open your moment</text>
 </svg>`;
 }
 

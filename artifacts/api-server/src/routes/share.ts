@@ -33,8 +33,8 @@ router.get("/share/:id", async (req, res) => {
 
   const baseUrl   = process.env.GIFTED_BASE_URL || `${req.protocol}://${req.get("host")}`;
   const ogImage   = `${baseUrl}/api/og/gift/${id}`;
-  const ogTitle   = `A gift for ${name} 🎁`;
-  const ogDesc    = `${from} sent you something special on gifted. Tap to open your gift.`;
+  const ogTitle   = `A moment for ${name} ✨`;
+  const ogDesc    = `${from} put something together just for you. Open your moment.`;
   const redirectUrl = `/open/${id}`;
   const canonicalUrl = `${baseUrl}/share/${id}`;
 
@@ -62,8 +62,8 @@ router.get("/share/:id", async (req, res) => {
 </head>
 <body style="background:#faf8f5;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:2rem;box-sizing:border-box;">
   <div style="text-align:center;">
-    <p style="font-size:1.4rem;color:#2c1810;margin-bottom:1.2rem;">Opening your gift&hellip;</p>
-    <a href="${redirectUrl}" style="color:#7a4a1e;font-size:0.95rem;text-decoration:underline;">Tap here if you are not redirected</a>
+    <p style="font-size:1.4rem;color:#2c1810;margin-bottom:1.2rem;">Opening your moment&hellip;</p>
+    <a href="${redirectUrl}" style="color:#7a4a1e;font-size:0.95rem;text-decoration:underline;">Tap to open your moment</a>
   </div>
   <script>window.location.replace(${JSON.stringify(redirectUrl)});</script>
 </body>
