@@ -122,12 +122,20 @@ router.patch("/auth/profile", async (req: Request, res: Response) => {
 });
 
 if (googleEnabled) {
-  router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+  router.get("/auth/google", (req: Request, res: Response, next: NextFunction) => {
+    const raw = (req.query.returnTo as string) || "";
+    // Only allow relative paths to prevent open redirect attacks
+    const returnTo = raw.startsWith("/") ? raw : "/my-gifts";
+    (req.session as any).returnTo = returnTo;
+    passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+  });
 
   router.get("/auth/google/callback",
     passport.authenticate("google", { failureRedirect: "/sign-in?error=google" }),
-    (_req: Request, res: Response) => {
-      res.redirect("/my-gifts");
+    (req: Request, res: Response) => {
+      const returnTo = (req.session as any).returnTo || "/my-gifts";
+      delete (req.session as any).returnTo;
+      res.redirect(returnTo);
     },
   );
 }
