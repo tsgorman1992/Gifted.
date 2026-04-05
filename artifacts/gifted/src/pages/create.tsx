@@ -809,6 +809,7 @@ export default function CreatePage() {
   const [suggestedExperience, setSuggestedExperience] = useState(() => getSuggestedExperience("Birthday"));
   const [hasManuallyChosen, setHasManuallyChosen] = useState(false);
   const [amount, setAmount] = useState("");
+  const [customAmountInput, setCustomAmountInput] = useState("");
   const [intent, setIntent] = useState("");
   const [customIntentMode, setCustomIntentMode] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
@@ -825,6 +826,7 @@ export default function CreatePage() {
   const [personalNote, setPersonalNote] = useState("");
   const [extraLinks, setExtraLinks] = useState<Array<{url: string; label: string}>>([{url: "", label: ""}]);
   const [linkErrors, setLinkErrors] = useState<Record<number, string>>({});
+  const [labelErrors, setLabelErrors] = useState<Record<number, string>>({});
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
@@ -875,7 +877,10 @@ export default function CreatePage() {
         if (Array.isArray(payload.links) && payload.links.length > 0) {
           setExtraLinks([...payload.links, { url: "", label: "" }]);
         }
-        if (payload.amt && parseFloat(payload.amt) > 0) setAmount(payload.amt);
+        if (payload.amt && parseFloat(payload.amt) > 0) {
+          setAmount(payload.amt);
+          if (!AMOUNTS.includes(payload.amt)) setCustomAmountInput(payload.amt);
+        }
         if (payload.int) setIntent(payload.int);
         if (payload.sf) { setScheduledFor(payload.sf); setScheduleEnabled(true); }
         if (payload.st) setScheduledTime(payload.st);
@@ -915,7 +920,10 @@ export default function CreatePage() {
       if (pl) setExtraLinks([{url: pl, label: ""}, {url: "", label: ""}]);
     }
     const amt = localStorage.getItem("gifted_amount");
-    if (amt && parseFloat(amt) > 0) setAmount(amt);
+    if (amt && parseFloat(amt) > 0) {
+      setAmount(amt);
+      if (!AMOUNTS.includes(amt)) setCustomAmountInput(amt);
+    }
     const int = localStorage.getItem("gifted_intent");
     if (int) {
       setIntent(int);
@@ -1215,8 +1223,15 @@ export default function CreatePage() {
       setStepError("Some links look invalid — please fix them before continuing.");
       return;
     }
-    if (filledLinks.some(l => !l.label.trim())) {
-      setStepError("Please add a label for each link you've added — e.g. \"Your Spotify playlist\" or \"Dinner reservation\".");
+    const newLabelErrors: Record<number, string> = {};
+    extraLinks.forEach((link, idx) => {
+      if (link.url.trim() && !link.label.trim()) {
+        newLabelErrors[idx] = "Add a label so they know what this link is.";
+      }
+    });
+    if (Object.keys(newLabelErrors).length > 0) {
+      setLabelErrors(newLabelErrors);
+      setStepError("Each link needs a label — scroll up to fill them in.");
       return;
     }
     if (amount && parseFloat(amount) > 0 && parseFloat(amount) < 10) {
@@ -2004,16 +2019,29 @@ export default function CreatePage() {
                               </motion.div>
                             )}
                             {link.url.trim() && !hasError && (
-                              <Input
-                                placeholder='Label — e.g. "Your birthday dinner at Nobu"'
-                                className="h-9 rounded-xl text-sm transition-all"
-                                value={link.label}
-                                onChange={(e) => {
-                                  const updated = [...extraLinks];
-                                  updated[idx] = { ...updated[idx], label: e.target.value };
-                                  setExtraLinks(updated);
-                                }}
-                              />
+                              <div className="space-y-1">
+                                <Input
+                                  placeholder='Label — what is this? e.g. "Concert tickets" or "Our song"'
+                                  className={`h-9 rounded-xl text-sm transition-all ${labelErrors[idx] ? "border-destructive focus-visible:ring-destructive/30" : ""}`}
+                                  value={link.label}
+                                  onChange={(e) => {
+                                    const updated = [...extraLinks];
+                                    updated[idx] = { ...updated[idx], label: e.target.value };
+                                    setExtraLinks(updated);
+                                    if (labelErrors[idx]) {
+                                      const errs = { ...labelErrors };
+                                      delete errs[idx];
+                                      setLabelErrors(errs);
+                                    }
+                                  }}
+                                />
+                                {labelErrors[idx] && (
+                                  <p className="text-xs text-destructive flex items-center gap-1.5 pl-1">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    {labelErrors[idx]}
+                                  </p>
+                                )}
+                              </div>
                             )}
                           </div>
                         );
@@ -2111,7 +2139,7 @@ export default function CreatePage() {
                     <div className="flex flex-wrap gap-2.5">
                       <button
                         type="button"
-                        onClick={() => setAmount("")}
+                        onClick={() => { setAmount(""); setCustomAmountInput(""); }}
                         className={`px-5 h-11 rounded-full font-semibold text-base border transition-all ${
                           !amount
                             ? "bg-primary text-primary-foreground border-primary"
@@ -2124,9 +2152,9 @@ export default function CreatePage() {
                         <button
                           key={amt}
                           type="button"
-                          onClick={() => setAmount(amt)}
+                          onClick={() => { setAmount(amt); setCustomAmountInput(""); }}
                           className={`px-6 h-11 rounded-full font-bold text-base border transition-all ${
-                            amount === amt
+                            amount === amt && !customAmountInput
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-secondary text-secondary-foreground border-transparent hover:border-border"
                           }`}
@@ -2139,9 +2167,9 @@ export default function CreatePage() {
                         <Input
                           type="number"
                           placeholder="Custom"
-                          className="h-11 rounded-full text-base font-bold pl-9"
-                          value={!AMOUNTS.includes(amount) && amount ? amount : ""}
-                          onChange={(e) => setAmount(e.target.value)}
+                          className={`h-11 rounded-full text-base font-bold pl-9 ${customAmountInput ? "ring-2 ring-primary/30 border-primary" : ""}`}
+                          value={customAmountInput}
+                          onChange={(e) => { const v = e.target.value; setCustomAmountInput(v); setAmount(v); }}
                         />
                       </div>
                     </div>
