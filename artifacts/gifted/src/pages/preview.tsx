@@ -1283,7 +1283,7 @@ export default function PreviewPage() {
                         value={contactName}
                         onChange={e => setContactName(e.target.value)}
                         placeholder="Name"
-                        className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        className="w-full text-[16px] border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                       />
                       <div className="grid grid-cols-2 gap-2">
                         <input
@@ -1291,14 +1291,14 @@ export default function PreviewPage() {
                           onChange={e => setContactPhone(formatContactPhone(e.target.value))}
                           placeholder="Phone (optional)"
                           type="tel"
-                          className="text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          className="text-[16px] border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                         <input
                           value={contactEmail}
                           onChange={e => setContactEmail(e.target.value)}
                           placeholder="Email (optional)"
                           type="email"
-                          className="text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          className="text-[16px] border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                       </div>
 
@@ -1307,7 +1307,7 @@ export default function PreviewPage() {
                         <select
                           value={contactOccasion}
                           onChange={e => setContactOccasion(e.target.value)}
-                          className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          className="text-[16px] border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                         >
                           {CONTACT_OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
                         </select>
@@ -1318,14 +1318,14 @@ export default function PreviewPage() {
                             <select
                               value={contactMonth}
                               onChange={e => setContactMonth(Number(e.target.value))}
-                              className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              className="text-[16px] border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                             >
                               {CONTACT_MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
                             </select>
                             <select
                               value={contactDay}
                               onChange={e => setContactDay(Number(e.target.value))}
-                              className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              className="text-[16px] border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                             >
                               {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
@@ -1341,7 +1341,7 @@ export default function PreviewPage() {
                             <select
                               value={occ.label}
                               onChange={e => setExtraOccasions(prev => prev.map((o, j) => j === i ? { ...o, label: e.target.value } : o))}
-                              className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              className="text-[16px] border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                             >
                               {CONTACT_OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
@@ -1352,14 +1352,14 @@ export default function PreviewPage() {
                                 <select
                                   value={occ.month}
                                   onChange={e => setExtraOccasions(prev => prev.map((o, j) => j === i ? { ...o, month: Number(e.target.value) } : o))}
-                                  className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                  className="text-[16px] border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 >
                                   {CONTACT_MONTH_NAMES.map((m, mi) => <option key={m} value={mi + 1}>{m}</option>)}
                                 </select>
                                 <select
                                   value={occ.day}
                                   onChange={e => setExtraOccasions(prev => prev.map((o, j) => j === i ? { ...o, day: Number(e.target.value) } : o))}
-                                  className="text-xs border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                  className="text-[16px] border border-border rounded-xl px-2.5 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 >
                                   {Array.from({ length: 31 }, (_, d) => d + 1).map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
@@ -1395,7 +1395,7 @@ export default function PreviewPage() {
                           value={contactNotifyPhone}
                           onChange={e => setContactNotifyPhone(formatContactPhone(e.target.value))}
                           placeholder="Your mobile number"
-                          className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                          className="w-full text-[16px] border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                       </div>
 
@@ -1500,18 +1500,18 @@ export default function PreviewPage() {
                         {nudgeMode === "sign-up" && (
                           <div className="grid grid-cols-2 gap-2">
                             <input type="text" value={nudgeFirstName} onChange={e => setNudgeFirstName(e.target.value)} placeholder="First name"
-                              className="h-9 px-3 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                              className="h-9 px-3 rounded-xl border border-border bg-background text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
                             <input type="text" value={nudgeLastName} onChange={e => setNudgeLastName(e.target.value)} placeholder="Last name"
-                              className="h-9 px-3 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                              className="h-9 px-3 rounded-xl border border-border bg-background text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
                           </div>
                         )}
                         <input type="email" value={nudgeEmail} onChange={e => { setNudgeEmail(e.target.value); setNudgeError(null); }}
                           placeholder="Email address" required autoComplete="email"
-                          className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                          className="w-full h-9 px-3 rounded-xl border border-border bg-background text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
                         <input type="password" value={nudgePassword} onChange={e => setNudgePassword(e.target.value)}
                           placeholder={nudgeMode === "sign-up" ? "Create a password (min. 8 chars)" : "Password"} required
                           autoComplete={nudgeMode === "sign-in" ? "current-password" : "new-password"}
-                          className="w-full h-9 px-3 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                          className="w-full h-9 px-3 rounded-xl border border-border bg-background text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
                         {nudgeError && <p className="text-[11px] text-destructive">{nudgeError}</p>}
                         <Button type="submit" size="sm" disabled={nudgeSubmitting} className="w-full h-9 rounded-xl text-xs">
                           {nudgeSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : nudgeMode === "sign-in" ? "Sign in" : "Create account"}
