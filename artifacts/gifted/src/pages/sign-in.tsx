@@ -13,6 +13,8 @@ export default function SignInPage() {
   const { isAuthenticated, isLoading, refetch } = useAuth();
   const [, setLocation] = useLocation();
 
+  const returnTo = new URLSearchParams(window.location.search).get("returnTo") || "/my-gifts";
+
   const [mode, setMode]               = useState<Mode>("sign-in");
   const [email, setEmail]             = useState("");
   const [password, setPassword]       = useState("");
@@ -30,8 +32,8 @@ export default function SignInPage() {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) setLocation("/my-gifts");
-  }, [isAuthenticated, isLoading, setLocation]);
+    if (!isLoading && isAuthenticated) setLocation(returnTo);
+  }, [isAuthenticated, isLoading, setLocation, returnTo]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +60,7 @@ export default function SignInPage() {
         return;
       }
       await refetch();
-      setLocation("/my-gifts");
+      setLocation(returnTo);
     } catch {
       setError("Unable to connect. Please check your connection and try again.");
     } finally {
@@ -104,7 +106,7 @@ export default function SignInPage() {
             <>
               <button
                 type="button"
-                onClick={() => { window.location.href = `${BASE}/api/auth/google`; }}
+                onClick={() => { window.location.href = `${BASE}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`; }}
                 className="w-full h-12 flex items-center justify-center gap-3 rounded-full border border-border hover:bg-secondary/60 transition-colors font-medium text-sm"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -197,7 +199,7 @@ export default function SignInPage() {
                 {googleEnabled && (
                   <button
                     type="button"
-                    onClick={() => { window.location.href = `${BASE}/api/auth/google`; }}
+                    onClick={() => { window.location.href = `${BASE}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`; }}
                     className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-white border border-amber-300 text-sm font-medium text-amber-900 hover:bg-amber-50 transition-colors shadow-sm"
                   >
                     <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">

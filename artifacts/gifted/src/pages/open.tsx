@@ -189,8 +189,8 @@ export default function OpenPage() {
   function handleSaveToAccount() {
     if (!giftId) return;
     if (isAuthenticated && user && giftSenderUserId && user.id === giftSenderUserId) return;
-    localStorage.setItem("gifted_auth_return", `/open/${giftId}?save-received=${giftId}`);
-    setLocation("/sign-in");
+    const here = window.location.pathname + window.location.search;
+    setLocation(`/sign-in?returnTo=${encodeURIComponent(here)}`);
   }
 
   if (status === "loading" || (status === "ready" && authLoading)) {

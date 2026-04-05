@@ -2315,9 +2315,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                         boxShadow: cfg.cardStyle.shadow,
                       }}
                     >
-                      <div className="w-full aspect-video relative group">
+                      <div className="w-full relative group bg-black">
                         {videoRefreshing ? (
-                          <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-black/10">
+                          <div className="w-full flex flex-col items-center justify-center gap-3 py-16">
                             <div className="w-8 h-8 border-2 border-white/40 border-t-white/90 rounded-full animate-spin" />
                             <p className="text-xs text-white/70">Loading video…</p>
                           </div>
@@ -2329,7 +2329,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                             playsInline
                             controls
                             preload="auto"
-                            className="w-full h-full object-cover"
+                            className="w-full h-auto max-h-[70vh] block"
                             onError={handleVideoError}
                           />
                         )}
