@@ -562,14 +562,15 @@ export default function AdminPage() {
   const [wipeMsg, setWipeMsg]     = useState<string | null>(null);
 
   // Transfer recipient modal
-  const [transferGiftId, setTransferGiftId]     = useState<string | null>(null);
-  const [transferGiftName, setTransferGiftName] = useState("");
-  const [transferEmail, setTransferEmail]       = useState("");
-  const [transferResults, setTransferResults]   = useState<TransferUser[]>([]);
-  const [transferSelected, setTransferSelected] = useState<TransferUser | null>(null);
-  const [transferSearching, setTransferSearching] = useState(false);
-  const [transferring, setTransferring]         = useState(false);
-  const [transferMsg, setTransferMsg]           = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [transferGiftId, setTransferGiftId]             = useState<string | null>(null);
+  const [transferGiftName, setTransferGiftName]         = useState("");
+  const [transferCurrentRecipient, setTransferCurrentRecipient] = useState<TransferUser | null>(null);
+  const [transferEmail, setTransferEmail]               = useState("");
+  const [transferResults, setTransferResults]           = useState<TransferUser[]>([]);
+  const [transferSelected, setTransferSelected]         = useState<TransferUser | null>(null);
+  const [transferSearching, setTransferSearching]       = useState(false);
+  const [transferring, setTransferring]                 = useState(false);
+  const [transferMsg, setTransferMsg]                   = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const headers = { "x-admin-key": key };
 
@@ -676,10 +677,22 @@ export default function AdminPage() {
     setTransferResults([]);
     setTransferSelected(null);
     setTransferMsg(null);
+    // Look up who currently holds this gift from the already-loaded user list
+    if (gift.recipientUserId) {
+      const match = userRows.find(u => u.id === gift.recipientUserId);
+      setTransferCurrentRecipient(
+        match
+          ? { id: match.id, email: match.email, displayName: match.displayName }
+          : { id: gift.recipientUserId, email: null, displayName: null }
+      );
+    } else {
+      setTransferCurrentRecipient(null);
+    }
   }
 
   function closeTransferModal() {
     setTransferGiftId(null);
+    setTransferCurrentRecipient(null);
     setTransferEmail("");
     setTransferResults([]);
     setTransferSelected(null);
@@ -1234,23 +1247,51 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Clear option */}
-            <button
-              onClick={() => handleTransferRecipient(null)}
-              disabled={transferring}
-              className="w-full flex items-center gap-3 border border-border rounded-xl px-4 py-3 text-sm hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
-            >
-              <UserX className="w-4 h-4 text-amber-600 shrink-0" />
-              <div>
-                <p className="font-medium">Clear assignment</p>
-                <p className="text-xs text-muted-foreground">Removes the current recipient so they can re-claim the gift</p>
-              </div>
-            </button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-              <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or transfer to a specific account</span></div>
+            {/* Current assignment status */}
+            <div className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm ${
+              transferCurrentRecipient
+                ? "bg-amber-50 border border-amber-200"
+                : "bg-muted/50 border border-border"
+            }`}>
+              {transferCurrentRecipient ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                  <span className="text-muted-foreground">Currently claimed by</span>
+                  <span className="font-medium text-foreground truncate">
+                    {transferCurrentRecipient.displayName
+                      ? `${transferCurrentRecipient.displayName} (${transferCurrentRecipient.email ?? "no email"})`
+                      : (transferCurrentRecipient.email ?? transferCurrentRecipient.id)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40 shrink-0" />
+                  <span className="text-muted-foreground">Not yet claimed by anyone</span>
+                </>
+              )}
             </div>
+
+            {/* Clear option — only shown when someone has claimed it */}
+            {transferCurrentRecipient && (
+              <>
+                <button
+                  onClick={() => handleTransferRecipient(null)}
+                  disabled={transferring}
+                  className="w-full flex items-center gap-3 border border-border rounded-xl px-4 py-3 text-sm hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
+                >
+                  <UserX className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <p className="font-medium">Clear assignment</p>
+                    <p className="text-xs text-muted-foreground">Removes the current recipient so they can re-claim the gift</p>
+                  </div>
+                </button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+                  <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or transfer to a different account</span></div>
+                </div>
+              </>
+            )}
 
             {/* Email search */}
             <div className="relative">
