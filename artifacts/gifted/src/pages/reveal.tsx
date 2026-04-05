@@ -4,7 +4,6 @@ import { motion, AnimatePresence, useInView } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
 import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check, ChevronLeft, ChevronRight, Download } from "lucide-react";
-import { mockGiftData } from "@/lib/mock-data";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { trackEvent } from "@/lib/analytics";
 
@@ -1517,9 +1516,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [linkCopied, setLinkCopied]       = useState<Record<number, boolean>>({});
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
   const [extraLinks, setExtraLinks]       = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
-  const [recipientName, setRecipientName] = useState(() => localStorage.getItem("gifted_recipient_name") || mockGiftData.recipientName);
-  const [senderName, setSenderName]       = useState(() => localStorage.getItem("gifted_sender_name") || mockGiftData.senderName);
-  const [giftTitle, setGiftTitle]         = useState(() => localStorage.getItem("gifted_gift_title") || mockGiftData.title);
+  const [recipientName, setRecipientName] = useState(() => localStorage.getItem("gifted_recipient_name") || "");
+  const [senderName, setSenderName]       = useState(() => localStorage.getItem("gifted_sender_name") || "");
+  const [giftTitle, setGiftTitle]         = useState(() => localStorage.getItem("gifted_gift_title") || "");
   const [experience, setExperience]       = useState(() => {
     const stored = localStorage.getItem("gifted_experience");
     return (stored && CONFIGS[stored]) ? stored : DEFAULT_EXPERIENCE;

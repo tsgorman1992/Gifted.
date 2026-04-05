@@ -7,7 +7,6 @@ import {
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
   CheckCircle2, Send, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download, Mail,
 } from "lucide-react";
-import { mockGiftData } from "@/lib/mock-data";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { useAuth } from "@/lib/auth-context";
 import QRCodeLib from "qrcode";
@@ -98,9 +97,9 @@ export default function PreviewPage() {
   const isMobileOrTablet = useIsMobileOrTablet();
 
   const [experience,     setExperience]     = useState(DEFAULT_EXPERIENCE);
-  const [recipientName,  setRecipientName]  = useState(mockGiftData.recipientName);
-  const [senderName,     setSenderName]     = useState(mockGiftData.senderName);
-  const [giftTitle,      setGiftTitle]      = useState(mockGiftData.title);
+  const [recipientName,  setRecipientName]  = useState(() => localStorage.getItem("gifted_recipient_name") || "");
+  const [senderName,     setSenderName]     = useState(() => localStorage.getItem("gifted_sender_name") || "");
+  const [giftTitle,      setGiftTitle]      = useState(() => localStorage.getItem("gifted_gift_title") || "");
   const [copied,         setCopied]         = useState(false);
   const [canShare,       setCanShare]       = useState(false);
   const [hasVideo,       setHasVideo]       = useState(false);
