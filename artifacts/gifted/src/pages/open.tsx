@@ -48,6 +48,7 @@ export default function OpenPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [giftId, setGiftId] = useState<string | null>(null);
   const [giftSenderUserId, setGiftSenderUserId] = useState<string | null>(null);
+  const [giftRecipientUserId, setGiftRecipientUserId] = useState<string | null>(null);
   const [giftRecipientName, setGiftRecipientName] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
   const [barVisible, setBarVisible] = useState(false);
@@ -123,6 +124,7 @@ export default function OpenPage() {
 
         setGiftId(gift.id);
         setGiftSenderUserId(gift.senderUserId ?? null);
+        setGiftRecipientUserId(gift.recipientUserId ?? null);
         setGiftRecipientName(gift.recipientName ?? "");
         setStatus("ready");
       })
@@ -135,12 +137,17 @@ export default function OpenPage() {
   // When an authenticated non-sender opens a gift, show a "is this for you?" prompt
   // instead of silently auto-claiming it (prevents the wrong person in a group chat
   // from accidentally locking the gift to their account).
+  // Skip prompt if this user is already the confirmed recipient (re-watching).
   useEffect(() => {
     if (!giftId || authLoading || !isAuthenticated) return;
     if (new URLSearchParams(window.location.search).get("preview") === "true") return;
     if (user && giftSenderUserId && user.id === giftSenderUserId) return;
+    if (user && giftRecipientUserId && user.id === giftRecipientUserId) {
+      setSaveStatus("saved");
+      return;
+    }
     setClaimPending(true);
-  }, [giftId, isAuthenticated, authLoading, user, giftSenderUserId]);
+  }, [giftId, isAuthenticated, authLoading, user, giftSenderUserId, giftRecipientUserId]);
 
   async function handleConfirmClaim() {
     if (!giftId) return;

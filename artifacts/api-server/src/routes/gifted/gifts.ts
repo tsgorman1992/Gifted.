@@ -260,6 +260,7 @@ router.get("/gifted/gifts/:id", async (req, res) => {
     res.json({
       id: gift.id,
       senderUserId: gift.senderUserId,
+      recipientUserId: gift.recipientUserId,
       recipientName: gift.recipientName,
       senderName: gift.senderName,
       experience: gift.experience,
