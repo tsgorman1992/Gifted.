@@ -42,7 +42,7 @@ async function saveReceivedGift(giftId: string): Promise<"saved" | "already-mine
 export default function OpenPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
 
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
