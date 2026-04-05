@@ -104,8 +104,8 @@ export async function sendSenderReceipt(params: SenderReceiptParams): Promise<vo
     : null;
 
   const body = `
-    ${h1(`Your gift is ready, ${senderName.split(" ")[0]}!`)}
-    ${p(`Everything is set. Your gift for <strong>${recipientName}</strong> has been created and funded. All that's left is to send them the link.`)}
+    ${h1(`Your moment is ready, ${senderName.split(" ")[0]}!`)}
+    ${p(`Everything is set. Your moment for <strong>${recipientName}</strong> has been created and funded. All that's left is to share the link.`)}
     ${divider()}
     <table cellpadding="0" cellspacing="0" width="100%">
       ${detail("For", recipientName)}
@@ -115,7 +115,7 @@ export async function sendSenderReceipt(params: SenderReceiptParams): Promise<vo
     </table>
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("View your gift", giftUrl)}
+      ${btn("View your moment", giftUrl)}
       <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Copy the link and share it however feels right — text, iMessage, WhatsApp, email.</p>
     </div>
   `;
@@ -125,8 +125,8 @@ export async function sendSenderReceipt(params: SenderReceiptParams): Promise<vo
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `Your gift for ${recipientName} is ready 🎁`,
-      html: layout(`Gift ready — gifted.`, body),
+      subject: `Your moment for ${recipientName} is ready ✨`,
+      html: layout(`Moment ready — gifted.`, body),
     });
     if (error) console.error("[email] sendSenderReceipt error:", error);
     else console.log(`[email] Sender receipt sent to ${to}`);
@@ -161,8 +161,8 @@ export async function sendSenderRedemptionNotice(params: SenderRedemptionParams)
     : null;
 
   const body = `
-    ${h1(`${recipientName} redeemed their gift!`)}
-    ${p(`Great news — ${recipientName} just claimed the ${amtStr} balance from your gift.${methodLabel ? ` They've requested their payout via <strong>${methodLabel}</strong>.` : ""}`)}
+    ${h1(`${recipientName} claimed their balance!`)}
+    ${p(`Great news — ${recipientName} just claimed the ${amtStr} balance from your moment.${methodLabel ? ` They've requested their payout via <strong>${methodLabel}</strong>.` : ""}`)}
     ${p(`Your generosity landed. That's what gifted. is all about.`, true)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
@@ -175,8 +175,8 @@ export async function sendSenderRedemptionNotice(params: SenderRedemptionParams)
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `${recipientName} redeemed your gift 🎉`,
-      html: layout(`Gift redeemed — gifted.`, body),
+      subject: `${recipientName} claimed their balance 🎉`,
+      html: layout(`Balance claimed — gifted.`, body),
     });
     if (error) console.error("[email] sendSenderRedemptionNotice error:", error);
     else console.log(`[email] Redemption notice sent to ${to}`);
@@ -261,8 +261,8 @@ export async function sendGiftOpenedNotice(params: GiftOpenedParams): Promise<vo
   const dashboardUrl = `${BASE_URL}/my-gifts`;
 
   const body = `
-    ${h1(`${recipientName} just opened your gift! 🎁`)}
-    ${p(`Your gift for <strong>${recipientName}</strong> has been opened. Head to your dashboard to see their reaction.`)}
+    ${h1(`${recipientName} just opened your moment! ✨`)}
+    ${p(`Your moment for <strong>${recipientName}</strong> has been opened. Head to your dashboard to see their reaction.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
       ${btn("See their reaction", dashboardUrl)}
@@ -274,8 +274,8 @@ export async function sendGiftOpenedNotice(params: GiftOpenedParams): Promise<vo
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `${recipientName} opened your gift 🎁`,
-      html: layout(`Gift opened — gifted.`, body),
+      subject: `${recipientName} opened your moment ✨`,
+      html: layout(`Moment opened — gifted.`, body),
     });
     if (error) console.error("[email] sendGiftOpenedNotice error:", error);
     else console.log(`[email] Gift opened notice sent to ${to}`);
@@ -301,11 +301,11 @@ export async function sendSenderNudgeEmail(params: SenderNudgeParams): Promise<v
   const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
 
   const body = `
-    ${h1(`Your gift to ${recipientName} hasn't been opened yet`)}
-    ${p(`Just a heads up — your gift for <strong>${recipientName}</strong> is still waiting. If you haven't shared the link yet, here it is ready to forward.`)}
+    ${h1(`Your moment for ${recipientName} hasn't been opened yet`)}
+    ${p(`Just a heads up — your moment for <strong>${recipientName}</strong> is still waiting. If you haven't shared the link yet, here it is ready to forward.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("View gift link", giftUrl)}
+      ${btn("View moment link", giftUrl)}
       <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Copy the link and send it however feels right — text, iMessage, WhatsApp, or email.</p>
     </div>
   `;
@@ -315,8 +315,8 @@ export async function sendSenderNudgeEmail(params: SenderNudgeParams): Promise<v
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `Your gift for ${recipientName} is still waiting to be opened`,
-      html: layout(`Gift not opened yet — gifted.`, body),
+      subject: `Your moment for ${recipientName} is still waiting to be opened`,
+      html: layout(`Moment not opened yet — gifted.`, body),
     });
     if (error) console.error("[email] sendSenderNudgeEmail error:", error);
     else console.log(`[email] Nudge email sent to ${to}`);
@@ -342,11 +342,11 @@ export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams):
   const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
 
   const body = `
-    ${h1(`Your gift for ${recipientName} is live!`)}
-    ${p(`The moment you scheduled has arrived. Your gift for <strong>${recipientName}</strong> is ready — copy the link below and send it whenever you're ready.`)}
+    ${h1(`Your moment for ${recipientName} is live!`)}
+    ${p(`The moment you scheduled has arrived. It's ready — copy the link below and share it whenever you're ready.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("View gift link", giftUrl)}
+      ${btn("View moment link", giftUrl)}
       <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Copy the link and share it however feels right — when it comes from you, it lands differently.</p>
     </div>
   `;
@@ -356,8 +356,8 @@ export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams):
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `Your gift for ${recipientName} is ready to share 🎁`,
-      html: layout(`Gift ready — gifted.`, body),
+      subject: `Your moment for ${recipientName} is ready to share ✨`,
+      html: layout(`Moment ready — gifted.`, body),
     });
     if (error) console.error("[email] sendScheduledGiftReadyEmail error:", error);
     else console.log(`[email] Scheduled ready email sent to ${to}`);
@@ -382,7 +382,7 @@ export async function sendPackageDeliveredEmail(params: PackageDeliveredParams):
   const dashboardUrl = `${BASE_URL}/my-gifts`;
 
   const body = `
-    ${h1(`Your gift to ${recipientName} has arrived! 🎁`)}
+    ${h1(`Your package for ${recipientName} has arrived! 📦`)}
     ${p(`Great news — the package you sent to <strong>${recipientName}</strong> has been delivered.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
@@ -395,7 +395,7 @@ export async function sendPackageDeliveredEmail(params: PackageDeliveredParams):
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `Your gift to ${recipientName} was delivered 📦`,
+      subject: `Your package for ${recipientName} was delivered 📦`,
       html: layout(`Package delivered — gifted.`, body),
     });
     if (error) console.error("[email] sendPackageDeliveredEmail error:", error);
@@ -422,15 +422,15 @@ export async function sendSenderSecondNudgeEmail(params: SenderSecondNudgeParams
   const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
 
   const body = `
-    ${h1(`Still waiting — ${recipientName} hasn't seen their gift yet`)}
-    ${p(`It's been a week since you built something for <strong>${recipientName}</strong>. The gift is still sitting here, ready to go — all it needs is you to pass along the link.`)}
+    ${h1(`Still waiting — ${recipientName} hasn't seen their moment yet`)}
+    ${p(`It's been a week since you built something for <strong>${recipientName}</strong>. The moment is still here, ready to go — all it needs is you to pass along the link.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("Get the gift link", giftUrl)}
+      ${btn("Get the link", giftUrl)}
       <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Forward it however feels right — iMessage, WhatsApp, email. When it comes from you, it lands differently.</p>
     </div>
     <p style="margin:24px 0 0;font-size:12px;color:#9e9087;line-height:1.6;">
-      If this was a mistake or you no longer want to send this gift, just reply to this email and we'll take care of it.
+      If this was a mistake or you no longer want to send this moment, just reply to this email and we'll take care of it.
     </p>
   `;
 
@@ -439,8 +439,8 @@ export async function sendSenderSecondNudgeEmail(params: SenderSecondNudgeParams
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `${recipientName} still hasn't opened their gift`,
-      html: layout(`Gift still waiting — gifted.`, body),
+      subject: `${recipientName} still hasn't seen their moment`,
+      html: layout(`Moment still waiting — gifted.`, body),
     });
     if (error) console.error("[email] sendSenderSecondNudgeEmail error:", error);
     else console.log(`[email] Second nudge sent to ${to}`);
@@ -505,12 +505,12 @@ export async function sendGiftLinkEmail(params: GiftLinkEmailParams): Promise<vo
   const previewUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
 
   const body = `
-    ${h1("Here's your gift link")}
-    ${p(`You asked us to email your gift link for <strong>${recipientName}</strong>. Open the link below to get back to your gift — then copy and forward it when you're ready.`)}
+    ${h1("Here's your moment link")}
+    ${p(`You asked us to email your link for <strong>${recipientName}</strong>. Open it below to get back to your moment — then copy and forward it when you're ready.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("Get my gift link", previewUrl)}
-      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Open this on the same browser where you built the gift for the best experience.</p>
+      ${btn("Get my moment link", previewUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Open this on the same browser where you built the moment for the best experience.</p>
     </div>
   `;
 
@@ -519,8 +519,8 @@ export async function sendGiftLinkEmail(params: GiftLinkEmailParams): Promise<vo
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `Your gift for ${recipientName} — link inside 🎁`,
-      html: layout("Gift link — gifted.", body),
+      subject: `Your moment for ${recipientName} — link inside ✨`,
+      html: layout("Moment link — gifted.", body),
     });
     if (error) console.error("[email] sendGiftLinkEmail error:", error);
     else console.log(`[email] Gift link email sent to ${to}`);
@@ -652,7 +652,7 @@ export async function sendOccasionReminderEmail({
     <p style="margin:0 0 24px;font-size:15px;color:#6b5744;line-height:1.6;">
       ${greeting} Just a heads-up — ${contactName}'s ${occasionLabel} ${urgency}. It only takes a minute to build something they'll remember.
     </p>
-    ${btn("Build a gift moment", `${BASE_URL}/create`)}
+    ${btn("Build a moment", `${BASE_URL}/create`)}
     <p style="margin:20px 0 0;font-size:13px;color:#9e9087;line-height:1.6;">
       You're receiving this because you saved this occasion in your gifted. contacts. 
       <a href="${BASE_URL}/my-gifts?tab=people" style="color:#7c4a1e;text-decoration:underline;">Manage reminders</a>

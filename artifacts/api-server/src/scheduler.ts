@@ -76,7 +76,7 @@ async function sendScheduledGifts() {
 
         // Build the forward-ready SMS for the sender
         const smsBody = [
-          `gifted. 🎁 Your gift for ${gift.recipientName} is live!`,
+          `gifted. ✨ Your moment for ${gift.recipientName} is live!`,
           ``,
           `Copy this link and send it to them — when it comes from you, it lands differently:`,
           giftUrl,
@@ -252,7 +252,7 @@ async function pollAfterShipTrackings() {
             if (updated.senderPhone) {
               await smsSender(
                 updated.senderPhone,
-                `gifted. 🎁 Your gift to ${updated.recipientName} just arrived!\n\nReply STOP to opt out.`,
+                `gifted. 📦 Your package for ${updated.recipientName} just arrived!\n\nReply STOP to opt out.`,
               );
               console.log(`[AfterShip poll] Gift ${gift.id} delivered — sender SMS sent.`);
             } else if (updated.senderEmail) {
@@ -308,7 +308,7 @@ async function nudgeStaleGifts() {
         if (gift.senderPhone) {
           const giftUrl = `${appOrigin}/open/${gift.id}`;
           const body = [
-            `gifted. 🎁 Your gift to ${gift.recipientName} hasn't been opened yet.`,
+            `gifted. ✨ Your moment for ${gift.recipientName} hasn't been opened yet.`,
             ``,
             `If you haven't sent the link yet, here it is — forward it whenever you're ready:`,
             giftUrl,
@@ -419,9 +419,9 @@ async function sendUnredeemedReminders() {
         if (gift.recipientPhone) {
           const giftUrl = `${appOrigin}/open/${gift.id}`;
           const body = [
-            `gifted. 🎁 You have a gift waiting from ${gift.senderName}!`,
+            `gifted. ✨ You have a moment waiting from ${gift.senderName}!`,
             ``,
-            `Your gift includes a cash balance — tap the link to open and claim it:`,
+            `Your moment includes a gift balance — tap the link to open and claim it:`,
             giftUrl,
             ``,
             `Reply STOP to opt out.`,

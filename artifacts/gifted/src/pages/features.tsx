@@ -124,9 +124,9 @@ function HeroSection({ onStart }: { onStart: () => void }) {
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Notifications</p>
                   </div>
                   {[
-                    { icon: Cake, color: "bg-rose-50 text-rose-500", text: "Sarah's Birthday is today", sub: "Don't forget to send a gift!" },
+                    { icon: Cake, color: "bg-rose-50 text-rose-500", text: "Sarah's Birthday is today", sub: "Don't forget to build a moment!" },
                     { icon: PartyPopper, color: "bg-green-50 text-green-600", text: "Mike redeemed his $75 gift", sub: "Birthday Dinner" },
-                    { icon: Gift, color: "bg-primary/10 text-primary", text: "Emma opened your gift", sub: "Happy Graduation" },
+                    { icon: Gift, color: "bg-primary/10 text-primary", text: "Emma opened your moment", sub: "Happy Graduation" },
                   ].map((n, i) => (
                     <div key={i} className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border last:border-0">
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${n.color}`}>
@@ -206,7 +206,7 @@ function GiftMomentSection() {
               <div className="rounded-2xl overflow-hidden aspect-video relative" style={{ background: "linear-gradient(160deg, #E8A87C, #c06b2a)" }}>
                 <div className="absolute inset-0 bg-black/10" />
                 <div className="absolute bottom-3 left-4 text-white">
-                  <p className="text-[10px] opacity-70">A gift for</p>
+                  <p className="text-[10px] opacity-70">A moment for</p>
                   <p className="font-serif text-2xl">Sarah</p>
                 </div>
               </div>
@@ -280,10 +280,10 @@ function GiftMomentSection() {
         <div className="flex flex-col gap-6">
           <motion.div {...fadeUp(0.05)}>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-              <Heart className="w-3 h-3" /> The gift itself
+              <Heart className="w-3 h-3" /> The moment
             </div>
             <h2 className="font-serif text-3xl md:text-5xl font-medium leading-tight mb-4">
-              Every layer of the moment — in one gift.
+              Every layer of the moment, in one place.
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed">
               gifted. isn't a gift card. It's a full moment: your words, your face, your memories, and money they can actually use — all choreographed into an experience they'll feel.
@@ -294,7 +294,7 @@ function GiftMomentSection() {
             {[
               { icon: MessageSquare, title: "Personal note", desc: "Write something that actually sounds like you." },
               { icon: Play, title: "Video message", desc: "Record or upload a video they can replay forever." },
-              { icon: ImageIcon, title: "Up to 6 photos", desc: "Shared memories that put the gift in context." },
+              { icon: ImageIcon, title: "Up to 6 photos", desc: "Shared memories that put the moment in context." },
               { icon: Link2, title: "Any link", desc: "Concert tickets, a song, a dinner reservation — anything with a URL." },
               { icon: CreditCard, title: "Real cash balance", desc: 'Optional. Add an amount with a spending intention: "Date night", "Coffee on me", "Treat yourself".' },
             ].map((f, i) => (
@@ -333,16 +333,16 @@ function ScheduledSection() {
               Build it today. <span className="text-primary italic">Share it when the moment arrives.</span>
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed">
-              Put the gift together on your own time — weeks in advance if you want. Set a reminder for the day, and gifted. will nudge you when it's time. You share the link directly from your phone, just like a text.
+              Put the moment together on your own time — weeks in advance if you want. Set a reminder for the day, and gifted. will nudge you when it's time. You share the link directly from your phone, just like a text.
             </p>
           </motion.div>
 
           <div className="flex flex-col gap-3">
             {[
-              "Build the gift whenever you have time — days or weeks before the occasion",
+              "Build the moment whenever you have time — days or weeks before the occasion",
               "Set a reminder and we'll alert you on the day so you don't forget to share",
               "You send the link yourself, from your number — it feels personal because it is",
-              "They tap the link and the full gift experience opens instantly in their browser",
+              "They tap the link and the full moment opens instantly in their browser",
             ].map((t, i) => (
               <motion.div key={i} {...fadeUp(0.08 + i * 0.06)} className="flex items-start gap-2.5">
                 <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5">
@@ -433,11 +433,11 @@ function TrackingSection() {
               </div>
               <div className="divide-y divide-border">
                 {[
-                  { icon: Cake, bg: "bg-rose-50", ic: "text-rose-500", text: "Sarah's Birthday is today", sub: "Don't forget to send a gift!", time: "now", unread: true },
+                  { icon: Cake, bg: "bg-rose-50", ic: "text-rose-500", text: "Sarah's Birthday is today", sub: "Don't forget to build a moment!", time: "now", unread: true },
                   { icon: PartyPopper, bg: "bg-green-50", ic: "text-green-600", text: "Mike redeemed his $75 gift", sub: "Birthday Dinner", time: "2h ago", unread: true },
-                  { icon: Gift, bg: "bg-primary/10", ic: "text-primary", text: "Emma opened your gift", sub: "Happy Graduation", time: "5h ago", unread: true },
-                  { icon: Smile, bg: "bg-amber-50", ic: "text-amber-500", text: "Alex reacted 🎉 to your gift", sub: "Weekend Getaway", time: "1d ago", unread: false },
-                  { icon: Cake, bg: "bg-rose-50", ic: "text-rose-500", text: "Tom's Anniversary is in 3 days", sub: "Coming up soon — send a gift", time: "1d ago", unread: false },
+                  { icon: Gift, bg: "bg-primary/10", ic: "text-primary", text: "Emma opened your moment", sub: "Happy Graduation", time: "5h ago", unread: true },
+                  { icon: Smile, bg: "bg-amber-50", ic: "text-amber-500", text: "Alex reacted 🎉 to your moment", sub: "Weekend Getaway", time: "1d ago", unread: false },
+                  { icon: Cake, bg: "bg-rose-50", ic: "text-rose-500", text: "Tom's Anniversary is in 3 days", sub: "Coming up soon — build a moment", time: "1d ago", unread: false },
                 ].map((n, i) => (
                   <div key={i} className="flex items-start gap-3 px-4 py-3">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${n.bg}`}>
@@ -465,10 +465,10 @@ function TrackingSection() {
               <Bell className="w-3 h-3" /> Live tracking
             </div>
             <h2 className="font-serif text-3xl md:text-5xl font-medium leading-tight mb-4 text-white">
-              Know the second your gift lands.
+              Know the second your moment lands.
             </h2>
             <p className="text-base text-white/60 leading-relaxed">
-              Your notification feed updates in real time. The moment your recipient opens the gift, claims the balance, or leaves a reaction — you'll see it immediately.
+              Your notification feed updates in real time. The moment your recipient opens their moment, claims the balance, or leaves a reaction — you'll see it immediately.
             </p>
           </motion.div>
 
@@ -542,7 +542,7 @@ function OccasionSection() {
               <Bell className="w-4 h-4 text-amber-600 shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-amber-900">Sarah's Birthday is today 🎂</p>
-                <p className="text-[10px] text-amber-700">Dec 28 · Don't forget to send a gift</p>
+                <p className="text-[10px] text-amber-700">Dec 28 · Don't forget to build a moment</p>
               </div>
             </div>
 
@@ -888,9 +888,9 @@ function MobileFeaturesScroll() {
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Notifications</p>
               </div>
               {[
-                { icon: Cake, bg: "bg-rose-50", ic: "text-rose-500", text: "Sarah's Birthday is today", sub: "Don't forget to send a gift!" },
+                { icon: Cake, bg: "bg-rose-50", ic: "text-rose-500", text: "Sarah's Birthday is today", sub: "Don't forget to build a moment!" },
                 { icon: PartyPopper, bg: "bg-green-50", ic: "text-green-600", text: "Mike redeemed his $75 gift", sub: "Birthday Dinner" },
-                { icon: Gift, bg: "bg-primary/10", ic: "text-primary", text: "Emma opened your gift", sub: "Happy Graduation" },
+                { icon: Gift, bg: "bg-primary/10", ic: "text-primary", text: "Emma opened your moment", sub: "Happy Graduation" },
               ].map((n, i) => (
                 <div key={i} className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border last:border-0">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${n.bg}`}>
@@ -927,7 +927,7 @@ function MobileFeaturesScroll() {
             Build it today. <span className="text-primary italic">Share it when the moment arrives.</span>
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-            Create the gift weeks in advance, set a reminder, and we'll nudge you when it's time to share from your own phone.
+            Create the moment weeks in advance, set a reminder, and we'll nudge you when it's time to share from your own phone.
           </p>
         </motion.div>
 
@@ -1000,7 +1000,7 @@ function MobileFeaturesScroll() {
               <Bell className="w-4 h-4 text-amber-600 shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-amber-900">Sarah's Birthday is today 🎂</p>
-                <p className="text-[10px] text-amber-700">Dec 28 · Don't forget to send a gift</p>
+                <p className="text-[10px] text-amber-700">Dec 28 · Don't forget to build a moment</p>
               </div>
             </div>
             {[
