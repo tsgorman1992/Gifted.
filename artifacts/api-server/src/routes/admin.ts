@@ -134,21 +134,23 @@ router.get("/admin/gifts", async (req, res) => {
   try {
     const rows = await db
       .select({
-        id:            gifts.id,
-        recipientName: gifts.recipientName,
-        senderName:    gifts.senderName,
-        amount:        gifts.amount,
-        paid:          gifts.paid,
-        experience:    gifts.experience,
-        occasion:      gifts.occasion,
-        openedAt:      gifts.openedAt,
-        redeemedAt:    gifts.redeemedAt,
-        cashoutPaidAt: gifts.cashoutPaidAt,
-        createdAt:     gifts.createdAt,
-        senderEmail:   gifts.senderEmail,
-        payoutMethod:  gifts.payoutMethod,
-        payoutHandle:  gifts.payoutHandle,
-        reaction:      gifts.reaction,
+        id:              gifts.id,
+        recipientName:   gifts.recipientName,
+        senderName:      gifts.senderName,
+        amount:          gifts.amount,
+        paid:            gifts.paid,
+        experience:      gifts.experience,
+        occasion:        gifts.occasion,
+        openedAt:        gifts.openedAt,
+        redeemedAt:      gifts.redeemedAt,
+        cashoutPaidAt:   gifts.cashoutPaidAt,
+        createdAt:       gifts.createdAt,
+        senderEmail:     gifts.senderEmail,
+        payoutMethod:    gifts.payoutMethod,
+        payoutHandle:    gifts.payoutHandle,
+        reaction:        gifts.reaction,
+        recipientUserId: gifts.recipientUserId,
+        senderUserId:    gifts.senderUserId,
       })
       .from(gifts)
       .orderBy(desc(gifts.createdAt));
@@ -283,11 +285,26 @@ router.get("/admin/users/search", async (req, res) => {
 });
 
 // PATCH /api/admin/gifts/:id/set-recipient
+// Pass recipientUserId: null to clear the assignment (so the real recipient can re-claim).
 router.patch("/admin/gifts/:id/set-recipient", async (req, res) => {
   if (!checkAuth(req, res)) return;
-  const { recipientUserId } = req.body as { recipientUserId?: string };
-  if (!recipientUserId) { res.status(400).json({ error: "recipientUserId required" }); return; }
+  const { recipientUserId } = req.body as { recipientUserId?: string | null };
+  if (recipientUserId === undefined) {
+    res.status(400).json({ error: "recipientUserId required (pass null to clear)" }); return;
+  }
   try {
+    if (recipientUserId === null) {
+      const updated = await db
+        .update(gifts)
+        .set({ recipientUserId: null })
+        .where(eq(gifts.id, req.params.id))
+        .returning({ id: gifts.id });
+      if (updated.length === 0) { res.status(404).json({ error: "Gift not found" }); return; }
+      console.log(`[admin] gift ${req.params.id} recipient cleared`);
+      res.json({ ok: true, giftId: req.params.id, recipientUserId: null, recipientEmail: null });
+      return;
+    }
+
     const [user] = await db.select({ id: usersTable.id, email: usersTable.email })
       .from(usersTable).where(eq(usersTable.id, recipientUserId)).limit(1);
     if (!user) { res.status(404).json({ error: "User not found" }); return; }

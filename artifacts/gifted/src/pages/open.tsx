@@ -43,6 +43,7 @@ export default function OpenPage() {
   const [giftRecipientName, setGiftRecipientName] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "claimed">("idle");
+  const [claimPending, setClaimPending] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
   const [savePromptDismissed, setSavePromptDismissed] = useState(false);
   // True when this browser created this gift (guest / not signed-in sender)
@@ -122,25 +123,37 @@ export default function OpenPage() {
       });
   }, [id]);
 
-  // Auto-save when gift loads for authenticated users (no reveal action required)
-  // Skip if the authenticated user is the sender, or if this is a preview (e.g. admin viewing)
+  // When an authenticated non-sender opens a gift, show a "is this for you?" prompt
+  // instead of silently auto-claiming it (prevents the wrong person in a group chat
+  // from accidentally locking the gift to their account).
   useEffect(() => {
     if (!giftId || authLoading || !isAuthenticated) return;
     if (new URLSearchParams(window.location.search).get("preview") === "true") return;
     if (user && giftSenderUserId && user.id === giftSenderUserId) return;
-    setSaveStatus("saving");
-    saveReceivedGift(giftId)
-      .then((result) => {
-        if (result === "claimed-by-other") {
-          setSaveStatus("claimed");
-        } else if (result === "is-sender") {
-          setSaveStatus("idle");
-        } else {
-          setSaveStatus("saved");
-        }
-      })
-      .catch(() => setSaveStatus("idle"));
+    setClaimPending(true);
   }, [giftId, isAuthenticated, authLoading, user, giftSenderUserId]);
+
+  async function handleConfirmClaim() {
+    if (!giftId) return;
+    setClaimPending(false);
+    setSaveStatus("saving");
+    try {
+      const result = await saveReceivedGift(giftId);
+      if (result === "claimed-by-other") {
+        setSaveStatus("claimed");
+      } else if (result === "is-sender") {
+        setSaveStatus("idle");
+      } else {
+        setSaveStatus("saved");
+      }
+    } catch {
+      setSaveStatus("idle");
+    }
+  }
+
+  function handleDeclineClaim() {
+    setClaimPending(false);
+  }
 
   function handleRevealComplete() {
     setRevealed(true);
@@ -247,6 +260,40 @@ export default function OpenPage() {
       >
         <RevealPage onRevealComplete={handleRevealComplete} senderPreview={isGuestSender && !isPreviewMode} />
       </React.Suspense>
+
+      {/* "Is this for you?" confirmation — shown for authenticated non-senders.
+          Prevents the wrong person in a group chat from accidentally claiming the gift. */}
+      {status === "ready" && claimPending && isAuthenticated && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Gift className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm leading-tight">
+                  This moment is for {giftRecipientName}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Is this gift meant for you?</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleConfirmClaim}
+                className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" /> Yes, save it
+              </button>
+              <button
+                onClick={handleDeclineClaim}
+                className="flex-1 h-9 rounded-xl border border-border text-sm font-medium hover:bg-muted/50 transition-colors"
+              >
+                No, just viewing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Save-to-account prompt — shown as soon as gift loads for signed-out users.
           Intentionally NOT gated on `revealed` — if the user closes the tab before

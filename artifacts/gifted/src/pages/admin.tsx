@@ -5,6 +5,7 @@ import {
   ExternalLink, Copy, Check, Users, BadgeCheck, X,
   TrendingUp, Percent, Repeat2, Sparkles, Search, Trash2,
   AlertTriangle, ChevronDown, ChevronUp, BarChart2, ArrowLeft,
+  ArrowLeftRight, UserX, UserCheck,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line,
@@ -60,6 +61,14 @@ interface GiftRow {
   payoutMethod: string | null;
   payoutHandle: string | null;
   reaction: string | null;
+  recipientUserId: string | null;
+  senderUserId: string | null;
+}
+
+interface TransferUser {
+  id: string;
+  email: string | null;
+  displayName: string | null;
 }
 
 interface UserRow {
@@ -552,6 +561,16 @@ export default function AdminPage() {
   const [wiping, setWiping]       = useState(false);
   const [wipeMsg, setWipeMsg]     = useState<string | null>(null);
 
+  // Transfer recipient modal
+  const [transferGiftId, setTransferGiftId]     = useState<string | null>(null);
+  const [transferGiftName, setTransferGiftName] = useState("");
+  const [transferEmail, setTransferEmail]       = useState("");
+  const [transferResults, setTransferResults]   = useState<TransferUser[]>([]);
+  const [transferSelected, setTransferSelected] = useState<TransferUser | null>(null);
+  const [transferSearching, setTransferSearching] = useState(false);
+  const [transferring, setTransferring]         = useState(false);
+  const [transferMsg, setTransferMsg]           = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   const headers = { "x-admin-key": key };
 
   const loadTrends = useCallback(async () => {
@@ -648,6 +667,66 @@ export default function AdminPage() {
         setWipeMsg("Wipe failed. Try again.");
       }
     } finally { setWiping(false); }
+  }
+
+  function openTransferModal(gift: GiftRow) {
+    setTransferGiftId(gift.id);
+    setTransferGiftName(gift.recipientName);
+    setTransferEmail("");
+    setTransferResults([]);
+    setTransferSelected(null);
+    setTransferMsg(null);
+  }
+
+  function closeTransferModal() {
+    setTransferGiftId(null);
+    setTransferEmail("");
+    setTransferResults([]);
+    setTransferSelected(null);
+    setTransferMsg(null);
+  }
+
+  async function searchTransferUsers(email: string) {
+    setTransferEmail(email);
+    setTransferSelected(null);
+    if (!email.trim()) { setTransferResults([]); return; }
+    setTransferSearching(true);
+    try {
+      const r = await fetch(`${API}/api/admin/users/search?email=${encodeURIComponent(email.trim())}`, { headers });
+      if (r.ok) setTransferResults(await r.json());
+    } catch { /* silent */ }
+    finally { setTransferSearching(false); }
+  }
+
+  async function handleTransferRecipient(recipientUserId: string | null) {
+    if (!transferGiftId) return;
+    setTransferring(true);
+    setTransferMsg(null);
+    try {
+      const r = await fetch(`${API}/api/admin/gifts/${transferGiftId}/set-recipient`, {
+        method: "PATCH",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientUserId }),
+      });
+      if (r.ok) {
+        const data = await r.json();
+        setTransferMsg({
+          type: "success",
+          text: recipientUserId
+            ? `Transferred to ${data.recipientEmail}`
+            : "Recipient cleared — they can re-claim the gift",
+        });
+        setGiftRows(prev =>
+          prev.map(g => g.id === transferGiftId ? { ...g, recipientUserId } : g)
+        );
+        setTimeout(() => closeTransferModal(), 2500);
+      } else {
+        const e = await r.json().catch(() => ({}));
+        setTransferMsg({ type: "error", text: e.error ?? "Transfer failed" });
+      }
+    } catch {
+      setTransferMsg({ type: "error", text: "Could not connect" });
+    } finally { setTransferring(false); }
   }
 
   // ── Login screen ──────────────────────────────────────────────────────────
@@ -974,7 +1053,14 @@ export default function AdminPage() {
                   {filteredGifts.map((g, i) => (
                     <tr key={g.id}
                       className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${i % 2 !== 0 ? "bg-muted/10" : ""}`}>
-                      <td className="px-3 sm:px-4 py-3 font-medium whitespace-nowrap">{g.recipientName}</td>
+                      <td className="px-3 sm:px-4 py-3 font-medium whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          {g.recipientName}
+                          {g.recipientUserId && (
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" title="Claimed by an account" />
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 sm:px-4 py-3 text-muted-foreground whitespace-nowrap">{g.senderName}</td>
                       <td className="px-3 sm:px-4 py-3 font-semibold text-primary whitespace-nowrap">{fmtAmt(g.amount)}</td>
                       <td className="px-3 sm:px-4 py-3"><StatusBadge gift={g} /></td>
@@ -982,10 +1068,19 @@ export default function AdminPage() {
                       <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{EXP_LABELS[g.experience] ?? g.experience}</td>
                       <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{fmtDate(g.createdAt)}</td>
                       <td className="px-3 sm:px-4 py-3">
-                        <a href={`/open/${g.id}?preview=true`} target="_blank" rel="noreferrer"
-                          className="text-muted-foreground hover:text-primary transition-colors p-1 block">
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openTransferModal(g)}
+                            className="text-muted-foreground hover:text-primary transition-colors p-1"
+                            title="Transfer / reassign recipient"
+                          >
+                            <ArrowLeftRight className="w-3.5 h-3.5" />
+                          </button>
+                          <a href={`/open/${g.id}?preview=true`} target="_blank" rel="noreferrer"
+                            className="text-muted-foreground hover:text-primary transition-colors p-1 block">
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1113,6 +1208,120 @@ export default function AdminPage() {
                 {wiping ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Wipe all gifts"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Transfer recipient modal ─────────────────────────────────────── */}
+      {transferGiftId && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+          <div className="bg-card border border-border rounded-t-3xl sm:rounded-2xl p-6 w-full sm:max-w-md shadow-2xl space-y-4">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <ArrowLeftRight className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-base">Reassign recipient</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Gift for <span className="font-medium text-foreground">{transferGiftName}</span>
+                  </p>
+                </div>
+              </div>
+              <button onClick={closeTransferModal} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Clear option */}
+            <button
+              onClick={() => handleTransferRecipient(null)}
+              disabled={transferring}
+              className="w-full flex items-center gap-3 border border-border rounded-xl px-4 py-3 text-sm hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
+            >
+              <UserX className="w-4 h-4 text-amber-600 shrink-0" />
+              <div>
+                <p className="font-medium">Clear assignment</p>
+                <p className="text-xs text-muted-foreground">Removes the current recipient so they can re-claim the gift</p>
+              </div>
+            </button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+              <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or transfer to a specific account</span></div>
+            </div>
+
+            {/* Email search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search by email…"
+                value={transferEmail}
+                onChange={e => searchTransferUsers(e.target.value)}
+                className="w-full pl-9 pr-4 py-2.5 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                autoFocus={false}
+              />
+              {transferSearching && (
+                <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground animate-spin" />
+              )}
+            </div>
+
+            {/* Search results */}
+            {transferResults.length > 0 && !transferSelected && (
+              <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/50">
+                {transferResults.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => setTransferSelected(u)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
+                      {(u.displayName ?? u.email ?? "?")[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      {u.displayName && <p className="font-medium truncate">{u.displayName}</p>}
+                      <p className="text-xs text-muted-foreground truncate">{u.email ?? "No email"}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Selected user — confirm step */}
+            {transferSelected && (
+              <div className="border border-primary/30 bg-primary/5 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
+                    {(transferSelected.displayName ?? transferSelected.email ?? "?")[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {transferSelected.displayName && <p className="font-medium text-sm truncate">{transferSelected.displayName}</p>}
+                    <p className="text-xs text-muted-foreground truncate">{transferSelected.email}</p>
+                  </div>
+                  <button onClick={() => setTransferSelected(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <Button
+                  onClick={() => handleTransferRecipient(transferSelected.id)}
+                  disabled={transferring}
+                  className="w-full h-10 rounded-xl gap-2"
+                >
+                  {transferring
+                    ? <RefreshCw className="w-4 h-4 animate-spin" />
+                    : <><UserCheck className="w-4 h-4" /> Confirm transfer</>}
+                </Button>
+              </div>
+            )}
+
+            {/* Result message */}
+            {transferMsg && (
+              <p className={`text-sm font-medium text-center ${transferMsg.type === "success" ? "text-green-600" : "text-destructive"}`}>
+                {transferMsg.text}
+              </p>
+            )}
           </div>
         </div>
       )}
