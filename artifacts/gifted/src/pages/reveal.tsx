@@ -2328,7 +2328,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                             src={videoUrl}
                             playsInline
                             controls
-                            preload="auto"
+                            preload="metadata"
                             className="w-full h-auto max-h-[70vh] block"
                             onError={handleVideoError}
                           />
