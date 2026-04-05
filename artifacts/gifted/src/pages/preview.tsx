@@ -208,6 +208,9 @@ export default function PreviewPage() {
 
     setCanShare(typeof navigator?.share === "function");
 
+    const sp = localStorage.getItem("gifted_sender_phone");
+    if (sp) setNotifyPhone(sp);
+
     // Handle return from Stripe Checkout
     const params = new URLSearchParams(window.location.search);
     const paidParam  = params.get("paid");
@@ -423,6 +426,17 @@ export default function PreviewPage() {
       return null;
     }
   }, [giftId, shareUrl, base, recipientName, senderName, experience, giftTitle]);
+
+  // Auto-save a draft gift as soon as an authenticated sender lands on preview,
+  // so giftId is available immediately (enables contact-save prompt before sharing).
+  const autoSaveRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!isAuthenticated || authLoading || giftId || autoSaveRef.current) return;
+    const rn = localStorage.getItem("gifted_recipient_name");
+    if (!rn?.trim()) return;
+    autoSaveRef.current = true;
+    saveGift().catch(() => { autoSaveRef.current = false; });
+  }, [isAuthenticated, authLoading, giftId, saveGift]);
 
   // ─── Stripe Pay & Send ───────────────────────────────────────────────────────
   const handlePayAndSend = async () => {
@@ -653,6 +667,7 @@ export default function PreviewPage() {
   const [contactSaving,   setContactSaving]   = useState(false);
   const [contactSaved,    setContactSaved]    = useState(false);
   const [contactSaveError, setContactSaveError] = useState(false);
+  const [contactNotifyPhone, setContactNotifyPhone] = useState(() => localStorage.getItem("gifted_sender_phone") ?? "");
   const [nonAuthContactDismissed,  setNonAuthContactDismissed]  = useState(false);
   const [contactAuthFormOpen,      setContactAuthFormOpen]      = useState(false);
 
@@ -712,6 +727,15 @@ export default function PreviewPage() {
           credentials: "include",
           body: JSON.stringify(buildOccasionPayload(occ.label, occ.month, occ.day)),
         });
+      }
+      if (contactNotifyPhone.trim() && giftId) {
+        await fetch(`${base}/api/gifted/gifts/${giftId}/sender-phone`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ senderPhone: contactNotifyPhone.trim() }),
+        }).catch(() => {});
+        setNotifySaved(true);
       }
       localStorage.setItem(`gifted_contact_prompt_${giftId}`, "saved");
       setContactSaved(true);
@@ -1220,7 +1244,7 @@ export default function PreviewPage() {
 
             {/* ── Contact save prompt (authenticated senders only, once per gift) ── */}
             <AnimatePresence>
-              {isAuthenticated && !authLoading && (linkShared || isPaid) && giftId && (contactSaved || (!contactPromptDismissed && !contactPromptSeen())) && (
+              {isAuthenticated && !authLoading && giftId && (contactSaved || (!contactPromptDismissed && !contactPromptSeen())) && (
                 <motion.div
                   key="contact-prompt"
                   initial={{ opacity: 0, y: 10 }}
@@ -1362,6 +1386,18 @@ export default function PreviewPage() {
                           + Add another occasion
                         </button>
                       )}
+
+                      {/* Notify me inline */}
+                      <div className="pt-1 border-t border-primary/10">
+                        <p className="text-[11px] text-muted-foreground mb-1.5">Text me when they open it (optional)</p>
+                        <input
+                          type="tel"
+                          value={contactNotifyPhone}
+                          onChange={e => setContactNotifyPhone(formatContactPhone(e.target.value))}
+                          placeholder="Your mobile number"
+                          className="w-full text-xs border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                        />
+                      </div>
 
                       {/* Save button */}
                       <Button

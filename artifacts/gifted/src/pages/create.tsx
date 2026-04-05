@@ -819,6 +819,7 @@ export default function CreatePage() {
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [quickContacts, setQuickContacts] = useState<Array<{ id: string; name: string; phone: string | null }>>([]);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [phoneValidating, setPhoneValidating] = useState(false);
   const [senderName, setSenderName] = useState("");
@@ -1503,7 +1504,7 @@ export default function CreatePage() {
                         placeholder="Their name"
                         autoComplete="off"
                         value={recipientName}
-                        onChange={(e) => setRecipientName(e.target.value)}
+                        onChange={(e) => { setRecipientName(e.target.value); setSelectedContactId(null); }}
                         className="h-11 rounded-xl text-base"
                       />
                       {quickContacts.length > 0 && (
@@ -1511,13 +1512,14 @@ export default function CreatePage() {
                           <Users className="w-3 h-3 text-muted-foreground shrink-0" />
                           {quickContacts.map(c => {
                             const firstName = c.name.trim().split(" ")[0];
-                            const isActive = recipientName.trim().toLowerCase() === firstName.toLowerCase();
+                            const isActive = selectedContactId === c.id;
                             return (
                               <button
                                 key={c.id}
                                 type="button"
                                 onClick={() => {
                                   setRecipientName(firstName);
+                                  setSelectedContactId(c.id);
                                   if (c.phone && !recipientPhone) setRecipientPhone(c.phone);
                                 }}
                                 className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
