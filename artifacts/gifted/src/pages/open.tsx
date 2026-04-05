@@ -49,6 +49,7 @@ export default function OpenPage() {
   const [giftId, setGiftId] = useState<string | null>(null);
   const [giftSenderUserId, setGiftSenderUserId] = useState<string | null>(null);
   const [giftRecipientUserId, setGiftRecipientUserId] = useState<string | null>(null);
+  const [giftOpenedAt, setGiftOpenedAt] = useState<string | null>(null);
   const [giftRecipientName, setGiftRecipientName] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
   const [barVisible, setBarVisible] = useState(false);
@@ -125,6 +126,7 @@ export default function OpenPage() {
         setGiftId(gift.id);
         setGiftSenderUserId(gift.senderUserId ?? null);
         setGiftRecipientUserId(gift.recipientUserId ?? null);
+        setGiftOpenedAt(gift.openedAt ?? null);
         setGiftRecipientName(gift.recipientName ?? "");
         setStatus("ready");
       })
@@ -142,12 +144,14 @@ export default function OpenPage() {
     if (!giftId || authLoading || !isAuthenticated) return;
     if (new URLSearchParams(window.location.search).get("preview") === "true") return;
     if (user && giftSenderUserId && user.id === giftSenderUserId) return;
-    if (user && giftRecipientUserId && user.id === giftRecipientUserId) {
+    // Only skip the prompt when this user has genuinely been here before:
+    // recipientUserId matches them AND openedAt is set (they've already watched it).
+    if (user && giftRecipientUserId && user.id === giftRecipientUserId && giftOpenedAt) {
       setSaveStatus("saved");
       return;
     }
     setClaimPending(true);
-  }, [giftId, isAuthenticated, authLoading, user, giftSenderUserId, giftRecipientUserId]);
+  }, [giftId, isAuthenticated, authLoading, user, giftSenderUserId, giftRecipientUserId, giftOpenedAt]);
 
   async function handleConfirmClaim() {
     if (!giftId) return;
