@@ -379,7 +379,7 @@ export default function OpenPage() {
             ) : !authLoading ? (
               <>
                 <Link
-                  href="/sign-in"
+                  href={`/sign-in?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`}
                   className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-full hover:bg-secondary"
                 >
                   Sign in
