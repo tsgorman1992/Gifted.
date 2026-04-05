@@ -413,9 +413,9 @@ export default function OpenPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm leading-tight">
-                  This moment is for {giftRecipientName}
+                  This moment is yours, {giftRecipientName}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">Is this gift meant for you?</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Save it to your account to keep it forever.</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -423,13 +423,13 @@ export default function OpenPage() {
                 onClick={handleConfirmClaim}
                 className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
               >
-                <Check className="w-3.5 h-3.5" /> Yes, save it
+                <Check className="w-3.5 h-3.5" /> Save to my account
               </button>
               <button
                 onClick={handleDeclineClaim}
                 className="flex-1 h-9 rounded-xl border border-border text-sm font-medium hover:bg-muted/50 transition-colors"
               >
-                No, just viewing
+                Just viewing
               </button>
             </div>
           </div>
