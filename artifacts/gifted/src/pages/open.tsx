@@ -2,8 +2,16 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "wouter";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Gift, LogIn, Copy, Check, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Loader2, AlertCircle, Gift, LogIn, Copy, Check, X, ChevronDown, Settings, LogOut, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { clearGiftSession } from "@/lib/session";
 
 const RevealPage = React.lazy(() => import("@/pages/reveal"));
 
@@ -42,6 +50,7 @@ export default function OpenPage() {
   const [giftSenderUserId, setGiftSenderUserId] = useState<string | null>(null);
   const [giftRecipientName, setGiftRecipientName] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
+  const [barVisible, setBarVisible] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "claimed">("idle");
   const [claimPending, setClaimPending] = useState(false);
   const [senderCopied, setSenderCopied] = useState(false);
@@ -159,6 +168,13 @@ export default function OpenPage() {
     setRevealed(true);
   }
 
+  // Delay bar appearance slightly so it doesn't pop in mid-reveal animation
+  useEffect(() => {
+    if (!revealed) return;
+    const t = setTimeout(() => setBarVisible(true), 700);
+    return () => clearTimeout(t);
+  }, [revealed]);
+
   function handleSaveToAccount() {
     if (!giftId) return;
     if (isAuthenticated && user && giftSenderUserId && user.id === giftSenderUserId) return;
@@ -249,8 +265,126 @@ export default function OpenPage() {
     );
   }
 
+  const displayName = user?.firstName || user?.email?.split("@")[0] || "Account";
+  const initials = user?.firstName
+    ? user.firstName[0].toUpperCase()
+    : user?.email
+      ? user.email[0].toUpperCase()
+      : "?";
+
   return (
     <>
+      {/* ── Post-reveal top bar ────────────────────────────────────────────
+          Fades in after the moment is fully revealed. Minimal glass bar
+          with brand wordmark + user actions. Hidden during the reveal. */}
+      <div
+        className={`fixed top-0 left-0 right-0 z-50 px-4 pt-3 transition-all duration-700 ease-out ${
+          barVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
+        }`}
+      >
+        <div className="max-w-2xl mx-auto flex items-center justify-between px-4 h-12 rounded-2xl bg-background/80 backdrop-blur-md border border-border/40 shadow-sm">
+          {/* Brand */}
+          <Link
+            href="/"
+            className="font-serif text-lg font-bold text-foreground/70 hover:text-foreground transition-colors"
+          >
+            gifted.
+          </Link>
+
+          {/* Right actions */}
+          <div className="flex items-center gap-2">
+            {!authLoading && isAuthenticated && user ? (
+              <>
+                {/* My Gifts — text link, desktop only */}
+                <Link
+                  href="/my-gifts"
+                  className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-full hover:bg-secondary"
+                >
+                  <Gift className="w-3 h-3" />
+                  My Gifts
+                </Link>
+
+                {/* Avatar dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors px-1 py-1 rounded-full hover:bg-secondary/50">
+                      {user.profileImageUrl ? (
+                        <img
+                          src={user.profileImageUrl}
+                          alt=""
+                          className="w-7 h-7 rounded-full object-cover ring-1 ring-border"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-border">
+                          <span className="text-primary font-bold text-xs leading-none">{initials}</span>
+                        </div>
+                      )}
+                      <ChevronDown className="w-3 h-3 opacity-40" />
+                    </button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent align="end" className="w-48 rounded-2xl">
+                    <div className="px-3 py-2 border-b border-border mb-1">
+                      <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+                      {user.email && <p className="text-xs text-muted-foreground truncate">{user.email}</p>}
+                    </div>
+
+                    <DropdownMenuItem asChild>
+                      <Link href="/my-gifts" className="flex items-center gap-2 cursor-pointer">
+                        <Gift className="w-4 h-4" />
+                        My Gifts
+                      </Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                      onClick={() => { clearGiftSession(); setLocation("/create"); }}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Build a moment
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem asChild>
+                      <Link href="/account" className="flex items-center gap-2 cursor-pointer">
+                        <Settings className="w-4 h-4" />
+                        Account settings
+                      </Link>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={logout}
+                      className="flex items-center gap-2 cursor-pointer text-muted-foreground"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : !authLoading ? (
+              <>
+                <Link
+                  href="/sign-in"
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2.5 py-1.5 rounded-full hover:bg-secondary"
+                >
+                  Sign in
+                </Link>
+                <button
+                  onClick={() => { clearGiftSession(); setLocation("/create"); }}
+                  className="text-xs font-semibold bg-primary text-primary-foreground px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity"
+                >
+                  Build a moment
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       <React.Suspense
         fallback={
           <div className="min-h-screen flex items-center justify-center bg-background">
