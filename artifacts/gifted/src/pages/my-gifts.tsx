@@ -52,6 +52,9 @@ interface ReceivedGiftSummary {
   amount: string | null;
   openedAt: string | null;
   redeemedAt: string | null;
+  payoutMethod: string | null;
+  payoutHandle: string | null;
+  payoutName: string | null;
   createdAt: string;
   trackingCarrier: string | null;
   trackingNumber: string | null;
@@ -574,7 +577,7 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
         {" · "}{gift.occasion}
         {" · "}
         {gift.redeemedAt
-          ? <span className="font-medium" style={{ color: "#15803d" }}>● Redeemed</span>
+          ? <span className="font-medium" style={{ color: "#b45309" }}>● Payout pending</span>
           : gift.openedAt
             ? <span className="font-medium" style={{ color: "#6d28d9" }}>● Opened</span>
             : <span className="text-muted-foreground/60">● Unopened</span>
@@ -623,12 +626,22 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
           >
             <span className="text-xs text-muted-foreground">
               {gift.redeemedAt
-                ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                ? `Requested ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
                 : gift.openedAt
                   ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
                   : `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
             </span>
             <div className="flex items-center gap-1 shrink-0">
+              {gift.redeemedAt && !hasUnclaimedBalance && gift.amount && parseFloat(gift.amount) > 0 && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  {gift.payoutMethod
+                    ? `${gift.payoutMethod.charAt(0).toUpperCase()}${gift.payoutMethod.slice(1)} · pending`
+                    : "Payout pending"}
+                </span>
+              )}
               {hasUnclaimedBalance && (
                 <button
                   onClick={(e) => {
