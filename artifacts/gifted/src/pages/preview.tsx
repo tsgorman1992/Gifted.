@@ -711,11 +711,12 @@ export default function PreviewPage() {
   const [revealUrl, setRevealUrl] = useState<string | null>(null);
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
 
-  const buildRevealUrl = (savedId: string) => {
+  const buildRevealUrl = (savedId: string, opts: { embed?: boolean } = {}) => {
     const b = import.meta.env.BASE_URL.replace(/\/$/, "");
     const params = new URLSearchParams();
     params.set("giftId", savedId);
     params.set("preview", "true");
+    if (opts.embed) params.set("embed", "true");
     return `${b}/reveal?${params.toString()}`;
   };
 
@@ -723,7 +724,7 @@ export default function PreviewPage() {
     if (!revealUrl) {
       const saved = await saveGift();
       if (!saved) return;
-      setRevealUrl(buildRevealUrl(saved.id));
+      setRevealUrl(buildRevealUrl(saved.id, { embed: true }));
     }
     setMobilePreviewOpen(true);
   };
@@ -732,7 +733,7 @@ export default function PreviewPage() {
     if (revealUrl) return;
     const saved = await saveGift();
     if (!saved) return;
-    const url = buildRevealUrl(saved.id);
+    const url = buildRevealUrl(saved.id, { embed: true });
     setRevealUrl(url);
   };
 
@@ -781,16 +782,20 @@ export default function PreviewPage() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="rounded-[2rem] overflow-hidden shadow-2xl"
+              className="rounded-[2rem] overflow-hidden shadow-2xl relative"
               style={{ aspectRatio: "9/19.5" }}
             >
               {revealUrl ? (
-                <iframe
-                  src={revealUrl}
-                  className="w-full h-full border-0 block"
-                  title="Gift reveal preview"
-                  allow="autoplay"
-                />
+                <>
+                  <iframe
+                    src={revealUrl}
+                    className="w-full h-full border-0 block"
+                    title="Gift reveal preview"
+                    allow="autoplay"
+                  />
+                  {/* Transparent overlay — prevents clicks from navigating the iframe */}
+                  <div className="absolute inset-0 z-10 cursor-default" />
+                </>
               ) : (
                 <div
                   className="w-full h-full flex flex-col items-center justify-center gap-4 relative cursor-pointer group"
@@ -894,14 +899,18 @@ export default function PreviewPage() {
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 className="md:hidden mb-6 flex flex-col shadow-2xl rounded-[2rem] overflow-hidden"
               >
-                <div style={{ height: "70dvh" }}>
+                <div className="relative" style={{ height: "70dvh" }}>
                   {revealUrl ? (
-                    <iframe
-                      src={revealUrl}
-                      className="w-full h-full border-0 block"
-                      title="Gift reveal preview"
-                      allow="autoplay"
-                    />
+                    <>
+                      <iframe
+                        src={revealUrl}
+                        className="w-full h-full border-0 block"
+                        title="Gift reveal preview"
+                        allow="autoplay"
+                      />
+                      {/* Transparent overlay — prevents clicks from navigating the iframe */}
+                      <div className="absolute inset-0 z-10 cursor-default" />
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center" style={gStyle}>
                       <Loader2 className="w-6 h-6 animate-spin text-white/70" />

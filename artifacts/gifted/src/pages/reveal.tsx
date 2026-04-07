@@ -1527,6 +1527,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
   const [giftPaid, setGiftPaid]           = useState<boolean>(true);
   const [isPreview, setIsPreview]         = useState(false);
+  const [isEmbed, setIsEmbed]             = useState(false);
   const [senderBannerDismissed, setSenderBannerDismissed] = useState(false);
   const [previewBarCopied, setPreviewBarCopied] = useState(false);
   const [isOpening, setIsOpening]         = useState(false);
@@ -1591,7 +1592,12 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
 
     const urlParams = new URLSearchParams(window.location.search);
     const isPreviewMode = urlParams.get("preview") === "true";
+    const isEmbedMode = urlParams.get("embed") === "true";
     const giftIdParam = urlParams.get("giftId");
+
+    if (isEmbedMode) {
+      setIsEmbed(true);
+    }
 
     if (isPreviewMode) {
       setIsPreview(true);
@@ -2891,7 +2897,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
       </AnimatePresence>
 
       {/* Sender preview bar — slides up from bottom after 1s, stays throughout the experience */}
-      {isPreview && (
+      {isPreview && !isEmbed && (
         <motion.div
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
