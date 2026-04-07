@@ -1595,16 +1595,11 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
     if (!isOpen || !giftAmount || parseFloat(giftAmount) <= 0) return;
     if (isPreview) return;
 
-    // Let content sections animate in, then pan down to the balance card.
-    const tScroll = setTimeout(() => {
-      if (amountRef.current) {
-        amountRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 1500);
-
+    // Let content sections animate in, then trigger the balance reveal in place.
+    // No auto-scroll — the balance card reveals wherever it is on the page.
     const tBuild = setTimeout(() => {
       setBalanceRevealPhase(p => p === "hidden" ? "building" : p);
-    }, 1800);
+    }, 1500);
 
     const tReveal = setTimeout(() => {
       setBalanceRevealPhase(p => {
@@ -1618,9 +1613,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
         playChime();
         return "revealed";
       });
-    }, 3200);
+    }, 2900);
 
-    return () => { clearTimeout(tScroll); clearTimeout(tBuild); clearTimeout(tReveal); };
+    return () => { clearTimeout(tBuild); clearTimeout(tReveal); };
   }, [isOpen, giftAmount, isPreview]);
 
   useEffect(() => {

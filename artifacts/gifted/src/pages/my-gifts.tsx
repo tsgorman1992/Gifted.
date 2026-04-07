@@ -521,6 +521,14 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
 
   function handleCardClick() {
     if (confirmDelete) return;
+    // If the gift has an unclaimed cash balance, go straight to redemption
+    if (hasUnclaimedBalance) {
+      localStorage.setItem("gifted_gift_id", gift.id);
+      if (gift.amount) localStorage.setItem("gifted_amount", gift.amount);
+      if (gift.senderName) localStorage.setItem("gifted_sender_name", gift.senderName);
+      setLocation("/redeem");
+      return;
+    }
     setLocation(`/open/${gift.id}`);
   }
 
