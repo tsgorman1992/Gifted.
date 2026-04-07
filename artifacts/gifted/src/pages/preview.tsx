@@ -1155,6 +1155,221 @@ export default function PreviewPage() {
               </div>
             )}
 
+            {/* ── Post-send confirmation + notification opt-in ── */}
+            <AnimatePresence>
+              {(isPaid || linkShared) && (
+                <motion.div
+                  key="confirmation"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="rounded-2xl border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30 p-5 space-y-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center shrink-0">
+                      {(isPaid || linkShared)
+                        ? <CheckCircle2 className="w-5 h-5 text-green-600" />
+                        : <Bell className="w-5 h-5 text-green-600" />
+                      }
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-green-800 dark:text-green-300">
+                        {isPaid
+                          ? "Payment received — gift ready!"
+                          : linkShared
+                            ? "Link copied — now send it!"
+                            : `Want to know when ${recipientName} opens this?`}
+                      </p>
+                      <p className="text-xs text-green-700/70 dark:text-green-400/70 mt-0.5">
+                        {recipientName} will see a beautiful reveal when they open it.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Timeline — only shown after a share/payment action */}
+                  {(isPaid || linkShared) && (
+                  <div className="flex items-start gap-0">
+                    {[
+                      {
+                        icon: CheckCircle2,
+                        label: isPaid ? "Payment received" : "Link copied",
+                        sub: "Done",
+                        done: true,
+                        color: "#15803d",
+                        bg: "#dcfce7",
+                      },
+                      {
+                        icon: Eye,
+                        label: `${recipientName} opens it`,
+                        sub: "Awaiting",
+                        done: false,
+                        color: "#6d28d9",
+                        bg: "#ede9fe",
+                      },
+                      ...(isPaid ? [{
+                        icon: Sparkles,
+                        label: "Balance redeemed",
+                        sub: "Awaiting",
+                        done: false,
+                        color: "hsl(28,62%,36%)",
+                        bg: "hsl(28,62%,90%)",
+                      }] : []),
+                    ].map((step, i, arr) => {
+                      const StepIcon = step.icon;
+                      return (
+                        <React.Fragment key={i}>
+                          <div className="flex flex-col items-center gap-1 min-w-0">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                              style={{ background: step.done ? step.bg : "hsl(var(--secondary))", color: step.done ? step.color : "hsl(var(--muted-foreground))" }}
+                            >
+                              <StepIcon className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="text-center px-1">
+                              <p className="text-[10px] font-medium leading-tight" style={{ color: step.done ? step.color : "hsl(var(--muted-foreground))" }}>{step.label}</p>
+                              <p className="text-[10px] leading-tight text-muted-foreground/60">{step.sub}</p>
+                            </div>
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div className="flex-1 h-px mt-4 mx-1 bg-border" />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                  )}
+
+                  {/* CTA — authenticated: phone notification; anonymous: optional sign-up nudge */}
+                  {isAuthenticated ? (
+                    <div>
+                      {!notifySaved ? (
+                        <div className="space-y-1.5">
+                          <p className="text-xs text-green-700/80 dark:text-green-400/80 font-medium">
+                            Get a text when {recipientName} opens it
+                          </p>
+                          <form onSubmit={handleNotifyPhoneSave} className="flex flex-col sm:flex-row gap-2">
+                            <input
+                              type="tel"
+                              value={notifyPhone}
+                              onChange={e => setNotifyPhone(e.target.value)}
+                              placeholder="Your mobile number"
+                              className="flex-1 h-9 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                            />
+                            <Button type="submit" size="sm" disabled={!notifyPhone.trim() || notifySaving}
+                              className="h-9 px-4 rounded-xl bg-green-700 hover:bg-green-800 text-white border-0 text-xs shrink-0 w-full sm:w-auto">
+                              {notifySaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Bell className="w-3 h-3 mr-1.5" /> Notify me</>}
+                            </Button>
+                          </form>
+                          <p className="text-[11px] text-green-700/50 dark:text-green-400/40 leading-relaxed">
+                            By adding your number, you agree to receive SMS updates about this gift from gifted. Msg &amp; data rates may apply. Reply STOP to opt out.
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-green-700/70 dark:text-green-400/70 text-center">
+                          ✓ We'll text you when {recipientName} opens and redeems their gift.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    /* ── Unauthenticated tracking nudge — compact, no duplicate form ── */
+                    <div className="pt-2 border-t border-green-200 dark:border-green-800 flex items-center justify-between gap-3">
+                      <p className="text-xs text-green-700/70 dark:text-green-400/70">
+                        Sign in to get notified when {recipientName} opens it.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (giftId) localStorage.setItem("gifted_auth_return", `/preview?gift_id=${giftId}`);
+                          window.location.href = `${base}/api/auth/google`;
+                        }}
+                        className="shrink-0 h-8 px-3 flex items-center gap-1.5 rounded-xl border border-green-300 dark:border-green-700 bg-white dark:bg-green-950/30 hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors text-xs font-medium text-green-900 dark:text-green-300"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
+                        Sign in
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Scheduled delivery badge */}
+            {scheduledFor && !isPaid && (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5">
+                <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                  <Send className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Scheduled delivery</p>
+                  <p className="text-xs text-muted-foreground">
+                    You'll get a link to share on{" "}
+                    {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", {
+                      weekday: "long", month: "long", day: "numeric",
+                    })}{" "}at{" "}
+                    {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", {
+                      hour: "numeric", minute: "2-digit",
+                    })}.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Error notices */}
+            {saveError && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {saveError}
+              </div>
+            )}
+            {payingError && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {payingError}
+              </div>
+            )}
+
+            {/* Primary CTA — load balance and send (no login required) */}
+            {hasBalance && !isPaid && (
+              <div className="space-y-2">
+                <Button
+                  onClick={handlePayAndSend}
+                  disabled={saving || isRedirecting || authLoading}
+                  className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
+                >
+                  {isRedirecting
+                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
+                    : saving
+                      ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
+                      : <><Gift className="w-5 h-5" /> Pay ${displayAmt} — get the gift link</>
+                  }
+                </Button>
+                {(() => {
+                  const amt = parseFloat(displayAmt || "0");
+                  const platformFee = amt * 0.08;
+                  const total = (amt * 1.08 + 0.30) / 0.971;
+                  const processingFee = total - amt - platformFee;
+                  return (
+                    <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 text-xs space-y-1.5">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Gift balance</span>
+                        <span>${amt.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>gifted. service fee (8%)</span>
+                        <span>${platformFee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Card processing</span>
+                        <span>${processingFee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1.5">
+                        <span>Total</span>
+                        <span>${total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* ── Contact save prompt (authenticated senders only, once per gift) ── */}
             <AnimatePresence>
               {isAuthenticated && !authLoading && giftId && (contactSaved || (!contactPromptDismissed && !contactPromptSeen())) && (
@@ -1450,221 +1665,6 @@ export default function PreviewPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            {/* ── Post-send confirmation + notification opt-in ── */}
-            <AnimatePresence>
-              {(isPaid || linkShared) && (
-                <motion.div
-                  key="confirmation"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="rounded-2xl border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30 p-5 space-y-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center shrink-0">
-                      {(isPaid || linkShared)
-                        ? <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        : <Bell className="w-5 h-5 text-green-600" />
-                      }
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-green-800 dark:text-green-300">
-                        {isPaid
-                          ? "Payment received — gift ready!"
-                          : linkShared
-                            ? "Link copied — now send it!"
-                            : `Want to know when ${recipientName} opens this?`}
-                      </p>
-                      <p className="text-xs text-green-700/70 dark:text-green-400/70 mt-0.5">
-                        {recipientName} will see a beautiful reveal when they open it.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Timeline — only shown after a share/payment action */}
-                  {(isPaid || linkShared) && (
-                  <div className="flex items-start gap-0">
-                    {[
-                      {
-                        icon: CheckCircle2,
-                        label: isPaid ? "Payment received" : "Link copied",
-                        sub: "Done",
-                        done: true,
-                        color: "#15803d",
-                        bg: "#dcfce7",
-                      },
-                      {
-                        icon: Eye,
-                        label: `${recipientName} opens it`,
-                        sub: "Awaiting",
-                        done: false,
-                        color: "#6d28d9",
-                        bg: "#ede9fe",
-                      },
-                      ...(isPaid ? [{
-                        icon: Sparkles,
-                        label: "Balance redeemed",
-                        sub: "Awaiting",
-                        done: false,
-                        color: "hsl(28,62%,36%)",
-                        bg: "hsl(28,62%,90%)",
-                      }] : []),
-                    ].map((step, i, arr) => {
-                      const StepIcon = step.icon;
-                      return (
-                        <React.Fragment key={i}>
-                          <div className="flex flex-col items-center gap-1 min-w-0">
-                            <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                              style={{ background: step.done ? step.bg : "hsl(var(--secondary))", color: step.done ? step.color : "hsl(var(--muted-foreground))" }}
-                            >
-                              <StepIcon className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="text-center px-1">
-                              <p className="text-[10px] font-medium leading-tight" style={{ color: step.done ? step.color : "hsl(var(--muted-foreground))" }}>{step.label}</p>
-                              <p className="text-[10px] leading-tight text-muted-foreground/60">{step.sub}</p>
-                            </div>
-                          </div>
-                          {i < arr.length - 1 && (
-                            <div className="flex-1 h-px mt-4 mx-1 bg-border" />
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                  )}
-
-                  {/* CTA — authenticated: phone notification; anonymous: optional sign-up nudge */}
-                  {isAuthenticated ? (
-                    <div>
-                      {!notifySaved ? (
-                        <div className="space-y-1.5">
-                          <p className="text-xs text-green-700/80 dark:text-green-400/80 font-medium">
-                            Get a text when {recipientName} opens it
-                          </p>
-                          <form onSubmit={handleNotifyPhoneSave} className="flex flex-col sm:flex-row gap-2">
-                            <input
-                              type="tel"
-                              value={notifyPhone}
-                              onChange={e => setNotifyPhone(e.target.value)}
-                              placeholder="Your mobile number"
-                              className="flex-1 h-9 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
-                            />
-                            <Button type="submit" size="sm" disabled={!notifyPhone.trim() || notifySaving}
-                              className="h-9 px-4 rounded-xl bg-green-700 hover:bg-green-800 text-white border-0 text-xs shrink-0 w-full sm:w-auto">
-                              {notifySaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Bell className="w-3 h-3 mr-1.5" /> Notify me</>}
-                            </Button>
-                          </form>
-                          <p className="text-[11px] text-green-700/50 dark:text-green-400/40 leading-relaxed">
-                            By adding your number, you agree to receive SMS updates about this gift from gifted. Msg &amp; data rates may apply. Reply STOP to opt out.
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-green-700/70 dark:text-green-400/70 text-center">
-                          ✓ We'll text you when {recipientName} opens and redeems their gift.
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    /* ── Unauthenticated tracking nudge — compact, no duplicate form ── */
-                    <div className="pt-2 border-t border-green-200 dark:border-green-800 flex items-center justify-between gap-3">
-                      <p className="text-xs text-green-700/70 dark:text-green-400/70">
-                        Sign in to get notified when {recipientName} opens it.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (giftId) localStorage.setItem("gifted_auth_return", `/preview?gift_id=${giftId}`);
-                          window.location.href = `${base}/api/auth/google`;
-                        }}
-                        className="shrink-0 h-8 px-3 flex items-center gap-1.5 rounded-xl border border-green-300 dark:border-green-700 bg-white dark:bg-green-950/30 hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors text-xs font-medium text-green-900 dark:text-green-300"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
-                        Sign in
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Scheduled delivery badge */}
-            {scheduledFor && !isPaid && (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5">
-                <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-                  <Send className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Scheduled delivery</p>
-                  <p className="text-xs text-muted-foreground">
-                    You'll get a link to share on{" "}
-                    {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", {
-                      weekday: "long", month: "long", day: "numeric",
-                    })}{" "}at{" "}
-                    {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", {
-                      hour: "numeric", minute: "2-digit",
-                    })}.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Error notices */}
-            {saveError && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                {saveError}
-              </div>
-            )}
-            {payingError && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                {payingError}
-              </div>
-            )}
-
-            {/* Primary CTA — load balance and send (no login required) */}
-            {hasBalance && !isPaid && (
-              <div className="space-y-2">
-                <Button
-                  onClick={handlePayAndSend}
-                  disabled={saving || isRedirecting || authLoading}
-                  className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-200 gap-2"
-                >
-                  {isRedirecting
-                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Redirecting to checkout…</>
-                    : saving
-                      ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving gift…</>
-                      : <><Gift className="w-5 h-5" /> Pay ${displayAmt} — get the gift link</>
-                  }
-                </Button>
-                {(() => {
-                  const amt = parseFloat(displayAmt || "0");
-                  const platformFee = amt * 0.08;
-                  const total = (amt * 1.08 + 0.30) / 0.971;
-                  const processingFee = total - amt - platformFee;
-                  return (
-                    <div className="rounded-xl border border-border bg-secondary/30 px-4 py-3 text-xs space-y-1.5">
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Gift balance</span>
-                        <span>${amt.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>gifted. service fee (8%)</span>
-                        <span>${platformFee.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Card processing</span>
-                        <span>${processingFee.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold text-foreground border-t border-border pt-1.5">
-                        <span>Total</span>
-                        <span>${total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
 
             {/* Link preview card — hidden pre-payment when there's a balance to load */}
             {(!hasBalance || isPaid) && (

@@ -228,14 +228,21 @@ router.post("/gifted/redeem", async (req, res) => {
       return;
     }
 
+    const updateFields: Record<string, unknown> = {
+      redeemedAt: new Date(),
+      payoutName:   payoutName   || null,
+      payoutMethod: payoutMethod || null,
+      payoutHandle: payoutHandle || null,
+    };
+
+    const authUser = (req as any).user;
+    if (authUser?.id && !gift.recipientUserId) {
+      updateFields.recipientUserId = authUser.id;
+    }
+
     await db
       .update(gifts)
-      .set({
-        redeemedAt: new Date(),
-        payoutName:   payoutName   || null,
-        payoutMethod: payoutMethod || null,
-        payoutHandle: payoutHandle || null,
-      })
+      .set(updateFields as any)
       .where(eq(gifts.id, giftId));
 
     const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";

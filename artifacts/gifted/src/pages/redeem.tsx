@@ -216,6 +216,11 @@ export default function RedeemPage() {
     setIsProcessing(true);
     try {
       if (giftId) {
+        await fetch(`${BASE}/api/gifted/gifts/${encodeURIComponent(giftId)}/associate`, {
+          method: "POST",
+          credentials: "include",
+        }).catch(() => {});
+
         const res = await fetch(`${BASE}/api/gifted/redeem`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
