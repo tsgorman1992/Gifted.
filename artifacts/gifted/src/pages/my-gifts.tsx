@@ -393,6 +393,9 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
         {steps.map((step, i) => {
           const isActiveCurrent = (status === "ready" || status === "sent") && i === 0;
           const done = i <= statusIdx && status !== "draft" && status !== "ready" && !(status === "sent" && i === 0);
+          const stepBaseColor = step === "redeemed"
+            ? (gift.cashoutPaidAt ? "#15803d" : "#b45309")
+            : (STATUS_META[step]?.color ?? "hsl(var(--foreground))");
           return (
             <React.Fragment key={step}>
               {i > 0 && <span className="text-border/60">·</span>}
@@ -400,7 +403,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 className="font-medium"
                 style={{
                   color: (done || isActiveCurrent)
-                    ? STATUS_META[step]?.color ?? "hsl(var(--foreground))"
+                    ? stepBaseColor
                     : "hsl(var(--muted-foreground)/0.4)",
                 }}
               >
