@@ -18,14 +18,14 @@ const PHOTOS = [
 const HOW_STEPS = [
   { icon: Heart,      label: "Build the moment",   desc: "Write a note that sounds like you. Add a video message, photos, or link anything — concert tickets, a restaurant reservation, a song." },
   { icon: Gift,       label: "Add a balance",  desc: "Fund it with whatever feels right. Add a spending intention like 'Coffee on me' or 'Date night' so they know it was thoughtful, not lazy." },
-  { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they provide their payout details and our team sends the balance directly to them — same day." },
+  { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they provide their payout details and the balance lands in their account — same day." },
 ];
 
 const FEATURES = [
   { icon: Play,       title: "Video Messages",  desc: "Record a heartfelt message they can keep forever." },
   { icon: ImageIcon,  title: "Photo Memories",  desc: "Add up to 6 photos to remind them of the good times." },
   { icon: Link2,      title: "Add Any Link",     desc: "Concert tickets, a dinner reservation, a song — anything with a URL becomes part of the gift." },
-  { icon: CreditCard, title: "Their balance",  desc: "No gift cards, no restrictions. Recipients choose Venmo, Cash App, PayPal, or Zelle — and we send the balance same day." },
+  { icon: CreditCard, title: "Their Balance",  desc: "No gift cards, no restrictions. Recipients choose Venmo, Cash App, PayPal, or Zelle — and we send the balance same day." },
 ];
 
 const LINK_DEMOS = [
@@ -401,10 +401,10 @@ export default function LandingPage() {
       <section className="w-full py-16 md:py-32 px-6 text-center">
         <div className="max-w-2xl mx-auto space-y-5 md:space-y-8">
           <h2 className="font-serif text-3xl md:text-6xl font-medium">Someone out there<br />deserves this.</h2>
-          <p className="text-base md:text-xl text-muted-foreground">Quick to build. No account needed to start.</p>
+          <p className="text-base md:text-xl text-muted-foreground">It takes five minutes to make someone's day.</p>
           <div className="pt-2 md:pt-4">
             <Button onClick={handleNewGift} size="lg" className="w-full sm:w-auto rounded-full text-base md:text-lg px-10 h-13 md:h-14 shadow-xl hover:-translate-y-1 transition-all duration-300">
-              Get Started <ArrowRight className="ml-2 w-5 h-5" />
+              Build a moment <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </div>
         </div>
