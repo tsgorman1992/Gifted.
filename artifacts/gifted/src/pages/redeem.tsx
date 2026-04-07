@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw, Lock, Gift, Sparkles, Clock } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Loader2, ShieldCheck, RefreshCw, Lock, Gift, Sparkles, Clock, X, UserPlus } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/+$/, "");
 
@@ -78,6 +78,20 @@ export default function RedeemPage() {
   const [recipientName, setRecipientName]   = useState<string | null>(null);
   const [alreadyRedeemed, setAlreadyRedeemed] = useState(false);
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked,     setAuthChecked]     = useState(false);
+  const [googleEnabled,   setGoogleEnabled]   = useState(false);
+  const [nudgeDismissed,  setNudgeDismissed]  = useState(false);
+  const [nudgeDone,       setNudgeDone]       = useState(false);
+  const [nudgeMode,       setNudgeMode]       = useState<"sign-up" | "sign-in">("sign-up");
+  const [nudgeEmail,      setNudgeEmail]      = useState("");
+  const [nudgePassword,   setNudgePassword]   = useState("");
+  const [nudgeFirstName,  setNudgeFirstName]  = useState("");
+  const [nudgeLastName,   setNudgeLastName]   = useState("");
+  const [nudgeSubmitting, setNudgeSubmitting] = useState(false);
+  const [nudgeError,      setNudgeError]      = useState<string | null>(null);
+  const [emailFormOpen,   setEmailFormOpen]   = useState(false);
+
   const [otpLoading, setOtpLoading]         = useState(false);
   const [otpError, setOtpError]             = useState<string | null>(null);
   const [otpCode, setOtpCode]               = useState(["", "", "", "", "", ""]);
@@ -98,7 +112,18 @@ export default function RedeemPage() {
         .then(r => r.ok ? r.json() : null)
         .then(gift => {
           if (!gift) return;
-          if (gift.redeemedAt) setAlreadyRedeemed(true);
+          if (gift.redeemedAt) {
+            const justRedeemed = localStorage.getItem("gifted_just_redeemed") === "1";
+            if (justRedeemed) {
+              // This user just redeemed (possibly returning from Google OAuth).
+              // Show the success screen — the auth check will handle linking.
+              setScreen("success");
+            } else {
+              setAlreadyRedeemed(true);
+            }
+            // Don't run the OTP/banking screen logic below
+            return;
+          }
           if (gift.recipientName) {
             setRecipientName(gift.recipientName);
             setPayoutName((prev) => prev || gift.recipientName);
@@ -110,6 +135,35 @@ export default function RedeemPage() {
         })
         .catch(() => {});
     }
+
+    // Check auth status — used to auto-link gift after Google OAuth return and to hide nudge
+    fetch(`${BASE}/api/auth/me`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(user => {
+        const authed = !!user?.id;
+        setIsAuthenticated(authed);
+        setAuthChecked(true);
+        if (authed) {
+          setNudgeDone(true);
+          // Handle Google OAuth return: flag was set before redirecting, now link the gift
+          const pendingId = localStorage.getItem("gifted_gift_id");
+          if (pendingId && localStorage.getItem("gifted_just_redeemed") === "1") {
+            localStorage.removeItem("gifted_just_redeemed");
+            fetch(`${BASE}/api/gifted/gifts/${encodeURIComponent(pendingId)}/save-received`, {
+              method: "PATCH",
+              credentials: "include",
+            }).catch(() => {});
+            setScreen("success");
+          }
+        }
+      })
+      .catch(() => setAuthChecked(true));
+
+    // Check Google OAuth availability
+    fetch(`${BASE}/api/auth/google/enabled`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.enabled) setGoogleEnabled(true); })
+      .catch(() => {});
 
     // Pre-fill payout method/handle from profile for authenticated users
     fetch(`${BASE}/api/gifted/profile`, { credentials: "include" })
@@ -239,11 +293,47 @@ export default function RedeemPage() {
         value:  parseFloat(amount) || 0,
         currency: "USD",
       });
+      localStorage.setItem("gifted_just_redeemed", "1");
       setScreen("success");
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again or contact help@gifted.page.");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleNudgeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNudgeError(null);
+    setNudgeSubmitting(true);
+    const endpoint = nudgeMode === "sign-in" ? "/api/auth/login" : "/api/auth/register";
+    const body: Record<string, string> = { email: nudgeEmail, password: nudgePassword };
+    if (nudgeMode === "sign-up") { body.firstName = nudgeFirstName; body.lastName = nudgeLastName; }
+    try {
+      const res = await fetch(`${BASE}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setNudgeError(data.error || "Something went wrong. Please try again.");
+        return;
+      }
+      if (giftId) {
+        await fetch(`${BASE}/api/gifted/gifts/${encodeURIComponent(giftId)}/save-received`, {
+          method: "PATCH",
+          credentials: "include",
+        }).catch(() => {});
+      }
+      localStorage.removeItem("gifted_just_redeemed");
+      setNudgeDone(true);
+      setIsAuthenticated(true);
+    } catch {
+      setNudgeError("Unable to connect. Please try again.");
+    } finally {
+      setNudgeSubmitting(false);
     }
   };
 
@@ -656,6 +746,120 @@ export default function RedeemPage() {
                     </div>
                   </div>
                 </motion.div>
+
+                {/* ── Account nudge ── */}
+                {!nudgeDismissed && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6, duration: 0.4 }}
+                    className="w-full"
+                  >
+                    {nudgeDone ? (
+                      <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                        <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                        <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                          Gift linked to your account — track it anytime in your dashboard.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <UserPlus className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">Track your payout</p>
+                              <p className="text-[11px] text-muted-foreground">Create a free account to see when it arrives.</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setNudgeDismissed(true); localStorage.removeItem("gifted_just_redeemed"); }}
+                            className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors shrink-0 mt-0.5"
+                            aria-label="Dismiss"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Google button */}
+                        {googleEnabled && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const returnTo = window.location.pathname + window.location.search;
+                              window.location.href = `${BASE}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`;
+                            }}
+                            className="w-full h-10 flex items-center justify-center gap-2.5 rounded-xl border border-border bg-background hover:bg-secondary transition-colors text-sm font-medium text-foreground"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
+                            Continue with Google
+                          </button>
+                        )}
+
+                        {/* Collapsible email form */}
+                        <button
+                          type="button"
+                          onClick={() => setEmailFormOpen(v => !v)}
+                          className="w-full text-center text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors underline underline-offset-2"
+                        >
+                          {emailFormOpen ? "Collapse" : (googleEnabled ? "Or continue with email" : "Continue with email")}
+                        </button>
+                        <AnimatePresence>
+                          {emailFormOpen && (
+                            <motion.form
+                              key="nudge-form"
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.22 }}
+                              onSubmit={handleNudgeSubmit}
+                              className="overflow-hidden space-y-2"
+                            >
+                              {nudgeMode === "sign-up" && (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <input type="text" value={nudgeFirstName} onChange={e => setNudgeFirstName(e.target.value)} placeholder="First name"
+                                    className="h-9 px-3 rounded-xl border border-border bg-background text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                                  <input type="text" value={nudgeLastName} onChange={e => setNudgeLastName(e.target.value)} placeholder="Last name"
+                                    className="h-9 px-3 rounded-xl border border-border bg-background text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                                </div>
+                              )}
+                              <input type="email" value={nudgeEmail} onChange={e => { setNudgeEmail(e.target.value); setNudgeError(null); }}
+                                placeholder="Email address" required autoComplete="email"
+                                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                              <input type="password" value={nudgePassword} onChange={e => setNudgePassword(e.target.value)}
+                                placeholder={nudgeMode === "sign-up" ? "Create a password (min. 8 chars)" : "Password"} required
+                                autoComplete={nudgeMode === "sign-in" ? "current-password" : "new-password"}
+                                className="w-full h-9 px-3 rounded-xl border border-border bg-background text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition" />
+                              {nudgeError && <p className="text-[11px] text-destructive">{nudgeError}</p>}
+                              <Button type="submit" size="sm" disabled={nudgeSubmitting} className="w-full h-9 rounded-xl text-xs">
+                                {nudgeSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : nudgeMode === "sign-in" ? "Sign in" : "Create account"}
+                              </Button>
+                              <p className="text-[11px] text-center text-muted-foreground/60">
+                                {nudgeMode === "sign-in" ? "New to gifted.? " : "Already have an account? "}
+                                <button type="button" onClick={() => { setNudgeMode(m => m === "sign-in" ? "sign-up" : "sign-in"); setNudgeError(null); }}
+                                  className="underline underline-offset-2 hover:text-foreground transition-colors">
+                                  {nudgeMode === "sign-in" ? "Sign up free" : "Sign in"}
+                                </button>
+                              </p>
+                            </motion.form>
+                          )}
+                        </AnimatePresence>
+
+                        <button
+                          type="button"
+                          onClick={() => { setNudgeDismissed(true); localStorage.removeItem("gifted_just_redeemed"); }}
+                          className="w-full text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                        >
+                          Skip — I don't need an account
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
 
                 {/* Support note */}
                 <p className="text-xs text-muted-foreground/70">
