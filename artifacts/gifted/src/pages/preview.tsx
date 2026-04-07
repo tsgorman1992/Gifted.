@@ -786,16 +786,12 @@ export default function PreviewPage() {
               style={{ aspectRatio: "9/19.5" }}
             >
               {revealUrl ? (
-                <>
-                  <iframe
-                    src={revealUrl}
-                    className="w-full h-full border-0 block"
-                    title="Gift reveal preview"
-                    allow="autoplay"
-                  />
-                  {/* Transparent overlay — prevents clicks from navigating the iframe */}
-                  <div className="absolute inset-0 z-10 cursor-default" />
-                </>
+                <iframe
+                  src={revealUrl}
+                  className="w-full h-full border-0 block"
+                  title="Gift reveal preview"
+                  allow="autoplay"
+                />
               ) : (
                 <div
                   className="w-full h-full flex flex-col items-center justify-center gap-4 relative cursor-pointer group"
@@ -899,18 +895,14 @@ export default function PreviewPage() {
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 className="md:hidden mb-6 flex flex-col shadow-2xl rounded-[2rem] overflow-hidden"
               >
-                <div className="relative" style={{ height: "70dvh" }}>
+                <div style={{ height: "70dvh" }}>
                   {revealUrl ? (
-                    <>
-                      <iframe
-                        src={revealUrl}
-                        className="w-full h-full border-0 block"
-                        title="Gift reveal preview"
-                        allow="autoplay"
-                      />
-                      {/* Transparent overlay — prevents clicks from navigating the iframe */}
-                      <div className="absolute inset-0 z-10 cursor-default" />
-                    </>
+                    <iframe
+                      src={revealUrl}
+                      className="w-full h-full border-0 block"
+                      title="Gift reveal preview"
+                      allow="autoplay"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center" style={gStyle}>
                       <Loader2 className="w-6 h-6 animate-spin text-white/70" />
