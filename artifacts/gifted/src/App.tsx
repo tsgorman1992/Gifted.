@@ -1,15 +1,19 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { useEffect } from "react";
 
-// Redirect /reveal?giftId=xxx → /open/xxx so auto-save and account-linking run correctly
+// Redirect /reveal?giftId=xxx → /open/xxx so auto-save and account-linking run correctly.
+// Preserve preview=true and embed=true so open.tsx can suppress overlays in iframe previews.
 function RevealRedirect() {
   const [, setLocation] = useLocation();
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const giftId = params.get("giftId");
     if (giftId) {
-      const isPreview = params.get("preview") === "true";
-      setLocation(`/open/${giftId}${isPreview ? "?preview=true" : ""}`, { replace: true });
+      const qs = new URLSearchParams();
+      if (params.get("preview") === "true") qs.set("preview", "true");
+      if (params.get("embed") === "true") qs.set("embed", "true");
+      const qsStr = qs.toString();
+      setLocation(`/open/${giftId}${qsStr ? `?${qsStr}` : ""}`, { replace: true });
     }
   }, [setLocation]);
   return null;

@@ -225,6 +225,7 @@ export default function OpenPage() {
   const isSender = !authLoading && isAuthenticated && user && giftSenderUserId && user.id === giftSenderUserId;
   // When coming from the dashboard, the URL has ?preview=true — let the sender through to the full experience
   const isPreviewMode = new URLSearchParams(window.location.search).get("preview") === "true";
+  const isEmbed = new URLSearchParams(window.location.search).get("embed") === "true";
 
   const handleSenderCopy = async () => {
     // Always copy the /api/share/:id URL — this is the OG-enabled link
@@ -287,8 +288,9 @@ export default function OpenPage() {
     <>
       {/* ── Post-reveal top bar ────────────────────────────────────────────
           Fades in after the moment is fully revealed. Minimal glass bar
-          with brand wordmark + user actions. Hidden during the reveal. */}
-      <div
+          with brand wordmark + user actions. Hidden during the reveal.
+          Suppressed entirely in embed mode (preview iframes). */}
+      {!isEmbed && <div
         className={`fixed top-0 left-0 right-0 z-50 px-4 pt-3 transition-all duration-700 ease-out ${
           barVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
         }`}
@@ -394,7 +396,7 @@ export default function OpenPage() {
             ) : null}
           </div>
         </div>
-      </div>
+      </div>}
 
       <React.Suspense
         fallback={
@@ -444,7 +446,7 @@ export default function OpenPage() {
           Intentionally NOT gated on `revealed` — if the user closes the tab before
           finishing the reveal they should have already had a chance to save it.
           Not shown for guest senders previewing their own gift. */}
-      {status === "ready" && !authLoading && !isAuthenticated && !isGuestSender && !savePromptDismissed && (
+      {status === "ready" && !authLoading && !isAuthenticated && !isGuestSender && !savePromptDismissed && !isEmbed && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -470,7 +472,7 @@ export default function OpenPage() {
       )}
 
       {/* Auto-save status indicator for signed-in users */}
-      {isAuthenticated && saveStatus === "saved" && (
+      {isAuthenticated && saveStatus === "saved" && !isEmbed && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
@@ -490,7 +492,7 @@ export default function OpenPage() {
       )}
 
       {/* Already claimed by another account */}
-      {isAuthenticated && saveStatus === "claimed" && (
+      {isAuthenticated && saveStatus === "claimed" && !isEmbed && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
