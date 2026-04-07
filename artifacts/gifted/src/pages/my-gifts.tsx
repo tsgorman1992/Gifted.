@@ -651,8 +651,8 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                     {gift.payoutMethod
-                      ? `${gift.payoutMethod.charAt(0).toUpperCase()}${gift.payoutMethod.slice(1)} sent`
-                      : "Payout sent"}
+                      ? `Payout sent ✓ · ${gift.payoutMethod.charAt(0).toUpperCase()}${gift.payoutMethod.slice(1)}`
+                      : "Payout sent ✓"}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
@@ -660,7 +660,7 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
                       <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                     </svg>
                     {gift.payoutMethod
-                      ? `${gift.payoutMethod.charAt(0).toUpperCase()}${gift.payoutMethod.slice(1)} · pending`
+                      ? `Payout pending · ${gift.payoutMethod.charAt(0).toUpperCase()}${gift.payoutMethod.slice(1)}`
                       : "Payout pending"}
                   </span>
                 )
