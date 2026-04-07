@@ -332,6 +332,10 @@ router.post("/stripe/webhook", async (req, res) => {
   const sig = req.headers["stripe-signature"] as string;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+  const bodyType = Buffer.isBuffer(req.body) ? "Buffer" : typeof req.body;
+  const bodyLen  = Buffer.isBuffer(req.body) ? req.body.length : JSON.stringify(req.body ?? "").length;
+  console.log(`[stripe/webhook] body=${bodyType}(${bodyLen}B) sig=${sig ? sig.slice(0, 40) + "..." : "MISSING"} secret=${webhookSecret ? "SET" : "MISSING"}`);
+
   let event: Stripe.Event;
 
   try {
@@ -342,7 +346,7 @@ router.post("/stripe/webhook", async (req, res) => {
       event = req.body as Stripe.Event;
     }
   } catch (err) {
-    console.error("Webhook signature error:", err);
+    console.error("[stripe/webhook] Signature error:", err);
     res.status(400).json({ error: "Invalid webhook signature" });
     return;
   }
@@ -367,6 +371,8 @@ router.post("/stripe/webhook", async (req, res) => {
               : (session.payment_intent?.id ?? null),
         })
         .where(eq(gifts.id, giftId));
+
+      console.log(`[stripe/webhook] checkout.session.completed giftId=${giftId} alreadyPaid=${alreadyPaid}`);
 
       // Send receipt if not already sent (webhook may fire after confirm-payment already handled it)
       if (!alreadyPaid && senderEmail && existing) {
