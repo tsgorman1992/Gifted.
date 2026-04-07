@@ -395,6 +395,7 @@ router.get("/gifted/my-gifts", async (req, res) => {
         paid: g.paid,
         openedAt: g.openedAt,
         redeemedAt: g.redeemedAt,
+        cashoutPaidAt: g.cashoutPaidAt ?? null,
         reaction: g.reaction,
         reactionAt: g.reactionAt,
         scheduledFor: g.scheduledFor,
@@ -426,6 +427,7 @@ router.get("/gifted/notifications", async (req, res) => {
         amount: gifts.amount,
         openedAt: gifts.openedAt,
         redeemedAt: gifts.redeemedAt,
+        cashoutPaidAt: gifts.cashoutPaidAt,
         reaction: gifts.reaction,
         reactionAt: gifts.reactionAt,
       })
@@ -442,7 +444,7 @@ router.get("/gifted/notifications", async (req, res) => {
     type GiftNotif = NotifBase & {
       type: "opened" | "redeemed" | "reaction";
       giftId: string; recipientName: string; giftTitle: string;
-      amount: string | null; reaction?: string | null;
+      amount: string | null; reaction?: string | null; cashoutPaidAt?: Date | null;
     };
     type OccasionNotif = NotifBase & {
       type: "occasion";
@@ -457,7 +459,7 @@ router.get("/gifted/notifications", async (req, res) => {
         items.push({ type: "reaction", giftId: g.id, recipientName: g.recipientName, giftTitle: g.giftTitle, amount: g.amount, reaction: g.reaction, at: g.reactionAt });
       }
       if (g.redeemedAt) {
-        items.push({ type: "redeemed", giftId: g.id, recipientName: g.recipientName, giftTitle: g.giftTitle, amount: g.amount, at: g.redeemedAt });
+        items.push({ type: "redeemed", giftId: g.id, recipientName: g.recipientName, giftTitle: g.giftTitle, amount: g.amount, cashoutPaidAt: g.cashoutPaidAt ?? null, at: g.redeemedAt });
       }
       if (g.openedAt) {
         items.push({ type: "opened", giftId: g.id, recipientName: g.recipientName, giftTitle: g.giftTitle, amount: g.amount, at: g.openedAt });
@@ -653,6 +655,7 @@ router.get("/gifted/received-gifts", async (req, res) => {
         amount: (g.amount && parseFloat(g.amount) > 0) ? g.amount : null,
         openedAt: g.openedAt,
         redeemedAt: g.redeemedAt,
+        cashoutPaidAt: g.cashoutPaidAt ?? null,
         payoutMethod: g.payoutMethod ?? null,
         payoutHandle: g.payoutHandle ?? null,
         payoutName: g.payoutName ?? null,

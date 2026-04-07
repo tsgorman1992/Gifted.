@@ -35,6 +35,7 @@ interface GiftSummary {
   paid: boolean;
   openedAt: string | null;
   redeemedAt: string | null;
+  cashoutPaidAt: string | null;
   reaction: string | null;
   reactionAt: string | null;
   scheduledFor: string | null;
@@ -52,6 +53,7 @@ interface ReceivedGiftSummary {
   amount: string | null;
   openedAt: string | null;
   redeemedAt: string | null;
+  cashoutPaidAt: string | null;
   payoutMethod: string | null;
   payoutHandle: string | null;
   payoutName: string | null;
@@ -344,7 +346,8 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
     : status;
   const statusIdx = orderedStatuses.indexOf(effectiveStatus);
   const stepLabels: Record<TimelineStep, string> = {
-    scheduled: "Scheduled", sent: "Sent", opened: "Opened", redeemed: "Redeemed",
+    scheduled: "Scheduled", sent: "Sent", opened: "Opened",
+    redeemed: gift.cashoutPaidAt ? "Payout sent ✓" : "Payout pending",
   };
 
   return (
@@ -474,7 +477,9 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
               {status !== "opened" && (
                 <span className="text-xs text-muted-foreground">
                   {status === "redeemed" && gift.redeemedAt
-                    ? `Redeemed ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                    ? gift.cashoutPaidAt
+                      ? `Paid ${formatDistanceToNow(new Date(gift.cashoutPaidAt), { addSuffix: true })}`
+                      : `Requested ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
                     : status === "sent"
                       ? `Ready since ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
                     : status === "ready"
@@ -577,7 +582,9 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
         {" · "}{gift.occasion}
         {" · "}
         {gift.redeemedAt
-          ? <span className="font-medium" style={{ color: "#b45309" }}>● Payout pending</span>
+          ? gift.cashoutPaidAt
+            ? <span className="font-medium" style={{ color: "#15803d" }}>● Payout sent</span>
+            : <span className="font-medium" style={{ color: "#b45309" }}>● Payout pending</span>
           : gift.openedAt
             ? <span className="font-medium" style={{ color: "#6d28d9" }}>● Opened</span>
             : <span className="text-muted-foreground/60">● Unopened</span>
@@ -626,21 +633,34 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
           >
             <span className="text-xs text-muted-foreground">
               {gift.redeemedAt
-                ? `Requested ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                ? gift.cashoutPaidAt
+                  ? `Paid ${formatDistanceToNow(new Date(gift.cashoutPaidAt), { addSuffix: true })}`
+                  : `Requested ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
                 : gift.openedAt
                   ? `Opened ${formatDistanceToNow(new Date(gift.openedAt), { addSuffix: true })}`
                   : `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
             </span>
             <div className="flex items-center gap-1 shrink-0">
               {gift.redeemedAt && !hasUnclaimedBalance && gift.amount && parseFloat(gift.amount) > 0 && (
-                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  {gift.payoutMethod
-                    ? `${gift.payoutMethod.charAt(0).toUpperCase()}${gift.payoutMethod.slice(1)} · pending`
-                    : "Payout pending"}
-                </span>
+                gift.cashoutPaidAt ? (
+                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    {gift.payoutMethod
+                      ? `${gift.payoutMethod.charAt(0).toUpperCase()}${gift.payoutMethod.slice(1)} sent`
+                      : "Payout sent"}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    {gift.payoutMethod
+                      ? `${gift.payoutMethod.charAt(0).toUpperCase()}${gift.payoutMethod.slice(1)} · pending`
+                      : "Payout pending"}
+                  </span>
+                )
               )}
               {hasUnclaimedBalance && (
                 <button
