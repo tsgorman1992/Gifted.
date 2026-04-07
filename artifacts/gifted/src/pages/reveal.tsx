@@ -1587,37 +1587,41 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [amountInView, giftAmount, balanceRevealPhase, reducedMotion, isPreview]);
 
-  // Fallback: if balance section hasn't been triggered after 4 s (e.g. user never scrolled
-  // to it), auto-scroll to it and run the reveal sequence so the amount and Redeem button
-  // are never permanently hidden.
+  // When the gift is opened and has a balance, auto-scroll to the balance section
+  // and run the reveal sequence — recipients never need to manually scroll.
+  // The scroll-triggered path (amountInView above) still fires early if the user
+  // happens to scroll there before these timers complete.
   useEffect(() => {
-    if (!giftAmount || parseFloat(giftAmount) <= 0) return;
-    if (isPreview) return; // preview forces "revealed" immediately on its own
-    const autoReveal = setTimeout(() => {
-      setBalanceRevealPhase((current) => {
-        if (current !== "hidden") return current; // already triggered via scroll
+    if (!isOpen || !giftAmount || parseFloat(giftAmount) <= 0) return;
+    if (isPreview) return;
+
+    // Let content sections animate in, then pan down to the balance card.
+    const tScroll = setTimeout(() => {
+      if (amountRef.current) {
+        amountRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 1500);
+
+    const tBuild = setTimeout(() => {
+      setBalanceRevealPhase(p => p === "hidden" ? "building" : p);
+    }, 1800);
+
+    const tReveal = setTimeout(() => {
+      setBalanceRevealPhase(p => {
+        if (p !== "building") return p;
         if (amountRef.current) {
-          amountRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+          const rect = amountRef.current.getBoundingClientRect();
+          const ox = Math.min(Math.max((rect.left + rect.width / 2) / window.innerWidth, 0.1), 0.9);
+          const oy = Math.min(Math.max((rect.top + rect.height / 2) / window.innerHeight, 0.1), 0.9);
+          confetti({ particleCount: 90, spread: 75, origin: { x: ox, y: oy }, startVelocity: 24, scalar: 1.1 });
         }
-        return "building";
+        playChime();
+        return "revealed";
       });
-      setTimeout(() => {
-        setBalanceRevealPhase((current) => {
-          if (current !== "building") return current;
-          if (amountRef.current) {
-            const rect = amountRef.current.getBoundingClientRect();
-            const ox = Math.min(Math.max((rect.left + rect.width / 2) / window.innerWidth, 0.1), 0.9);
-            const oy = Math.min(Math.max((rect.top + rect.height / 2) / window.innerHeight, 0.1), 0.9);
-            confetti({ particleCount: 90, spread: 75, origin: { x: ox, y: oy }, startVelocity: 24, scalar: 1.1 });
-          }
-          playChime();
-          return "revealed";
-        });
-      }, 1200);
-    }, 4000);
-    return () => clearTimeout(autoReveal);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [giftAmount, isPreview]);
+    }, 3200);
+
+    return () => { clearTimeout(tScroll); clearTimeout(tBuild); clearTimeout(tReveal); };
+  }, [isOpen, giftAmount, isPreview]);
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
