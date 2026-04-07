@@ -185,6 +185,21 @@ const CARRIER_LABELS: Record<string, string> = {
   amazon: "Amazon", lasership: "LaserShip", ontrac: "OnTrac", "canada-post": "Canada Post",
 };
 
+function getCarrierTrackingUrl(carrier: string, trackingNumber: string): string | null {
+  const n = encodeURIComponent(trackingNumber);
+  switch (carrier) {
+    case "usps":         return `https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=${n}`;
+    case "ups":          return `https://www.ups.com/track?tracknum=${n}`;
+    case "fedex":        return `https://www.fedex.com/apps/fedextrack/?tracknumbers=${n}`;
+    case "dhl":          return `https://www.dhl.com/en/express/tracking.html?AWB=${n}`;
+    case "amazon":       return `https://track.amazon.com/tracking/${n}`;
+    case "lasership":    return `https://www.lasership.com/track/${n}`;
+    case "ontrac":       return `https://www.ontrac.com/tracking/?number=${n}`;
+    case "canada-post":  return `https://www.canadapost-postescanada.ca/track-reperage/en#${n}`;
+    default:             return null;
+  }
+}
+
 function greeting(firstName: string | null) {
   const h = new Date().getHours();
   const time = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
@@ -819,6 +834,20 @@ function PhysicalGiftCard({ gift, idx, onRefresh, onHide }: {
         </div>
       ) : (
         <div className="flex items-center gap-1 ml-4 mt-1.5">
+          {gift.carrier && gift.trackingNumber && (() => {
+            const url = getCarrierTrackingUrl(gift.carrier, gift.trackingNumber);
+            return url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1 text-xs text-primary font-medium hover:opacity-80 transition-opacity mr-1"
+              >
+                Track on {CARRIER_LABELS[gift.carrier] ?? gift.carrier} <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : null;
+          })()}
           {gift.carrier && (
             <button
               onClick={handleRefresh}
@@ -1664,6 +1693,20 @@ function LinkedGiftTracking({ gift, idx }: { gift: ReceivedGiftSummary; idx: num
             >
               View gift →
             </button>
+            {gift.trackingCarrier && gift.trackingNumber && (() => {
+              const url = getCarrierTrackingUrl(gift.trackingCarrier, gift.trackingNumber);
+              return url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {CARRIER_LABELS[gift.trackingCarrier] ?? gift.trackingCarrier} <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : null;
+            })()}
             {!isDelivered && (
               <button
                 onClick={handleRefresh}

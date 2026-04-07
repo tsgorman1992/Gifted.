@@ -224,7 +224,7 @@ async function pollAfterShipTrackings() {
         const tag = (tracking.tag as string | undefined) ?? "";
         const checkpoints = (tracking.checkpoints as Array<Record<string, unknown>> | undefined) ?? [];
 
-        const events: TrackingEvent[] = checkpoints
+        let events: TrackingEvent[] = checkpoints
           .map((cp) => ({
             status:    (cp.tag as string)             ?? "",
             message:   (cp.subtag_message as string)  || (cp.message as string) || "",
@@ -232,6 +232,11 @@ async function pollAfterShipTrackings() {
             timestamp: (cp.checkpoint_time as string) ?? new Date().toISOString(),
           }))
           .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        // AfterShip sometimes has a tag but no checkpoint events yet — synthesize one so the UI shows something
+        if (events.length === 0 && tag && tag !== "Pending") {
+          events = [{ status: tag, message: "", location: undefined, timestamp: new Date().toISOString() }];
+        }
 
         const isDelivered = tag === "Delivered";
         console.log(`[AfterShip poll] ${gift.id}: tag=${tag}, checkpoints=${events.length}`);

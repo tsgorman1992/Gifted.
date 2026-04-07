@@ -42,25 +42,47 @@ async function registerAfterShipTracking(carrier: string, trackingNumber: string
 
 async function fetchAfterShipTracking(aftershipId: string) {
   const apiKey = process.env.AFTERSHIP_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn("[AfterShip physical] AFTERSHIP_API_KEY not set — skipping fetch");
+    return null;
+  }
   try {
-    const response = await fetch(`https://api.aftership.com/tracking/2024-07/trackings/${aftershipId}`, {
+    const url = `https://api.aftership.com/tracking/2024-07/trackings/${aftershipId}`;
+    const response = await fetch(url, {
       headers: { "as-api-key": apiKey },
     });
-    if (!response.ok) return null;
-    const json = await response.json() as Record<string, unknown>;
-    const tracking = (json?.data as Record<string, unknown> | undefined)?.tracking as Record<string, unknown> | undefined;
-    if (!tracking) return null;
-
+    const json = await response.json().catch(() => null) as Record<string, unknown> | null;
+    if (!response.ok) {
+      console.warn(`[AfterShip physical] HTTP ${response.status} for ${aftershipId}:`, JSON.stringify(json));
+      return null;
+    }
+    // 2024-07 ID-based: { data: { id, tag, checkpoints, ... } }
+    // Older slug/number: { data: { tracking: { id, tag, checkpoints, ... } } }
+    const data = json?.data as Record<string, unknown> | undefined;
+    const tracking = (data?.tracking as Record<string, unknown> | undefined) ?? data;
+    if (!tracking) {
+      console.warn(`[AfterShip physical] No tracking object in response for ${aftershipId}:`, JSON.stringify(json));
+      return null;
+    }
+    const tag = (tracking.tag as string | undefined) ?? "";
     const checkpoints = (tracking.checkpoints as Array<Record<string, unknown>> | undefined) ?? [];
-    const events = checkpoints.map((c) => ({
-      status: (c.tag as string) ?? "Unknown",
-      message: (c.message as string) ?? "",
-      location: (c.city as string) ?? (c.country_name as string) ?? undefined,
-      timestamp: (c.checkpoint_time as string) ?? new Date().toISOString(),
-    }));
+    console.log(`[AfterShip physical] ${aftershipId}: tag=${tag}, checkpoints=${checkpoints.length}`);
 
-    const isDelivered = (tracking.tag as string) === "Delivered";
+    let events = checkpoints
+      .map((c) => ({
+        status:    (c.tag as string)             ?? "Unknown",
+        message:   (c.subtag_message as string)  || (c.message as string) || "",
+        location:  (c.city as string)            ?? (c.country_name as string) ?? undefined,
+        timestamp: (c.checkpoint_time as string) ?? new Date().toISOString(),
+      }))
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    // AfterShip sometimes has a tag but no checkpoint events yet — synthesize one so the UI shows something
+    if (events.length === 0 && tag && tag !== "Pending") {
+      events = [{ status: tag, message: "", location: undefined, timestamp: new Date().toISOString() }];
+    }
+
+    const isDelivered = tag === "Delivered";
     const deliveredAt = isDelivered
       ? (checkpoints.find(c => c.tag === "Delivered")?.checkpoint_time as string | undefined)
       : null;

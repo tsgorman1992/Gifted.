@@ -1320,6 +1320,21 @@ const CARRIER_LABELS: Record<string, string> = {
   ontrac: "OnTrac",
 };
 
+function getCarrierTrackingUrl(carrier: string, trackingNumber: string): string | null {
+  const n = encodeURIComponent(trackingNumber);
+  switch (carrier) {
+    case "usps":         return `https://tools.usps.com/go/TrackConfirmAction?qtc_tLabels1=${n}`;
+    case "ups":          return `https://www.ups.com/track?tracknum=${n}`;
+    case "fedex":        return `https://www.fedex.com/apps/fedextrack/?tracknumbers=${n}`;
+    case "dhl":          return `https://www.dhl.com/en/express/tracking.html?AWB=${n}`;
+    case "amazon":       return `https://track.amazon.com/tracking/${n}`;
+    case "lasership":    return `https://www.lasership.com/track/${n}`;
+    case "ontrac":       return `https://www.ontrac.com/tracking/?number=${n}`;
+    case "canada-post":  return `https://www.canadapost-postescanada.ca/track-reperage/en#${n}`;
+    default:             return null;
+  }
+}
+
 const STATUS_LABEL: Record<string, string> = {
   InfoReceived: "Label Created",
   InTransit: "In Transit",
@@ -1393,11 +1408,20 @@ function TrackingTimeline({
             <p className={`text-[11px] font-semibold tracking-widest uppercase mb-1 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
               Package tracking
             </p>
-            <p className={`text-xs font-mono leading-snug ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
-              <span className="block sm:inline">{CARRIER_LABELS[carrier] ?? carrier}</span>
-              <span className="hidden sm:inline"> · </span>
-              <span className="block sm:inline">{displayTrackingNumber}</span>
-            </p>
+            {(() => {
+              const trackUrl = getCarrierTrackingUrl(carrier, trackingNumber);
+              const inner = (
+                <p className={`text-xs font-mono leading-snug ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+                  <span className="block sm:inline">{CARRIER_LABELS[carrier] ?? carrier}</span>
+                  <span className="hidden sm:inline"> · </span>
+                  <span className="block sm:inline">{displayTrackingNumber}</span>
+                  {trackUrl && <span className={`hidden sm:inline ml-1 ${isDark ? "text-white/30" : "text-muted-foreground/40"}`}>↗</span>}
+                </p>
+              );
+              return trackUrl ? (
+                <a href={trackUrl} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity block">{inner}</a>
+              ) : inner;
+            })()}
           </div>
           {isDelivered && (
             <div

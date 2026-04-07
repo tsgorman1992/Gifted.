@@ -69,19 +69,31 @@ async function assertGiftIsDeletable(giftId: string): Promise<void> {
 
 async function fetchAfterShipTrackingForGift(aftershipId: string) {
   const apiKey = process.env.AFTERSHIP_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.warn("[AfterShip gift] AFTERSHIP_API_KEY not set — skipping fetch");
+    return null;
+  }
   try {
-    const response = await fetch(`https://api.aftership.com/tracking/2024-07/trackings/${aftershipId}`, {
-      headers: { "as-api-key": apiKey },
-    });
-    if (!response.ok) return null;
-    const json = await response.json() as Record<string, unknown>;
-    // ID-based endpoint returns { data: { id, tag, checkpoints, ... } }
-    const tracking = (json?.data as Record<string, unknown> | undefined)?.tracking as Record<string, unknown> | undefined
-      ?? json?.data as Record<string, unknown> | undefined;
-    if (!tracking) return null;
+    const url = `https://api.aftership.com/tracking/2024-07/trackings/${aftershipId}`;
+    const response = await fetch(url, { headers: { "as-api-key": apiKey } });
+    const json = await response.json().catch(() => null) as Record<string, unknown> | null;
+    if (!response.ok) {
+      console.warn(`[AfterShip gift] HTTP ${response.status} for ${aftershipId}:`, JSON.stringify(json));
+      return null;
+    }
+    // 2024-07 ID-based: { data: { id, tag, checkpoints, ... } }
+    // Older slug/number: { data: { tracking: { id, tag, checkpoints, ... } } }
+    const data = json?.data as Record<string, unknown> | undefined;
+    const tracking = (data?.tracking as Record<string, unknown> | undefined) ?? data;
+    if (!tracking) {
+      console.warn(`[AfterShip gift] No tracking object in response for ${aftershipId}:`, JSON.stringify(json));
+      return null;
+    }
+    const tag = (tracking.tag as string | undefined) ?? "";
     const checkpoints = (tracking.checkpoints as Array<Record<string, unknown>> | undefined) ?? [];
-    const events = checkpoints
+    console.log(`[AfterShip gift] ${aftershipId}: tag=${tag}, checkpoints=${checkpoints.length}`);
+
+    let events = checkpoints
       .map((c) => ({
         status:    (c.tag as string)              ?? "Unknown",
         message:   (c.subtag_message as string)   || (c.message as string) || "",
@@ -89,13 +101,19 @@ async function fetchAfterShipTrackingForGift(aftershipId: string) {
         timestamp: (c.checkpoint_time as string)  ?? new Date().toISOString(),
       }))
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    const isDelivered = (tracking.tag as string) === "Delivered";
+
+    // AfterShip sometimes has a tag but no checkpoint events yet — synthesize one so the UI shows something
+    if (events.length === 0 && tag && tag !== "Pending") {
+      events = [{ status: tag, message: "", location: undefined, timestamp: new Date().toISOString() }];
+    }
+
+    const isDelivered = tag === "Delivered";
     const deliveredAt = isDelivered
       ? (checkpoints.find(c => c.tag === "Delivered")?.checkpoint_time as string | undefined)
       : null;
     return { events, deliveredAt: deliveredAt ? new Date(deliveredAt) : null };
   } catch (err) {
-    console.error("[AfterShip] fetchAfterShipTrackingForGift error:", err);
+    console.error("[AfterShip gift] fetchAfterShipTrackingForGift error:", err);
     return null;
   }
 }
