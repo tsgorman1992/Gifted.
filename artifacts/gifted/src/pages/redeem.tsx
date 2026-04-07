@@ -216,8 +216,8 @@ export default function RedeemPage() {
     setIsProcessing(true);
     try {
       if (giftId) {
-        await fetch(`${BASE}/api/gifted/gifts/${encodeURIComponent(giftId)}/associate`, {
-          method: "POST",
+        await fetch(`${BASE}/api/gifted/gifts/${encodeURIComponent(giftId)}/save-received`, {
+          method: "PATCH",
           credentials: "include",
         }).catch(() => {});
 
