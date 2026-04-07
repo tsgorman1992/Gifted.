@@ -579,9 +579,13 @@ export default function PreviewPage() {
       });
       if (!res.ok) throw new Error("failed");
       setSelfSendStatus("sent");
+      setLinkShared(true);
+      localStorage.setItem("gifted_link_shared", "1");
     } catch {
       try { await navigator.clipboard.writeText(saved.url); } catch { /* ignore */ }
       setSelfSendStatus("sent");
+      setLinkShared(true);
+      localStorage.setItem("gifted_link_shared", "1");
     }
   };
 
@@ -1045,9 +1049,16 @@ export default function PreviewPage() {
                     </Button>
                   </div>
                   {selfSendStatus === "sent" && (
-                    <p className="text-xs text-green-600">
-                      Check your phone — copy the link and forward it to {recipientName}.
-                    </p>
+                    <div className="rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3.5 py-3 space-y-2">
+                      <p className="text-xs font-semibold text-green-800 dark:text-green-300 flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5" /> Link sent to your phone!
+                      </p>
+                      <ol className="text-xs text-green-700/80 dark:text-green-400/80 space-y-1 list-none">
+                        <li className="flex items-start gap-2"><span className="font-semibold shrink-0">1.</span> Open the text from gifted. and copy the link.</li>
+                        <li className="flex items-start gap-2"><span className="font-semibold shrink-0">2.</span> Paste it into iMessage, WhatsApp — however you normally text {recipientName}.</li>
+                        <li className="flex items-start gap-2"><span className="font-semibold shrink-0">3.</span> When it comes from your number, they'll actually open it.</li>
+                      </ol>
+                    </div>
                   )}
                   {selfSendStatus === "idle" && (
                     <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
@@ -1441,7 +1452,7 @@ export default function PreviewPage() {
 
             {/* ── Post-send confirmation + notification opt-in ── */}
             <AnimatePresence>
-              {(!hasBalance || isPaid) && (
+              {(isPaid || linkShared) && (
                 <motion.div
                   key="confirmation"
                   initial={{ opacity: 0, y: 12 }}
@@ -1555,70 +1566,22 @@ export default function PreviewPage() {
                       )}
                     </div>
                   ) : (
-                    /* ── Unauthenticated tracking nudge (all ready gifts) ── */
-                    <div className="space-y-3 pt-2 border-t border-green-200 dark:border-green-800">
-                      {googleEnabled && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (giftId) localStorage.setItem("gifted_auth_return", `/preview`);
-                            window.location.href = `${base}/api/auth/google`;
-                          }}
-                          className="w-full h-10 flex items-center justify-center gap-2.5 rounded-xl border border-green-300 bg-white hover:bg-green-50 dark:border-green-700 dark:bg-green-950/30 dark:hover:bg-green-900/40 transition-colors text-sm font-medium text-green-900 dark:text-green-300"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
-                          Sign in with Google
-                        </button>
-                      )}
+                    /* ── Unauthenticated tracking nudge — compact, no duplicate form ── */
+                    <div className="pt-2 border-t border-green-200 dark:border-green-800 flex items-center justify-between gap-3">
+                      <p className="text-xs text-green-700/70 dark:text-green-400/70">
+                        Sign in to get notified when {recipientName} opens it.
+                      </p>
                       <button
                         type="button"
-                        onClick={() => { if (!nudgeFormOpen) setNudgeMode("sign-in"); setNudgeFormOpen(v => !v); }}
-                        className="w-full text-center text-xs text-green-700/70 dark:text-green-400/70 hover:text-green-800 dark:hover:text-green-300 transition-colors underline underline-offset-2"
+                        onClick={() => {
+                          if (giftId) localStorage.setItem("gifted_auth_return", `/preview?gift_id=${giftId}`);
+                          window.location.href = `${base}/api/auth/google`;
+                        }}
+                        className="shrink-0 h-8 px-3 flex items-center gap-1.5 rounded-xl border border-green-300 dark:border-green-700 bg-white dark:bg-green-950/30 hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors text-xs font-medium text-green-900 dark:text-green-300"
                       >
-                        {nudgeFormOpen ? "Collapse" : (googleEnabled ? "Or sign in with email" : "Sign in with email")}
+                        <svg width="13" height="13" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
+                        Sign in
                       </button>
-                      <AnimatePresence>
-                        {nudgeFormOpen && (
-                          <motion.form
-                            key="paid-nudge-form"
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.22 }}
-                            onSubmit={handleNudgeSubmit}
-                            className="overflow-hidden space-y-3"
-                          >
-                            {nudgeMode === "sign-up" && (
-                              <div className="grid grid-cols-2 gap-2">
-                                <input type="text" value={nudgeFirstName} onChange={e => setNudgeFirstName(e.target.value)} placeholder="First name"
-                                  className="h-10 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 transition" />
-                                <input type="text" value={nudgeLastName} onChange={e => setNudgeLastName(e.target.value)} placeholder="Last name"
-                                  className="h-10 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 transition" />
-                              </div>
-                            )}
-                            <input type="email" value={nudgeEmail} onChange={e => { setNudgeEmail(e.target.value); setNudgeError(null); }}
-                              placeholder="Email address" required autoComplete="email"
-                              className="w-full h-10 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 transition" />
-                            <input type="password" value={nudgePassword} onChange={e => setNudgePassword(e.target.value)}
-                              placeholder={nudgeMode === "sign-up" ? "Create a password (min. 8 chars)" : "Password"} required
-                              autoComplete={nudgeMode === "sign-in" ? "current-password" : "new-password"}
-                              className="w-full h-10 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30 transition" />
-                            {nudgeError && <p className="text-xs text-destructive">{nudgeError}</p>}
-                            <Button type="submit" size="sm" disabled={nudgeSubmitting} className="w-full h-10 rounded-xl text-sm bg-green-700 hover:bg-green-800 border-0">
-                              {nudgeSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : nudgeMode === "sign-in" ? "Sign in" : "Create account"}
-                            </Button>
-                            <p className="text-center text-xs text-green-700/70 dark:text-green-400/70">
-                              {nudgeMode === "sign-in" ? "New to gifted.? " : "Already have one? "}
-                              <button type="button"
-                                onClick={() => { setNudgeMode(m => m === "sign-in" ? "sign-up" : "sign-in"); setNudgeError(null); }}
-                                className="text-green-800 dark:text-green-300 font-semibold hover:underline"
-                              >
-                                {nudgeMode === "sign-in" ? "Sign up free" : "Sign in"}
-                              </button>
-                            </p>
-                          </motion.form>
-                        )}
-                      </AnimatePresence>
                     </div>
                   )}
                 </motion.div>
