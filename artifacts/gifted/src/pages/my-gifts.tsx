@@ -621,6 +621,20 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
                   : `Received ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
             </span>
             <div className="flex items-center gap-1 shrink-0">
+              {hasUnclaimedBalance && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    localStorage.setItem("gifted_gift_id", gift.id);
+                    if (gift.amount) localStorage.setItem("gifted_amount", gift.amount);
+                    if (gift.senderName) localStorage.setItem("gifted_sender_name", gift.senderName);
+                    setLocation("/redeem");
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:opacity-90 transition-all"
+                >
+                  Collect ${parseFloat(gift.amount!).toFixed(0)}
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); setLocation(`/open/${gift.id}`); }}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
