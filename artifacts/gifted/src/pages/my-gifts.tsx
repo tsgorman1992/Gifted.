@@ -1556,6 +1556,21 @@ function LinkedGiftTracking({ gift, idx }: { gift: ReceivedGiftSummary; idx: num
   const queryClient = useQueryClient();
   const [confirmDismiss, setConfirmDismiss] = useState(false);
   const [dismissing, setDismissing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefresh(e: React.MouseEvent) {
+    e.stopPropagation();
+    setRefreshing(true);
+    try {
+      await fetch(`${BASE}/api/gifted/gifts/${gift.id}/refresh-tracking`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      await queryClient.invalidateQueries({ queryKey: ["received-gifts"] });
+    } catch { /* silent */ } finally {
+      setRefreshing(false);
+    }
+  }
 
   const latestEvent = gift.trackingStatus && gift.trackingStatus.length > 0
     ? gift.trackingStatus[gift.trackingStatus.length - 1]
@@ -1649,6 +1664,16 @@ function LinkedGiftTracking({ gift, idx }: { gift: ReceivedGiftSummary; idx: num
             >
               View gift →
             </button>
+            {!isDelivered && (
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                title="Refresh tracking"
+                className="p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all disabled:opacity-40"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              </button>
+            )}
             {isDelivered && (
               <button
                 onClick={(e) => { e.stopPropagation(); setConfirmDismiss(true); }}

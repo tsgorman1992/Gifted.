@@ -67,6 +67,39 @@ async function assertGiftIsDeletable(giftId: string): Promise<void> {
   }
 }
 
+async function fetchAfterShipTrackingForGift(aftershipId: string) {
+  const apiKey = process.env.AFTERSHIP_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const response = await fetch(`https://api.aftership.com/tracking/2024-07/trackings/${aftershipId}`, {
+      headers: { "as-api-key": apiKey },
+    });
+    if (!response.ok) return null;
+    const json = await response.json() as Record<string, unknown>;
+    // ID-based endpoint returns { data: { id, tag, checkpoints, ... } }
+    const tracking = (json?.data as Record<string, unknown> | undefined)?.tracking as Record<string, unknown> | undefined
+      ?? json?.data as Record<string, unknown> | undefined;
+    if (!tracking) return null;
+    const checkpoints = (tracking.checkpoints as Array<Record<string, unknown>> | undefined) ?? [];
+    const events = checkpoints
+      .map((c) => ({
+        status:    (c.tag as string)              ?? "Unknown",
+        message:   (c.subtag_message as string)   || (c.message as string) || "",
+        location:  (c.city as string)             ?? (c.country_name as string) ?? undefined,
+        timestamp: (c.checkpoint_time as string)  ?? new Date().toISOString(),
+      }))
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const isDelivered = (tracking.tag as string) === "Delivered";
+    const deliveredAt = isDelivered
+      ? (checkpoints.find(c => c.tag === "Delivered")?.checkpoint_time as string | undefined)
+      : null;
+    return { events, deliveredAt: deliveredAt ? new Date(deliveredAt) : null };
+  } catch (err) {
+    console.error("[AfterShip] fetchAfterShipTrackingForGift error:", err);
+    return null;
+  }
+}
+
 async function registerAfterShipTracking(carrier: string, trackingNumber: string, giftId: string): Promise<string | null> {
   const apiKey = process.env.AFTERSHIP_API_KEY;
   if (!apiKey) return null;
@@ -911,6 +944,71 @@ router.get("/gifted/gifts/:id/tracking", async (req, res) => {
   } catch (err) {
     console.error("Error fetching tracking:", err);
     res.status(500).json({ error: "Failed to fetch tracking" });
+  }
+});
+
+// PATCH /api/gifted/gifts/:id/refresh-tracking — live AfterShip fetch for recipient/sender
+router.patch("/gifted/gifts/:id/refresh-tracking", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [gift] = await db
+      .select({
+        trackingCarrier:    gifts.trackingCarrier,
+        trackingNumber:     gifts.trackingNumber,
+        aftershipTrackingId: gifts.aftershipTrackingId,
+        trackingDeliveredAt: gifts.trackingDeliveredAt,
+      })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    if (!gift.trackingCarrier || !gift.trackingNumber) {
+      res.json({ hasTracking: false });
+      return;
+    }
+
+    // Ensure the gift is registered with AfterShip
+    let aftershipId = gift.aftershipTrackingId;
+    if (!aftershipId) {
+      aftershipId = await registerAfterShipTracking(gift.trackingCarrier, gift.trackingNumber, id);
+      if (aftershipId) {
+        await db.update(gifts).set({ aftershipTrackingId: aftershipId }).where(eq(gifts.id, id));
+      }
+    }
+
+    if (!aftershipId) {
+      res.json({ hasTracking: true, carrier: gift.trackingCarrier, trackingNumber: gift.trackingNumber, events: [], deliveredAt: null });
+      return;
+    }
+
+    const fresh = await fetchAfterShipTrackingForGift(aftershipId);
+    if (!fresh) {
+      res.json({ hasTracking: true, carrier: gift.trackingCarrier, trackingNumber: gift.trackingNumber, events: [], deliveredAt: null });
+      return;
+    }
+
+    await db.update(gifts)
+      .set({
+        trackingStatus: fresh.events.length > 0 ? fresh.events : undefined,
+        ...(fresh.deliveredAt && !gift.trackingDeliveredAt ? { trackingDeliveredAt: fresh.deliveredAt } : {}),
+      })
+      .where(eq(gifts.id, id));
+
+    res.json({
+      hasTracking: true,
+      carrier: gift.trackingCarrier,
+      trackingNumber: gift.trackingNumber,
+      events: fresh.events,
+      deliveredAt: fresh.deliveredAt ?? gift.trackingDeliveredAt,
+    });
+  } catch (err) {
+    console.error("Error refreshing tracking:", err);
+    res.status(500).json({ error: "Failed to refresh tracking" });
   }
 });
 
