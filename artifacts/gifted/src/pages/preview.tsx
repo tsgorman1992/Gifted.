@@ -118,9 +118,6 @@ export default function PreviewPage() {
   const [giftId,    setGiftId]    = useState<string | null>(null);
   const [shareUrl,  setShareUrl]  = useState<string | null>(null);
 
-  const [desktopContact,    setDesktopContact]    = useState("");
-  const [desktopSendStatus, setDesktopSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [desktopSendError,  setDesktopSendError]  = useState<string | null>(null);
   const [selfPhone,         setSelfPhone]         = useState("");
   const [selfSendStatus,    setSelfSendStatus]    = useState<"idle" | "sending" | "sent">("idle");
   const [linkShared,        setLinkShared]        = useState(false);
@@ -561,50 +558,6 @@ export default function PreviewPage() {
     window.location.href = `sms:?body=${encodeURIComponent(body)}`;
     setLinkShared(true);
     localStorage.setItem("gifted_link_shared", "1");
-  };
-
-  const handleDesktopSend = async () => {
-    const contact = desktopContact.trim();
-    if (!contact) return;
-    setDesktopSendError(null);
-
-    const isEmail = contact.includes("@");
-    const saved = await saveGift();
-    if (!saved) return;
-
-    if (isEmail) {
-      try { await navigator.clipboard.writeText(saved.url); } catch { /* ignore */ }
-      setDesktopSendStatus("sent");
-      setLinkShared(true);
-      localStorage.setItem("gifted_link_shared", "1");
-    } else {
-      setDesktopSendStatus("sending");
-      try {
-        const res = await fetch(`${base}/api/gifted/send-link`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            phone: contact,
-            giftUrl: saved.url,
-            recipientName,
-            senderName,
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as { error?: string }).error || "Failed to send");
-        }
-        setDesktopSendStatus("sent");
-        setLinkShared(true);
-        localStorage.setItem("gifted_link_shared", "1");
-      } catch {
-        try { await navigator.clipboard.writeText(saved.url); } catch { /* ignore */ }
-        setDesktopSendStatus("sent");
-        setDesktopSendError("sms-fallback");
-        setLinkShared(true);
-        localStorage.setItem("gifted_link_shared", "1");
-      }
-    }
   };
 
   const handleSelfSend = async () => {
@@ -1103,58 +1056,6 @@ export default function PreviewPage() {
                   )}
                 </div>
 
-                {/* Divider */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-[11px] text-muted-foreground/60 font-medium">or send via gifted.</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                {/* Tertiary: platform SMS — clearly labeled as coming from gifted.'s number */}
-                <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-2.5">
-                  <p className="text-xs text-muted-foreground">
-                    We'll text it — arrives from gifted.'s number, not yours
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="tel"
-                      value={desktopContact}
-                      onChange={(e) => {
-                        setDesktopContact(formatPhone(e.target.value));
-                        setDesktopSendStatus("idle");
-                        setDesktopSendError(null);
-                      }}
-                      placeholder="(555) 000-0000"
-                      className="flex-1 h-10 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                      onKeyDown={(e) => { if (e.key === "Enter") handleDesktopSend(); }}
-                      disabled={desktopSendStatus === "sending" || desktopSendStatus === "sent"}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={handleDesktopSend}
-                      disabled={!desktopContact.trim() || desktopSendStatus === "sending" || desktopSendStatus === "sent" || saving}
-                      className="h-10 px-4 rounded-xl text-sm font-medium shrink-0"
-                    >
-                      {desktopSendStatus === "sending"
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : desktopSendStatus === "sent"
-                          ? <><Check className="w-4 h-4 mr-1" /> Sent</>
-                          : <><Send className="w-4 h-4 mr-1.5" /> Send text</>}
-                    </Button>
-                  </div>
-                  {desktopSendStatus === "sent" ? (
-                    <p className="text-xs text-green-600 flex items-center gap-1.5">
-                      <Check className="w-3.5 h-3.5" />
-                      {desktopSendError === "sms-fallback"
-                        ? `Link copied — paste it in a message to ${recipientName}`
-                        : `Text sent to ${desktopContact}`}
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                      By tapping "Send text" I confirm {recipientName} has agreed to receive a one-time text from gifted. Reply STOP to unsubscribe, HELP for help. Msg&data rates may apply.
-                    </p>
-                  )}
-                </div>
 
                 {/* QR code — links to preview page so sender can share from their phone */}
                 {giftId && (

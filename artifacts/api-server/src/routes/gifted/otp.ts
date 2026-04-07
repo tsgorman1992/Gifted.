@@ -12,8 +12,10 @@ function getTwilioClient() {
   return twilio(sid, token);
 }
 
-function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+function getVerifyServiceSid(): string {
+  const sid = process.env.TWILIO_VERIFY_SERVICE_SID;
+  if (!sid) throw new Error("TWILIO_VERIFY_SERVICE_SID not configured");
+  return sid;
 }
 
 function normalizePhone(phone: string): string {
@@ -26,7 +28,8 @@ function normalizePhone(phone: string): string {
 
 /**
  * POST /api/gifted/send-otp
- * Generates a 6-digit OTP and sends it via SMS to the recipient's phone on file.
+ * Sends a verification code via Twilio Verify to the recipient's phone on file.
+ * The code is managed entirely by Twilio — nothing is stored in our database.
  */
 router.post("/gifted/send-otp", async (req, res) => {
   try {
@@ -36,7 +39,17 @@ router.post("/gifted/send-otp", async (req, res) => {
       return;
     }
 
-    const [gift] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
+    const [gift] = await db
+      .select({
+        id: gifts.id,
+        recipientPhone: gifts.recipientPhone,
+        redemptionVerified: gifts.redemptionVerified,
+        redeemedAt: gifts.redeemedAt,
+      })
+      .from(gifts)
+      .where(eq(gifts.id, giftId))
+      .limit(1);
+
     if (!gift) {
       res.status(404).json({ error: "Gift not found" });
       return;
@@ -57,35 +70,27 @@ router.post("/gifted/send-otp", async (req, res) => {
       return;
     }
 
-    const otp = generateOtp();
-    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    await db.update(gifts).set({
-      redemptionOtp: otp,
-      redemptionOtpExpiry: expiry,
-    }).where(eq(gifts.id, giftId));
-
     const client = getTwilioClient();
-    const rawFrom = process.env.TWILIO_PHONE_NUMBER;
-    if (!rawFrom) throw new Error("TWILIO_PHONE_NUMBER not configured");
-    const fromNumber = normalizePhone(rawFrom);
-    const toNumber   = normalizePhone(gift.recipientPhone);
+    const serviceSid = getVerifyServiceSid();
+    const to = normalizePhone(gift.recipientPhone);
 
-    console.log(`[OTP] Sending from=${fromNumber} to=${toNumber}`);
+    console.log(`[OTP/Verify] Sending verification to ${to} for gift ${giftId}`);
 
-    const msg = await client.messages.create({
-      body: `Your gifted. verification code is ${otp}. Expires in 10 min. Do not share it with anyone. Reply STOP to opt out, HELP for help. Msg & data rates may apply.`,
-      from: fromNumber,
-      to: toNumber,
-    });
+    const verification = await client.verify.v2
+      .services(serviceSid)
+      .verifications.create({ to, channel: "sms" });
 
-    console.log(`[OTP] Twilio SID=${msg.sid} status=${msg.status} errorCode=${msg.errorCode}`);
+    console.log(`[OTP/Verify] status=${verification.status} sid=${verification.sid}`);
 
     res.json({ success: true, message: "Verification code sent" });
   } catch (err: any) {
-    console.error("send-otp error:", err);
+    console.error("[OTP/Verify] send-otp error:", err);
     if (err.message?.includes("not configured")) {
       res.status(503).json({ error: "SMS service not configured" });
+    } else if (err.code === 60200) {
+      res.status(400).json({ error: "Invalid phone number format" });
+    } else if (err.code === 60203) {
+      res.status(429).json({ error: "Max verification attempts reached. Please wait before trying again." });
     } else {
       res.status(500).json({ error: "Failed to send verification code" });
     }
@@ -94,7 +99,7 @@ router.post("/gifted/send-otp", async (req, res) => {
 
 /**
  * POST /api/gifted/verify-otp
- * Verifies the OTP and marks the gift as redemption-verified.
+ * Verifies the code via Twilio Verify and marks the gift as redemption-verified.
  */
 router.post("/gifted/verify-otp", async (req, res) => {
   try {
@@ -104,7 +109,16 @@ router.post("/gifted/verify-otp", async (req, res) => {
       return;
     }
 
-    const [gift] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
+    const [gift] = await db
+      .select({
+        id: gifts.id,
+        recipientPhone: gifts.recipientPhone,
+        redemptionVerified: gifts.redemptionVerified,
+      })
+      .from(gifts)
+      .where(eq(gifts.id, giftId))
+      .limit(1);
+
     if (!gift) {
       res.status(404).json({ error: "Gift not found" });
       return;
@@ -115,31 +129,41 @@ router.post("/gifted/verify-otp", async (req, res) => {
       return;
     }
 
-    if (!gift.redemptionOtp || !gift.redemptionOtpExpiry) {
-      res.status(400).json({ error: "No verification code was sent. Please request a new code." });
+    if (!gift.recipientPhone) {
+      res.status(400).json({ error: "No phone number on file for this gift" });
       return;
     }
 
-    if (new Date() > gift.redemptionOtpExpiry) {
-      res.status(400).json({ error: "Verification code has expired. Please request a new one." });
-      return;
-    }
+    const client = getTwilioClient();
+    const serviceSid = getVerifyServiceSid();
+    const to = normalizePhone(gift.recipientPhone);
 
-    if (gift.redemptionOtp !== code.trim()) {
+    console.log(`[OTP/Verify] Checking code for ${to}, gift ${giftId}`);
+
+    const check = await client.verify.v2
+      .services(serviceSid)
+      .verificationChecks.create({ to, code: code.trim() });
+
+    console.log(`[OTP/Verify] check status=${check.status}`);
+
+    if (check.status !== "approved") {
       res.status(400).json({ error: "Incorrect code. Please try again." });
       return;
     }
 
-    await db.update(gifts).set({
-      redemptionVerified: true,
-      redemptionOtp: null,
-      redemptionOtpExpiry: null,
-    }).where(eq(gifts.id, giftId));
+    await db
+      .update(gifts)
+      .set({ redemptionVerified: true })
+      .where(eq(gifts.id, giftId));
 
     res.json({ success: true });
-  } catch (err) {
-    console.error("verify-otp error:", err);
-    res.status(500).json({ error: "Failed to verify code" });
+  } catch (err: any) {
+    console.error("[OTP/Verify] verify-otp error:", err);
+    if (err.code === 20404) {
+      res.status(400).json({ error: "No verification code was sent. Please request a new code." });
+    } else {
+      res.status(500).json({ error: "Failed to verify code" });
+    }
   }
 });
 

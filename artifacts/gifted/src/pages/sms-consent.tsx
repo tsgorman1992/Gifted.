@@ -1,4 +1,4 @@
-import { ShieldCheck, MessageSquare } from "lucide-react";
+import { ShieldCheck, MessageSquare, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
@@ -10,42 +10,51 @@ export default function SmsConsentPage() {
         {/* Header */}
         <div className="text-center space-y-3">
           <Link href="/" className="text-2xl font-serif font-medium tracking-tight">gifted.</Link>
-          <h1 className="text-3xl font-serif font-medium mt-4">SMS Opt-In Consent</h1>
+          <h1 className="text-3xl font-serif font-medium mt-4">SMS Messaging Policy</h1>
           <p className="text-muted-foreground">
-            gifted. (gifted.page) sends one type of SMS: a one-time identity verification code
-            that recipients explicitly request when claiming a gift balance. No marketing. No recurring messages.
+            gifted. (gifted.page) sends two types of SMS messages — one to gift senders so they can share their
+            gift link, and one to recipients for identity verification when claiming a cash balance.
+            No marketing. No subscriptions. No recurring messages.
           </p>
         </div>
 
-        {/* How it works */}
+        {/* Use Case 1 — Sender */}
         <section className="space-y-3">
-          <h2 className="text-base font-semibold">How opt-in works</h2>
-          <ol className="space-y-3 text-sm text-muted-foreground">
-            <li className="flex gap-3">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">1</span>
-              <p>A sender creates a gift and enters the recipient's phone number. No SMS is sent at this step.</p>
-            </li>
-            <li className="flex gap-3">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">2</span>
-              <p>The sender shares a private gift link with the recipient.</p>
-            </li>
-            <li className="flex gap-3">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">3</span>
-              <p>The recipient opens the link. If a cash balance is attached, they see the screen below. They must <strong>actively tap "Send verification code"</strong> — reading the full consent notice first. The SMS is never sent automatically or proactively.</p>
-            </li>
-            <li className="flex gap-3">
-              <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">4</span>
-              <p>After entering the correct 6-digit code, the recipient claims the balance.</p>
-            </li>
-          </ol>
+          <div className="flex items-center gap-2">
+            <Send className="w-5 h-5 text-primary" />
+            <h2 className="text-base font-semibold">Use Case 1 — Gift Link to Sender</h2>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            After a sender creates a gift on desktop, they can optionally request a text with their own gift link so
+            they can forward it to the recipient from their personal number. This is always a self-send — the SMS
+            goes to the sender's own phone. The sender enters their number and taps <strong>"Send to me"</strong>,
+            reading the full consent notice before submission.
+          </p>
+          <div className="bg-muted/50 rounded-2xl p-4 space-y-1">
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Sample message</p>
+            <p className="text-sm text-muted-foreground font-mono">
+              gifted.: Your gift link for Alex is ready.{"\n\n"}Copy this link and paste it into iMessage or WhatsApp — when it comes from your number, they'll open it:{"\n"}https://gifted.page/open/abc123{"\n\n"}Reply STOP to unsubscribe, HELP for help. Msg&data rates may apply.
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
+            <p className="text-sm text-foreground leading-relaxed">
+              <strong>Consent language shown before send:</strong> "By tapping 'Send to me' I agree to receive a one-time text at this number from gifted. Reply STOP to unsubscribe, HELP for help. Msg&data rates may apply."
+            </p>
+          </div>
         </section>
 
-        {/* Exact opt-in UI */}
+        {/* Use Case 2 — Recipient Verification */}
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-primary" />
-            <h2 className="text-base font-semibold">The exact opt-in screen recipients see</h2>
+            <h2 className="text-base font-semibold">Use Case 2 — Recipient Identity Verification (2FA)</h2>
           </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            When a recipient opens a gift with a cash balance, they must verify their identity before claiming.
+            They tap <strong>"Send verification code"</strong> — reading the full consent notice first.
+            The code is delivered via Twilio Verify. The SMS is <em>never</em> sent automatically or proactively;
+            it only fires on the recipient's explicit tap.
+          </p>
 
           <div className="bg-card border border-border rounded-[2rem] p-8 space-y-6 shadow-sm">
             <div className="text-center space-y-4">
@@ -79,11 +88,10 @@ export default function SmsConsentPage() {
             </div>
           </div>
 
-          {/* Sample message */}
           <div className="bg-muted/50 rounded-2xl p-4 space-y-1">
-            <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Sample message sent after tap</p>
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Sample verification message</p>
             <p className="text-sm text-muted-foreground font-mono">
-              Your gifted. verification code is 847291. Expires in 10 min. Do not share it with anyone. Reply STOP to opt out, HELP for help. Msg &amp; data rates may apply.
+              Your gifted. verification code is 847291. This code expires in 10 minutes. Do not share it with anyone.
             </p>
           </div>
         </section>

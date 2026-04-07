@@ -111,13 +111,16 @@ export default function TermsPage() {
 
           <Section title="9. SMS Messaging">
             <p>
-              gifted. may send you transactional text messages (SMS) when you provide your mobile phone number on our platform — for example, to deliver a gift link to your own phone so you can forward it.
+              gifted. sends two types of transactional SMS messages. We do not send marketing or promotional SMS messages.
             </p>
             <p>
-              By entering your phone number and tapping "Send to me" or "Send text," you consent to receive a one-time SMS from gifted. at the number provided. Your consent is not a condition of purchase.
+              <strong>Gift link delivery (senders):</strong> After creating a gift on desktop, a sender may enter their own mobile number to receive a one-time text containing their gift link so they can forward it to the recipient. By entering your number and tapping "Send to me," you consent to receive this single SMS. Your consent is not a condition of purchase.
             </p>
             <p>
-              <strong>Message frequency:</strong> Up to 2 messages per gift. <strong>Msg&amp;data rates may apply.</strong>
+              <strong>Identity verification (recipients):</strong> When a recipient opens a gift with a cash balance, they may tap "Send verification code" to receive a one-time 6-digit code for identity verification. This message is sent only on the recipient's explicit request and is powered by Twilio Verify. By tapping the button, the recipient consents to receive this single verification SMS.
+            </p>
+            <p>
+              <strong>Message frequency:</strong> 1 message per use case, per gift. <strong>Msg&amp;data rates may apply.</strong>
             </p>
             <p>
               To opt out, reply <strong>STOP</strong> to any message from gifted. For help, reply <strong>HELP</strong> or contact{" "}
@@ -125,7 +128,9 @@ export default function TermsPage() {
             </p>
             <p>
               gifted. does not sell or share your phone number with third parties for marketing purposes. See our{" "}
-              <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a> for details.
+              <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>{" "}
+              and our{" "}
+              <a href="/sms-consent" className="text-primary hover:underline">SMS Messaging Policy</a> for full details.
             </p>
           </Section>
 
