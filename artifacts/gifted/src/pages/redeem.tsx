@@ -397,7 +397,15 @@ export default function RedeemPage() {
                 </div>
 
                 {otpError && (
-                  <p className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3">{otpError}</p>
+                  <div className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3 space-y-1.5">
+                    <p>{otpError}</p>
+                    <p className="text-xs text-destructive/80">
+                      Need help?{" "}
+                      <a href="mailto:help@gifted.page" className="underline font-medium hover:opacity-80">
+                        Email us at help@gifted.page →
+                      </a>
+                    </p>
+                  </div>
                 )}
 
                 <Button
@@ -409,6 +417,13 @@ export default function RedeemPage() {
                     ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Sending…</>
                     : "Send verification code"}
                 </Button>
+
+                <p className="text-center text-xs text-muted-foreground">
+                  Having trouble?{" "}
+                  <a href="mailto:help@gifted.page" className="underline hover:text-foreground transition-colors">
+                    Contact support
+                  </a>
+                </p>
 
                 <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-center">
                   <p className="text-sm text-foreground leading-relaxed">
@@ -456,7 +471,15 @@ export default function RedeemPage() {
                 </div>
 
                 {otpError && (
-                  <p className="text-sm text-destructive text-center bg-destructive/10 rounded-xl px-4 py-3">{otpError}</p>
+                  <div className="text-sm text-destructive text-center bg-destructive/10 rounded-xl px-4 py-3 space-y-1.5">
+                    <p>{otpError}</p>
+                    <p className="text-xs text-destructive/80">
+                      Need help?{" "}
+                      <a href="mailto:help@gifted.page" className="underline font-medium hover:opacity-80">
+                        Email us at help@gifted.page →
+                      </a>
+                    </p>
+                  </div>
                 )}
 
                 <Button
@@ -469,7 +492,7 @@ export default function RedeemPage() {
                     : "Verify code"}
                 </Button>
 
-                <div className="text-center">
+                <div className="flex items-center justify-between">
                   <button
                     type="button"
                     onClick={handleSendOtp}
@@ -479,6 +502,12 @@ export default function RedeemPage() {
                     <RefreshCw className="w-3.5 h-3.5" />
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
                   </button>
+                  <a
+                    href="mailto:help@gifted.page"
+                    className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+                  >
+                    Need help?
+                  </a>
                 </div>
               </div>
             </motion.div>
