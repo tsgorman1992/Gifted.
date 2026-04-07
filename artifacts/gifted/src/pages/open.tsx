@@ -454,11 +454,11 @@ export default function OpenPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm leading-tight">Save this moment</p>
-              <p className="text-xs text-muted-foreground">Sign in to keep it in your account</p>
+              <p className="text-xs text-muted-foreground">Create a free account — or sign in — to keep it forever.</p>
             </div>
             <Button size="sm" className="rounded-full gap-1.5 shrink-0" onClick={handleSaveToAccount}>
               <LogIn className="w-3.5 h-3.5" />
-              Sign in
+              Save it
             </Button>
             <button
               onClick={() => setSavePromptDismissed(true)}
