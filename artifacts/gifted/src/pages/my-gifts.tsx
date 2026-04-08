@@ -1992,7 +1992,9 @@ export default function MyGiftsPage() {
 
   return (
     <div className="min-h-screen w-full pb-28">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-10 md:pt-16">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 md:pt-16">
+        <div className="lg:grid lg:grid-cols-[1fr_288px] lg:gap-10 lg:items-start">
+        <div className="min-w-0">
 
         {/* ── Header ── */}
         <motion.div
@@ -2025,7 +2027,7 @@ export default function MyGiftsPage() {
               </div>
             </div>
           </div>
-          <Button onClick={handleNewGift} className="rounded-full px-5 gap-2 hidden sm:flex shadow-sm hover:-translate-y-0.5 transition-transform">
+          <Button onClick={handleNewGift} className="rounded-full px-5 gap-2 hidden sm:flex lg:hidden shadow-sm hover:-translate-y-0.5 transition-transform">
             <Plus className="w-4 h-4" />
             Build a moment
           </Button>
@@ -2042,10 +2044,12 @@ export default function MyGiftsPage() {
           )}
         </AnimatePresence>
 
-        {/* ── Upcoming occasions banner (sent tab only) ── */}
-        {activeTab === "sent" && upcomingContactsData.length > 0 && (
-          <UpcomingOccasionsBanner contacts={upcomingContactsData} onGift={handleGiftContact} />
-        )}
+        {/* ── Upcoming occasions banner (sent tab only, mobile/tablet) ── */}
+        <div className="lg:hidden">
+          {activeTab === "sent" && upcomingContactsData.length > 0 && (
+            <UpcomingOccasionsBanner contacts={upcomingContactsData} onGift={handleGiftContact} />
+          )}
+        </div>
 
         {/* ── Flat stat strip (Sent tab, has gifts) ── */}
         {activeTab === "sent" && !giftsLoading && totalSent > 0 && (
@@ -2053,7 +2057,7 @@ export default function MyGiftsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05, duration: 0.4 }}
-            className="flex divide-x divide-border/50 border border-border/60 rounded-xl mb-7 bg-card overflow-hidden"
+            className="flex divide-x divide-border/50 border border-border/60 rounded-xl mb-7 bg-card overflow-hidden lg:hidden"
           >
             <div className="flex-1 px-4 py-3.5 min-w-0">
               <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Sent</p>
@@ -2634,7 +2638,112 @@ export default function MyGiftsPage() {
             )}
           </div>
         )}
-      </div>
+      </div>{/* end main column */}
+
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden lg:flex flex-col gap-5 sticky top-8 self-start">
+
+        {/* Build a moment */}
+        <Button onClick={handleNewGift} className="w-full rounded-full gap-2 h-11 shadow-sm">
+          <Plus className="w-4 h-4" />
+          Build a moment
+        </Button>
+
+        {/* Stats */}
+        {totalSent > 0 && (
+          <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-5 pt-4 pb-3">Your gifting</p>
+            <div className="grid grid-cols-2 divide-x divide-y divide-border/50">
+              <div className="px-5 py-3.5">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Sent</p>
+                <p className="font-serif text-2xl font-medium">{totalSent}</p>
+              </div>
+              <div className="px-5 py-3.5">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Total value</p>
+                <p className="font-serif text-2xl font-medium">{totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"}</p>
+              </div>
+              <div className="px-5 py-3.5">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Opened</p>
+                <p className="font-serif text-2xl font-medium">{openedCount}</p>
+              </div>
+              <div className="px-5 py-3.5">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Redeemed</p>
+                <p className="font-serif text-2xl font-medium">{redeemed}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Upcoming occasions */}
+        {upcomingContactsData.some(c => c.occasions.some(o => daysUntilOccasion(o) <= 14)) && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell className="w-3.5 h-3.5 text-amber-600" />
+              <p className="text-xs font-semibold text-amber-900">Upcoming occasions</p>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {upcomingContactsData
+                .flatMap(c => c.occasions.map(o => ({ ...o, contactName: c.name })))
+                .filter(o => daysUntilOccasion(o) <= 14)
+                .sort((a, b) => daysUntilOccasion(a) - daysUntilOccasion(b))
+                .slice(0, 3)
+                .map(o => {
+                  const d = daysUntilOccasion(o);
+                  return (
+                    <div key={o.id} className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-amber-900 truncate">{o.contactName}</p>
+                        <p className="text-[10px] text-amber-700">{o.label} · {d === 0 ? "Today" : d === 1 ? "Tomorrow" : `in ${d} days`}</p>
+                      </div>
+                      <button onClick={() => handleGiftContact(o.contactName)} className="text-[10px] font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2 shrink-0 transition-colors whitespace-nowrap">
+                        Gift them
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* People quick picks */}
+        {contactsData && contactsData.length > 0 && (
+          <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 pt-4 pb-3">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">People</p>
+              <button onClick={() => setActiveTab("people")} className="text-[10px] text-primary font-medium hover:opacity-80 transition-opacity">
+                See all
+              </button>
+            </div>
+            <div className="divide-y divide-border/40">
+              {contactsData.slice(0, 5).map(c => {
+                const initial = c.name[0]?.toUpperCase() ?? "?";
+                const next = c.occasions.length > 0
+                  ? [...c.occasions].map(o => ({ ...o, days: daysUntilOccasion(o) })).sort((a, b) => a.days - b.days)[0]
+                  : null;
+                return (
+                  <div key={c.id} className="flex items-center gap-3 px-5 py-3">
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                      <span className="text-xs font-semibold">{initial}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{c.name}</p>
+                      {next && (
+                        <p className="text-[10px] text-muted-foreground">{next.label} · {next.days === 0 ? "today" : next.days === 1 ? "tomorrow" : `in ${next.days}d`}</p>
+                      )}
+                    </div>
+                    <button onClick={() => handleGiftContact(c.name)} className="text-xs font-medium text-primary hover:opacity-80 transition-opacity shrink-0">
+                      Gift
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      </aside>
+      </div>{/* end lg:grid */}
+      </div>{/* end max-w-6xl */}
 
       {/* ── Mobile FAB ── */}
       <motion.button
