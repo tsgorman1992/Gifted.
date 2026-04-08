@@ -22,7 +22,7 @@ function normalizePhone(phone: string): string {
  * POST /api/gifted/send-link
  * Sends the gift link to a phone number via SMS.
  */
-router.post("/api/gifted/send-link", async (req, res) => {
+router.post("/gifted/send-link", async (req, res) => {
   try {
     const { phone, giftUrl, recipientName, senderName, selfSend } = req.body as {
       phone: string;
