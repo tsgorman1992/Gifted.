@@ -971,6 +971,47 @@ export default function CreatePage() {
     }
   }, []);
 
+  // Auto-save key form fields to localStorage as the user types so that
+  // navigating away mid-build (e.g. opening a new tab to look up a link)
+  // never loses their work. Skips the very first run so we don't overwrite
+  // localStorage with empty state before the mount restore above settles.
+  const autoSaveRestoredRef = useRef(false);
+  const autoSaveTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!autoSaveRestoredRef.current) {
+      autoSaveRestoredRef.current = true;
+      return;
+    }
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      if (recipientName) localStorage.setItem("gifted_recipient_name", recipientName);
+      else localStorage.removeItem("gifted_recipient_name");
+      if (senderName) localStorage.setItem("gifted_sender_name", senderName);
+      else localStorage.removeItem("gifted_sender_name");
+      if (recipientPhone) localStorage.setItem("gifted_recipient_phone", recipientPhone);
+      else localStorage.removeItem("gifted_recipient_phone");
+      if (giftTitle.trim()) localStorage.setItem("gifted_gift_title", giftTitle.trim());
+      else localStorage.removeItem("gifted_gift_title");
+      if (personalNote.trim()) localStorage.setItem("gifted_personal_note", personalNote.trim());
+      else localStorage.removeItem("gifted_personal_note");
+      if (amount && parseFloat(amount) > 0) localStorage.setItem("gifted_amount", amount);
+      else localStorage.removeItem("gifted_amount");
+      if (intent) localStorage.setItem("gifted_intent", intent);
+      else localStorage.removeItem("gifted_intent");
+      localStorage.setItem("gifted_occasion", occasion);
+      localStorage.setItem("gifted_experience", selectedExperience);
+      const nonEmptyLinks = extraLinks.filter(l => l.url.trim());
+      if (nonEmptyLinks.length > 0) {
+        localStorage.setItem("gifted_extra_links", JSON.stringify(
+          nonEmptyLinks.map(l => ({ url: l.url.trim(), label: l.label.trim() }))
+        ));
+      } else {
+        localStorage.removeItem("gifted_extra_links");
+      }
+    }, 500);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  }, [recipientName, senderName, recipientPhone, giftTitle, personalNote, amount, intent, occasion, selectedExperience, extraLinks]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fetch contacts for quick-pick chips when authenticated
   useEffect(() => {
     if (!isAuthenticated) return;

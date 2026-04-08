@@ -386,6 +386,13 @@ export default function PreviewPage() {
   const expMeta = EXPERIENCE_MAP[experience as keyof typeof EXPERIENCE_MAP] ?? EXPERIENCE_MAP[DEFAULT_EXPERIENCE];
   const gStyle  = { background: `linear-gradient(135deg, ${expMeta.palette.from}, ${expMeta.palette.via}, ${expMeta.palette.to})` };
 
+  // Scale the hero name font size so long names never wrap awkwardly
+  const heroNameSize = recipientName.length > 16
+    ? "text-2xl"
+    : recipientName.length > 12
+      ? "text-3xl"
+      : "text-4xl";
+
   const saveGift = useCallback(async (): Promise<{ id: string; url: string } | null> => {
     if (giftId && shareUrl) return { id: giftId, url: shareUrl };
 
@@ -905,7 +912,7 @@ export default function PreviewPage() {
               </div>
               <div>
                 <p className="text-white/65 text-xs font-medium mb-0.5">A gift for</p>
-                <h2 className="font-serif text-4xl text-white leading-none mb-1">{recipientName}</h2>
+                <h2 className={`font-serif ${heroNameSize} text-white leading-none mb-1`}>{recipientName}</h2>
                 <p className="text-white/55 text-sm">from {senderName}</p>
               </div>
             </div>
