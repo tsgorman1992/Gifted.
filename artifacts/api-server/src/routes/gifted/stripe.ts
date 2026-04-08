@@ -38,7 +38,11 @@ async function smsTo(to: string | null | undefined, body: string) {
 }
 
 async function notifyOperator(message: string) {
-  await smsTo(process.env.OPERATOR_PHONE, message);
+  const numbers = [
+    process.env.OPERATOR_PHONE,
+    process.env.OPERATOR_PHONE_2,
+  ].filter(Boolean) as string[];
+  await Promise.all(numbers.map(n => smsTo(n, message)));
 }
 
 const router = Router();
