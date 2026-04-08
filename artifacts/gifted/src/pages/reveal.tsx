@@ -1715,6 +1715,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
           if (gift.personalNote) setPersonalNote(gift.personalNote);
           if (gift.amount && parseFloat(gift.amount) > 0) setGiftAmount(gift.amount);
           if (gift.intent) setGiftIntent(gift.intent);
+          if (typeof gift.paid === "boolean") setGiftPaid(gift.paid);
 
           const rawLinks: Array<string | {url: string; label: string; subtitle?: string}> =
             Array.isArray(gift.extraLinks) ? gift.extraLinks : [];
