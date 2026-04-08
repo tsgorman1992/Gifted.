@@ -1268,10 +1268,11 @@ function playExperienceSound(exp: string) {
 // ─── Scroll-to-explore hint (post-reveal only) ────────────────────────────────
 
 function ScrollHint({ isDark }: { isDark: boolean }) {
-  const [visible, setVisible] = React.useState(true);
+  const [visible, setVisible] = React.useState(false);
   React.useEffect(() => {
-    const t = setTimeout(() => setVisible(false), 5000);
-    return () => clearTimeout(t);
+    const show = setTimeout(() => setVisible(true), 1800);
+    const hide = setTimeout(() => setVisible(false), 7000);
+    return () => { clearTimeout(show); clearTimeout(hide); };
   }, []);
   return (
     <AnimatePresence>
@@ -1287,11 +1288,11 @@ function ScrollHint({ isDark }: { isDark: boolean }) {
             animate={{ y: [0, 6, 0] }}
             transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={isDark ? "text-white/30" : "text-muted-foreground/40"}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={isDark ? "text-white/50" : "text-muted-foreground/60"}>
               <path d="M10 3v11M10 14l-4-4M10 14l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </motion.div>
-          <p className={`text-[10px] tracking-widest uppercase mt-1 ${isDark ? "text-white/25" : "text-muted-foreground/40"}`}>
+          <p className={`text-[10px] tracking-widest uppercase mt-1 ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
             scroll to explore
           </p>
         </motion.div>
@@ -2132,11 +2133,23 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                 ))}
               </h1>
 
+              {/* Sender attribution — appears just below name */}
+              {senderName && (
+                <motion.p
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 + recipientName.length * 0.042, duration: 0.5 }}
+                  className={`text-sm mb-8 -mt-6 ${isDark ? "text-white/45" : "text-muted-foreground/70"}`}
+                >
+                  from {senderName}
+                </motion.p>
+              )}
+
               {/* CTA button with shimmer */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 + recipientName.length * 0.042, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: 0.85 + recipientName.length * 0.042, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                 className="relative w-full max-w-xs"
               >
                 <Button
@@ -2279,7 +2292,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                     )}
                   </h1>
 
-                  <p className={`text-xl ${isDark ? "text-white/60" : "text-muted-foreground"}`}>
+                  <p className={`text-xl sm:text-2xl font-medium ${isDark ? "text-white/75" : "text-foreground/75"}`}>
                     {cfg.senderText} {senderName}
                   </p>
                 </motion.div>
@@ -2292,82 +2305,12 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
             {/* Content sections */}
             <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-5 sm:space-y-8 md:space-y-14 -mt-4 md:-mt-6 relative z-20">
 
-              {/* Note / message — section 0 (hidden when no note) */}
-              {personalNote?.trim() && (
-                <Section cfg={cfg} idx={0}>
-                  <div
-                    className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border relative overflow-hidden"
-                    style={isDark
-                      ? {
-                          background: cfg.cardStyle.bg ?? "rgba(255,248,240,0.05)",
-                          borderColor: cfg.cardStyle.border,
-                          boxShadow: cfg.cardStyle.shadow,
-                        }
-                      : {
-                          background: cfg.cardStyle.bg ?? "hsl(30,38%,98%)",
-                          backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)",
-                          borderColor: cfg.cardStyle.border,
-                          boxShadow: cfg.cardStyle.shadow,
-                        }
-                    }
-                  >
-                    {/* Garden Bloom: botanical watermark + accent */}
-                    {experience === "garden-bloom" && (
-                      <>
-                        <GardenBloomWatermark />
-                        <div style={{ borderTop: "1.5px solid rgba(181,234,215,0.55)", marginBottom: "1.25rem", width: "100%" }} />
-                      </>
-                    )}
-
-                    {/* Rose Petal: stationery double-rule decoration */}
-                    {experience === "rose-petal" && (
-                      <div className="flex items-center gap-3 mb-7">
-                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
-                        <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
-                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
-                      </div>
-                    )}
-
-                    {/* Universal top rule — for all other experiences */}
-                    {experience !== "garden-bloom" && experience !== "rose-petal" && (
-                      <div style={{ height: 1, background: cfg.cardStyle.border, marginBottom: "1.25rem", width: "100%", opacity: 0.5 }} />
-                    )}
-
-                    {cfg.titleStyle === "typewriter" ? (
-                      <p className={`font-serif text-sm sm:text-base md:text-xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.8 }}>
-                        &ldquo;<TypewriterText text={personalNote} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />&rdquo;
-                      </p>
-                    ) : (
-                      <p className={`font-serif text-sm sm:text-base md:text-xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.8 }}>
-                        &ldquo;{personalNote}&rdquo;
-                      </p>
-                    )}
-
-                    {/* Garden Bloom: bottom accent line */}
-                    {experience === "garden-bloom" && (
-                      <div style={{ borderBottom: "1.5px solid rgba(181,234,215,0.55)", marginTop: "1.25rem", width: "100%" }} />
-                    )}
-
-                    {/* Rose Petal: bottom stationery line */}
-                    {experience === "rose-petal" && (
-                      <div className="flex items-center gap-3 mt-4 sm:mt-7">
-                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
-                        <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
-                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
-                      </div>
-                    )}
-
-                    {/* Universal bottom rule — for all other experiences */}
-                    {experience !== "garden-bloom" && experience !== "rose-petal" && (
-                      <div style={{ height: 1, background: cfg.cardStyle.border, marginTop: "1.25rem", width: "100%", opacity: 0.5 }} />
-                    )}
-                  </div>
-                </Section>
-              )}
-
-              {/* Video — section 1 (hidden when no video) */}
+              {/* Video — section 0 (hidden when no video) */}
               {videoUrl && (
-                <Section cfg={cfg} idx={1}>
+                <Section cfg={cfg} idx={0}>
+                  <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                    {senderName ? `${senderName} recorded this for you` : "A video message"}
+                  </p>
                   <div className="flex flex-col gap-2">
                     <div
                       className="w-full rounded-[2rem] overflow-hidden border"
@@ -2424,6 +2367,82 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                           Download video
                         </a>
                       </div>
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              {/* Note / message — section 1 (hidden when no note) */}
+              {personalNote?.trim() && (
+                <Section cfg={cfg} idx={1}>
+                  <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                    {senderName ? `A note from ${senderName}` : "A personal note"}
+                  </p>
+                  <div
+                    className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border relative overflow-hidden"
+                    style={isDark
+                      ? {
+                          background: cfg.cardStyle.bg ?? "rgba(255,248,240,0.09)",
+                          borderColor: cfg.cardStyle.border,
+                          boxShadow: cfg.cardStyle.shadow,
+                        }
+                      : {
+                          background: cfg.cardStyle.bg ?? "hsl(30,38%,98%)",
+                          backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)",
+                          borderColor: cfg.cardStyle.border,
+                          boxShadow: cfg.cardStyle.shadow,
+                        }
+                    }
+                  >
+                    {/* Garden Bloom: botanical watermark + accent */}
+                    {experience === "garden-bloom" && (
+                      <>
+                        <GardenBloomWatermark />
+                        <div style={{ borderTop: "1.5px solid rgba(181,234,215,0.55)", marginBottom: "1.25rem", width: "100%" }} />
+                      </>
+                    )}
+
+                    {/* Rose Petal: stationery double-rule decoration */}
+                    {experience === "rose-petal" && (
+                      <div className="flex items-center gap-3 mb-7">
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
+                        <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
+                      </div>
+                    )}
+
+                    {/* Universal top rule — for all other experiences */}
+                    {experience !== "garden-bloom" && experience !== "rose-petal" && (
+                      <div style={{ height: 1, background: cfg.cardStyle.border, marginBottom: "1.25rem", width: "100%", opacity: 0.5 }} />
+                    )}
+
+                    {cfg.titleStyle === "typewriter" ? (
+                      <p className={`font-serif text-base md:text-xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.8 }}>
+                        &ldquo;<TypewriterText text={personalNote} delayS={cfg.sectionInitialDelay + 0.3} speed={28} />&rdquo;
+                      </p>
+                    ) : (
+                      <p className={`font-serif text-base md:text-xl text-center ${isDark ? "text-white/90" : "text-foreground"}`} style={{ lineHeight: 1.8 }}>
+                        &ldquo;{personalNote}&rdquo;
+                      </p>
+                    )}
+
+                    {/* Garden Bloom: bottom accent line */}
+                    {experience === "garden-bloom" && (
+                      <div style={{ borderBottom: "1.5px solid rgba(181,234,215,0.55)", marginTop: "1.25rem", width: "100%" }} />
+                    )}
+
+                    {/* Rose Petal: bottom stationery line */}
+                    {experience === "rose-petal" && (
+                      <div className="flex items-center gap-3 mt-4 sm:mt-7">
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
+                        <span style={{ color: "rgba(255,143,171,0.7)", fontSize: 14 }}>♥</span>
+                        <div style={{ flex: 1, height: 1, background: "rgba(255,143,171,0.4)" }} />
+                      </div>
+                    )}
+
+                    {/* Universal bottom rule — for all other experiences */}
+                    {experience !== "garden-bloom" && experience !== "rose-petal" && (
+                      <div style={{ height: 1, background: cfg.cardStyle.border, marginTop: "1.25rem", width: "100%", opacity: 0.5 }} />
                     )}
                   </div>
                 </Section>
@@ -2521,7 +2540,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                     <div
                       className="rounded-[2rem] p-5 border relative overflow-hidden"
                       style={isDark
-                        ? { background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.06)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
+                        ? { background: cfg.cardStyle.bg ?? "rgba(255,255,255,0.09)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
                         : { background: cfg.cardStyle.bg ?? "hsl(var(--card)/0.8)", backdropFilter: experience === "snow-flurry" ? "blur(24px) saturate(1.3)" : "blur(20px)", borderColor: cfg.cardStyle.border, boxShadow: cfg.cardStyle.shadow }
                       }
                     >
@@ -2791,9 +2810,11 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                             </AnimatePresence>
                           </div>
 
-                          <p className="text-sm sm:text-base opacity-80 mb-5 sm:mb-8 max-w-md mx-auto">
-                            Sent with intention. Yours to use however you need.
-                          </p>
+                          {!giftIntent && (
+                            <p className="text-sm sm:text-base opacity-80 mb-5 sm:mb-8 max-w-md mx-auto">
+                              Yours to use however you need.
+                            </p>
+                          )}
                           <motion.div
                             animate={{ opacity: balanceRevealPhase === "revealed" ? 1 : 0 }}
                             transition={{ duration: 0.5, delay: balanceRevealPhase === "revealed" ? 0.6 : 0 }}
@@ -2823,29 +2844,13 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
 
             </div>
 
-            {/* Package tracking timeline — only shown when tracking info exists */}
-            {trackingData && (
-              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-8">
-                <Section cfg={cfg} idx={99}>
-                  <TrackingTimeline
-                    carrier={trackingData.carrier}
-                    trackingNumber={trackingData.trackingNumber}
-                    events={trackingData.events}
-                    deliveredAt={trackingData.deliveredAt}
-                    cfg={cfg}
-                    isDark={isDark}
-                  />
-                </Section>
-              </div>
-            )}
-
-            {/* Reaction panel — shown after full reveal, real gifts only */}
+            {/* Reaction panel — shown after full reveal, right after content, real gifts only */}
             {!isPreview && giftId && openPhase >= 4 && !reactionSkipped && (
-              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-16 mb-2">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-12 mb-2">
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.5 }}
+                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.8 }}
                   className="text-center py-2"
                 >
                   {reactionSent ? (
@@ -2856,16 +2861,16 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                       className="flex items-center justify-center gap-2"
                     >
                       <span className="text-xl">{reactionEmoji}</span>
-                      <span className={`text-xs ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>
+                      <span className={`text-sm ${isDark ? "text-white/55" : "text-muted-foreground/70"}`}>
                         Sent to {senderName}
                       </span>
                     </motion.div>
                   ) : (
                     <>
-                      <p className={`text-xs mb-3 ${isDark ? "text-white/30" : "text-muted-foreground/50"}`}>
+                      <p className={`text-sm mb-4 ${isDark ? "text-white/55" : "text-muted-foreground/75"}`}>
                         Send {senderName} a quick reaction
                       </p>
-                      <div className="flex items-center justify-center gap-4 mb-3 flex-wrap">
+                      <div className="flex items-center justify-center gap-5 mb-4 flex-wrap">
                         {(["❤️", "😭", "🤯", "😊", "🙏"] as const).map((emoji) => (
                           <button
                             key={emoji}
@@ -2883,7 +2888,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                               } catch {}
                               setReactionSent(true);
                             }}
-                            className="text-2xl transition-all duration-150 hover:scale-125 active:scale-110"
+                            className="text-3xl transition-all duration-150 hover:scale-125 active:scale-110"
                             style={{ lineHeight: 1 }}
                           >
                             {emoji}
@@ -2893,13 +2898,29 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                       <button
                         type="button"
                         onClick={() => setReactionSkipped(true)}
-                        className={`text-xs underline underline-offset-2 ${isDark ? "text-white/30 hover:text-white/50" : "text-muted-foreground/50 hover:text-muted-foreground"} transition-colors`}
+                        className={`text-xs underline underline-offset-2 ${isDark ? "text-white/35 hover:text-white/55" : "text-muted-foreground/55 hover:text-muted-foreground"} transition-colors`}
                       >
                         Skip
                       </button>
                     </>
                   )}
                 </motion.div>
+              </div>
+            )}
+
+            {/* Package tracking timeline — only shown when tracking info exists */}
+            {trackingData && (
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-8">
+                <Section cfg={cfg} idx={99}>
+                  <TrackingTimeline
+                    carrier={trackingData.carrier}
+                    trackingNumber={trackingData.trackingNumber}
+                    events={trackingData.events}
+                    deliveredAt={trackingData.deliveredAt}
+                    cfg={cfg}
+                    isDark={isDark}
+                  />
+                </Section>
               </div>
             )}
 
