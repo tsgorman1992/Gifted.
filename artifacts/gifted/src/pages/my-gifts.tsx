@@ -208,7 +208,7 @@ function greeting(firstName: string | null) {
 
 // ─── Resend Button ────────────────────────────────────────────────────────────
 
-function ResendButton({ url, recipientName, full = false }: { url: string; recipientName: string; full?: boolean }) {
+function ResendButton({ url, recipientName, full = false, label = "Share moment" }: { url: string; recipientName: string; full?: boolean; label?: string }) {
   const [state, setState] = useState<"idle" | "shared" | "copied">("idle");
   const canMobileShare = typeof navigator?.share === "function" && window.innerWidth < 768;
 
@@ -245,7 +245,7 @@ function ResendButton({ url, recipientName, full = false }: { url: string; recip
             </motion.span>
           ) : (
             <motion.span key="idle" className="flex items-center gap-2" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
-              <Send className="w-4 h-4" />Share moment
+              <Send className="w-4 h-4" />{label}
             </motion.span>
           )}
         </AnimatePresence>
@@ -270,7 +270,7 @@ function ResendButton({ url, recipientName, full = false }: { url: string; recip
           </motion.span>
         ) : (
           <motion.span key="idle" className="flex items-center gap-1.5" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
-            <Send className="w-3 h-3" />Share moment
+            <Send className="w-3 h-3" />{label}
           </motion.span>
         )}
       </AnimatePresence>
@@ -400,7 +400,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
         </p>
       )}
 
-      {/* Resend full-width button (ready / sent states) */}
+      {/* Share button — full-width while gift hasn't been opened yet; small pill once opened */}
       {!confirmDelete && (status === "ready" || status === "sent") && (
         <div onClick={(e) => e.stopPropagation()} className="mb-3">
           <ResendButton url={shareUrl} recipientName={gift.recipientName} full />
@@ -494,7 +494,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
           >
             <div className="flex items-center gap-2 flex-wrap">
               {status === "opened" && !gift.redeemedAt && (
-                <ResendButton url={shareUrl} recipientName={gift.recipientName} />
+                <ResendButton url={shareUrl} recipientName={gift.recipientName} label="Resend" />
               )}
               {status !== "opened" && (
                 <>
@@ -504,7 +504,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                         ? `Paid ${formatDistanceToNow(new Date(gift.cashoutPaidAt), { addSuffix: true })}`
                         : `Requested ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
                       : status === "sent"
-                        ? `Ready since ${format(new Date(gift.createdAt), "MMM d, yyyy 'at' h:mm a")}`
+                        ? `Shared ${format(new Date(gift.createdAt), "MMM d, yyyy 'at' h:mm a")}`
                       : status === "ready"
                         ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy 'at' h:mm a")}`
                       : status === "scheduled" && gift.scheduledFor
