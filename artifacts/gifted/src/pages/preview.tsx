@@ -297,6 +297,59 @@ export default function PreviewPage() {
       .catch(() => {});
   }, [base]);
 
+  // When giftId is set from a URL param or localStorage recovery and the
+  // current localStorage might be for a different gift (or cleared), fetch
+  // fresh data from the API so the preview always shows the correct amount,
+  // names, and other fields.
+  const giftHydratedRef = useRef(false);
+  useEffect(() => {
+    if (!giftId || giftHydratedRef.current) return;
+    const storedId = localStorage.getItem("gifted_gift_id");
+    if (storedId === giftId) {
+      giftHydratedRef.current = true;
+      return;
+    }
+    giftHydratedRef.current = true;
+    fetch(`${base}/api/gifted/gifts/${giftId}`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(gift => {
+        if (!gift) return;
+        if (gift.amount && parseFloat(gift.amount) > 0) {
+          localStorage.setItem("gifted_amount", gift.amount);
+          setGiftAmount(gift.amount);
+        } else {
+          localStorage.removeItem("gifted_amount");
+          setGiftAmount(null);
+        }
+        if (gift.recipientName) { localStorage.setItem("gifted_recipient_name", gift.recipientName); setRecipientName(gift.recipientName); }
+        if (gift.senderName) { localStorage.setItem("gifted_sender_name", gift.senderName); setSenderName(gift.senderName); }
+        if (gift.giftTitle) { localStorage.setItem("gifted_gift_title", gift.giftTitle); setGiftTitle(gift.giftTitle); }
+        if (gift.personalNote) { localStorage.setItem("gifted_personal_note", gift.personalNote); setPersonalNote(gift.personalNote); }
+        if (gift.intent) { localStorage.setItem("gifted_intent", gift.intent); setGiftIntent(gift.intent); }
+        if (gift.experience) { localStorage.setItem("gifted_experience", gift.experience); setExperience(gift.experience); }
+        if (Array.isArray(gift.extraLinks) && gift.extraLinks.length > 0) {
+          localStorage.setItem("gifted_extra_links", JSON.stringify(gift.extraLinks));
+          const normalized = gift.extraLinks
+            .map((item: string | {url: string; label: string; subtitle?: string}) =>
+              typeof item === "string" ? { url: item, label: "" } : item
+            )
+            .filter((l: {url: string}) => l.url);
+          if (normalized.length > 0) setPreviewLinks(normalized);
+        }
+        if (gift.videoPath) {
+          localStorage.setItem("gifted_video_path", gift.videoPath);
+          setHasVideo(true);
+          setVideoUrl(`${base}/api/storage${gift.videoPath}`);
+        }
+        if (Array.isArray(gift.photoPaths) && gift.photoPaths.length > 0) {
+          localStorage.setItem("gifted_photo_paths", JSON.stringify(gift.photoPaths));
+          setPhotoCount(gift.photoPaths.length);
+        }
+        localStorage.setItem("gifted_gift_id", gift.id);
+      })
+      .catch(() => {});
+  }, [giftId, base]);
+
   // Auto-trigger Stripe checkout if Google OAuth was used during a pending payment
   useEffect(() => {
     if (!isAuthenticated || authLoading) return;
