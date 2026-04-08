@@ -1123,7 +1123,6 @@ function formatPhone(raw: string): string {
 function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [importing, setImporting] = useState(false);
@@ -1138,12 +1137,11 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
   async function handleImportFromContacts() {
     setImporting(true);
     try {
-      const contacts = await (navigator as any).contacts.select(["name", "tel", "email"], { multiple: false });
+      const contacts = await (navigator as any).contacts.select(["name", "tel"], { multiple: false });
       if (contacts && contacts.length > 0) {
         const c = contacts[0];
         if (c.name?.[0]) setName(c.name[0]);
         if (c.tel?.[0]) setPhone(c.tel[0].replace(/\D/g, "").replace(/^1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") || c.tel[0]);
-        if (c.email?.[0]) setEmail(c.email[0]);
       }
     } catch { /* User cancelled */ } finally {
       setImporting(false);
@@ -1159,7 +1157,7 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name, phone, email }),
+        body: JSON.stringify({ name, phone }),
       });
       if (!res.ok) throw new Error("Failed to save");
       const contact = await res.json() as { id: string };
@@ -1198,10 +1196,7 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
           )}
         </div>
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name*" className="rounded-xl h-10" autoFocus />
-        <div className="grid grid-cols-2 gap-3">
-          <Input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="Phone (optional)" className="rounded-xl h-10" />
-          <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-10" type="email" />
-        </div>
+        <Input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="Phone (optional)" className="rounded-xl h-10" />
         {pendingOccasions.length > 0 && (
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             <span className="text-xs font-medium text-muted-foreground">Occasions</span>
@@ -1330,7 +1325,7 @@ function QuickAddBirthdayForm({ onSaved, onCancel, onFullForm }: {
           onClick={onFullForm}
           className="text-xs text-muted-foreground/55 hover:text-muted-foreground transition-colors text-center"
         >
-          Add phone, email &amp; more occasions instead →
+          Add phone &amp; more occasions instead →
         </button>
       </form>
     </motion.div>
@@ -1410,7 +1405,6 @@ function ContactCard({ contact, idx, onRefresh }: { contact: Contact; idx: numbe
   const [showEdit, setShowEdit] = useState(false);
   const [editName, setEditName] = useState(contact.name);
   const [editPhone, setEditPhone] = useState(contact.phone ?? "");
-  const [editEmail, setEditEmail] = useState(contact.email ?? "");
   const [editOccasions, setEditOccasions] = useState<OccasionEditRow[]>(initOccasionRows(contact.occasions));
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
@@ -1436,7 +1430,6 @@ function ContactCard({ contact, idx, onRefresh }: { contact: Contact; idx: numbe
   function openEdit() {
     setEditName(contact.name);
     setEditPhone(contact.phone ?? "");
-    setEditEmail(contact.email ?? "");
     setEditOccasions(initOccasionRows(contact.occasions));
     setEditError("");
     setShowEdit(true);
@@ -1460,7 +1453,7 @@ function ContactCard({ contact, idx, onRefresh }: { contact: Contact; idx: numbe
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: editName, phone: editPhone, email: editEmail, notes: contact.notes ?? undefined }),
+        body: JSON.stringify({ name: editName, phone: editPhone, notes: contact.notes ?? undefined }),
       });
       if (!contactRes.ok) throw new Error("Failed");
       const originalById = Object.fromEntries(contact.occasions.map(o => [o.id, o]));
@@ -1518,10 +1511,7 @@ function ContactCard({ contact, idx, onRefresh }: { contact: Contact; idx: numbe
             <button type="button" onClick={handleEditCancel} className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">Cancel</button>
           </div>
           <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Name*" className="rounded-xl h-9 text-sm" autoFocus />
-          <div className="grid grid-cols-2 gap-2">
-            <Input value={editPhone} onChange={e => setEditPhone(formatPhone(e.target.value))} placeholder="Phone (optional)" className="rounded-xl h-9 text-sm" />
-            <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-9 text-sm" type="email" />
-          </div>
+          <Input value={editPhone} onChange={e => setEditPhone(formatPhone(e.target.value))} placeholder="Phone (optional)" className="rounded-xl h-9 text-sm" />
           {editOccasions.filter(r => !r.deleted).length > 0 && (
             <div className="flex flex-col gap-2 pt-2 border-t border-border">
               <span className="text-xs font-medium text-muted-foreground">Occasions</span>
@@ -1555,8 +1545,8 @@ function ContactCard({ contact, idx, onRefresh }: { contact: Contact; idx: numbe
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-sm leading-tight">{contact.name}</p>
-              {(contact.phone || contact.email) && (
-                <p className="text-xs text-muted-foreground truncate">{contact.phone || contact.email}</p>
+              {contact.phone && (
+                <p className="text-xs text-muted-foreground truncate">{contact.phone}</p>
               )}
             </div>
           </div>
@@ -2618,7 +2608,7 @@ export default function MyGiftsPage() {
                   >
                     add a full contact
                   </button>
-                  {" "}with phone, email &amp; more
+                  {" "}with phone &amp; more
                 </p>
               </motion.div>
             ) : (
