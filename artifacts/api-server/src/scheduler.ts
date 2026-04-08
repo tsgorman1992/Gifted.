@@ -38,13 +38,23 @@ function getTwilioClient() {
   return twilio(sid, token);
 }
 
+function normPhone(raw: string): string {
+  const d = raw.replace(/\D/g, "");
+  if (d.length === 10) return `+1${d}`;
+  if (d.length === 11 && d.startsWith("1")) return `+${d}`;
+  return `+${d}`;
+}
+
 async function smsSender(phone: string | null, body: string) {
   if (!phone) return;
   const client = getTwilioClient();
-  const from   = process.env.TWILIO_PHONE_NUMBER;
-  if (!client || !from) return;
+  const rawFrom = process.env.TWILIO_PHONE_NUMBER;
+  if (!client || !rawFrom) return;
+  const from = normPhone(rawFrom);
+  const to   = normPhone(phone);
+  console.log(`[scheduler/smsSender] from=${from} to=${to}`);
   try {
-    await client.messages.create({ to: phone, from, body });
+    await client.messages.create({ to, from, body });
   } catch (err) {
     console.error("[scheduler] SMS failed:", err);
   }
@@ -90,8 +100,8 @@ async function sendScheduledGifts() {
         if (gift.senderPhone && client && fromPhone) {
           try {
             await client.messages.create({
-              to:   gift.senderPhone,
-              from: fromPhone,
+              to:   normPhone(gift.senderPhone),
+              from: normPhone(fromPhone),
               body: smsBody,
             });
             smsSent = true;

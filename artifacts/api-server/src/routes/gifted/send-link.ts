@@ -47,10 +47,12 @@ router.post("/api/gifted/send-link", async (req, res) => {
       : `gifted. 🎁 ${fromName} made something just for you.\n\nTap to open:\n${giftUrl}\n\nReply STOP to unsubscribe, HELP for help. Msg&data rates may apply.`;
 
     const client = getTwilioClient();
-    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-    if (!fromNumber) {
+    const rawFrom = process.env.TWILIO_PHONE_NUMBER;
+    if (!rawFrom) {
       return res.status(500).json({ error: "Twilio phone number not configured" });
     }
+    const fromNumber = normalizePhone(rawFrom);
+    console.log(`[send-link] from=${fromNumber} to=${to}`);
 
     await client.messages.create({ to, from: fromNumber, body });
     return res.json({ ok: true });
