@@ -1232,6 +1232,111 @@ function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: 
   );
 }
 
+// ─── Quick Birthday Form ──────────────────────────────────────────────────────
+
+function QuickAddBirthdayForm({ onSaved, onCancel, onFullForm }: {
+  onSaved: () => void;
+  onCancel: () => void;
+  onFullForm: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [day, setDay] = useState(new Date().getDate());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) { setError("Name is required"); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (!res.ok) throw new Error();
+      const contact = await res.json() as { id: string };
+      await fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ label: "Birthday", month, day }),
+      });
+      onSaved();
+    } catch {
+      setError("Couldn't save — please try again.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      className="bg-card border border-primary/20 rounded-2xl p-5"
+    >
+      <form onSubmit={handleSave} className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Cake className="w-4 h-4 text-primary" />
+            <h3 className="font-medium text-base">Add a birthday</h3>
+          </div>
+          <button type="button" onClick={onCancel} className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <Input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Their name"
+          className="rounded-xl h-11"
+          autoFocus
+        />
+
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Birthday</p>
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={month}
+              onChange={e => setMonth(Number(e.target.value))}
+              className="h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
+            >
+              {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+            </select>
+            <select
+              value={day}
+              onChange={e => setDay(Number(e.target.value))}
+              className="h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
+            >
+              {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        <Button type="submit" disabled={saving} className="rounded-full h-11">
+          {saving ? "Saving…" : "Save birthday"}
+        </Button>
+
+        <button
+          type="button"
+          onClick={onFullForm}
+          className="text-xs text-muted-foreground/55 hover:text-muted-foreground transition-colors text-center"
+        >
+          Add phone, email &amp; more occasions instead →
+        </button>
+      </form>
+    </motion.div>
+  );
+}
+
 // ─── Add Occasion Form ────────────────────────────────────────────────────────
 
 function AddOccasionForm({ contactId, onSaved, onCancel }: { contactId: string; onSaved: () => void; onCancel: () => void }) {
@@ -1750,6 +1855,7 @@ export default function MyGiftsPage() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [localName, setLocalName] = useState<{ first: string; last: string } | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showQuickBirthday, setShowQuickBirthday] = useState(false);
   const [showAddPhysical, setShowAddPhysical] = useState(false);
   const [showAllReceived, setShowAllReceived] = useState(false);
   const [copiedGiftId, setCopiedGiftId] = useState<string | null>(null);
@@ -2446,17 +2552,35 @@ export default function MyGiftsPage() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Save contacts and occasion dates.</p>
-                <p className="text-xs text-muted-foreground/70">We'll remind you 7 days before each occasion and again on the day.</p>
+                <p className="text-xs text-muted-foreground/70">We'll remind you 7 days before and again on the day.</p>
               </div>
-              <Button size="sm" onClick={() => setShowAddContact(true)} className="rounded-full gap-1.5">
-                <UserPlus className="w-3.5 h-3.5" />
-                Add
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => { setShowQuickBirthday(true); setShowAddContact(false); }} className="rounded-full gap-1.5">
+                  <Cake className="w-3.5 h-3.5" />
+                  Add birthday
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAddContact(true); setShowQuickBirthday(false); }}
+                  className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors whitespace-nowrap"
+                >
+                  Full contact
+                </button>
+              </div>
             </motion.div>
 
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
+              {showQuickBirthday && (
+                <QuickAddBirthdayForm
+                  key="quick"
+                  onSaved={() => { setShowQuickBirthday(false); refetchContacts(); }}
+                  onCancel={() => setShowQuickBirthday(false)}
+                  onFullForm={() => { setShowQuickBirthday(false); setShowAddContact(true); }}
+                />
+              )}
               {showAddContact && (
                 <AddContactForm
+                  key="full"
                   onSaved={() => { setShowAddContact(false); refetchContacts(); }}
                   onCancel={() => setShowAddContact(false)}
                 />
@@ -2473,18 +2597,29 @@ export default function MyGiftsPage() {
                 ))}
               </div>
             ) : !contactsData || contactsData.length === 0 ? (
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-16 bg-card border border-border/60 rounded-2xl px-6">
+              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-14 bg-card border border-border/60 rounded-2xl px-6">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <Users className="w-7 h-7 text-primary" />
+                  <Cake className="w-7 h-7 text-primary" />
                 </div>
-                <h2 className="font-serif text-xl font-medium mb-2">No people saved yet</h2>
+                <h2 className="font-serif text-xl font-medium mb-2">Never miss a birthday</h2>
                 <p className="text-muted-foreground mb-6 max-w-xs mx-auto text-sm">
-                  Add the people you gift regularly and save their birthdays and anniversaries. We'll remind you when something special is coming up.
+                  Save birthdays and anniversaries for the people you care about. We'll remind you when something special is coming up.
                 </p>
-                <Button onClick={() => setShowAddContact(true)} className="rounded-full px-6 h-11 gap-2">
-                  <UserPlus className="w-4 h-4" />
-                  Add your first contact
+                <Button onClick={() => { setShowQuickBirthday(true); setShowAddContact(false); }} className="rounded-full px-6 h-11 gap-2">
+                  <Cake className="w-4 h-4" />
+                  Add a birthday
                 </Button>
+                <p className="text-xs text-muted-foreground/50 mt-3">
+                  or{" "}
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddContact(true); setShowQuickBirthday(false); }}
+                    className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
+                  >
+                    add a full contact
+                  </button>
+                  {" "}with phone, email &amp; more
+                </p>
               </motion.div>
             ) : (
               <div className="border border-border/60 rounded-xl bg-card overflow-hidden px-5">
