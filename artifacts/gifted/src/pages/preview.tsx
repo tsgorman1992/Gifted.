@@ -572,7 +572,7 @@ export default function PreviewPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phone,
-          giftUrl: saved.url.includes("?") ? `${saved.url}&preview=true` : `${saved.url}?preview=true`,
+          giftUrl: saved.url,
           recipientName,
           selfSend: true,
         }),

@@ -321,6 +321,10 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
 
   function handleCardClick() {
     if (confirmDelete) return;
+    if (status === "draft") {
+      setLocation(`/preview?gift_id=${gift.id}`);
+      return;
+    }
     setLocation(`/open/${gift.id}?preview=true`);
   }
 
@@ -493,19 +497,29 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 <ResendButton url={shareUrl} recipientName={gift.recipientName} />
               )}
               {status !== "opened" && (
-                <span className="text-xs text-muted-foreground">
-                  {status === "redeemed" && gift.redeemedAt
-                    ? gift.cashoutPaidAt
-                      ? `Paid ${formatDistanceToNow(new Date(gift.cashoutPaidAt), { addSuffix: true })}`
-                      : `Requested ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
-                    : status === "sent"
-                      ? `Ready since ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                    : status === "ready"
-                      ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy")}`
-                    : status === "scheduled" && gift.scheduledFor
-                      ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy")}`
-                      : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy")}`}
-                </span>
+                <>
+                  <span className="text-xs text-muted-foreground">
+                    {status === "redeemed" && gift.redeemedAt
+                      ? gift.cashoutPaidAt
+                        ? `Paid ${formatDistanceToNow(new Date(gift.cashoutPaidAt), { addSuffix: true })}`
+                        : `Requested ${formatDistanceToNow(new Date(gift.redeemedAt), { addSuffix: true })}`
+                      : status === "sent"
+                        ? `Ready since ${format(new Date(gift.createdAt), "MMM d, yyyy 'at' h:mm a")}`
+                      : status === "ready"
+                        ? `Created ${format(new Date(gift.createdAt), "MMM d, yyyy 'at' h:mm a")}`
+                      : status === "scheduled" && gift.scheduledFor
+                        ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy 'at' h:mm a")}`
+                        : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy 'at' h:mm a")}`}
+                  </span>
+                  {status === "draft" && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setLocation(`/preview?gift_id=${gift.id}`); }}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Resume →
+                    </button>
+                  )}
+                </>
               )}
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
