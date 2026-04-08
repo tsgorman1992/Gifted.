@@ -29,5 +29,7 @@ app.listen(port, () => {
   if (process.env.GIFTED_BASE_URL) {
     console.log(`Share base URL: ${process.env.GIFTED_BASE_URL}`);
   }
+  const twilioNum = process.env.TWILIO_PHONE_NUMBER;
+  console.log(`[config] TWILIO_PHONE_NUMBER=${twilioNum ? twilioNum.slice(0, 6) + "****" + twilioNum.slice(-2) : "NOT SET"}`);
   startScheduler();
 });
