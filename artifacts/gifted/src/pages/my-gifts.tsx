@@ -512,7 +512,7 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                         ? `Scheduled for ${format(new Date(gift.scheduledFor), "MMM d, yyyy 'at' h:mm a")}`
                         : `Draft · ${format(new Date(gift.createdAt), "MMM d, yyyy 'at' h:mm a")}`}
                   </span>
-                  {status === "draft" && (
+                  {status === "draft" && !gift.paid && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setLocation(`/preview?gift_id=${gift.id}`); }}
                       className="text-xs font-medium text-primary hover:underline"

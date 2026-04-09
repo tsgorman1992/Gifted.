@@ -1,5 +1,7 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Redirect /reveal?giftId=xxx → /open/xxx so auto-save and account-linking run correctly.
 // Preserve preview=true and embed=true so open.tsx can suppress overlays in iframe previews.
@@ -49,10 +51,45 @@ import FeaturesPage   from "@/pages/features";
 
 const queryClient = new QueryClient();
 
+const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
+
+function GlobalClaimOnLogin() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const qc = useQueryClient();
+  const claimedRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || claimedRef.current) return;
+    const giftId = localStorage.getItem("gifted_gift_id");
+    if (!giftId) {
+      qc.invalidateQueries({ queryKey: ["my-gifts"] });
+      claimedRef.current = true;
+      return;
+    }
+    fetch(`${BASE}/api/gifted/gifts/${giftId}/claim`, {
+      method: "PATCH",
+      credentials: "include",
+    })
+      .then((res) => {
+        if (res.ok || res.status === 409) {
+          localStorage.removeItem("gifted_gift_id");
+          claimedRef.current = true;
+        }
+        qc.invalidateQueries({ queryKey: ["my-gifts"] });
+      })
+      .catch(() => {
+        qc.invalidateQueries({ queryKey: ["my-gifts"] });
+      });
+  }, [isAuthenticated, isLoading, qc]);
+
+  return null;
+}
+
 function Router() {
   return (
     <Layout>
       <ScrollToTop />
+      <GlobalClaimOnLogin />
       <Switch>
         <Route path="/"          component={LandingPage}  />
         <Route path="/create"    component={CreatePage}   />
