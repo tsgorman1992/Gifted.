@@ -164,6 +164,12 @@ router.post("/gifted/confirm-payment", async (req, res) => {
       return;
     }
 
+    // Security: ensure the session was created for this gift, not a different one
+    if (session.metadata?.giftId !== giftId) {
+      res.status(400).json({ error: "Session does not match this gift." });
+      return;
+    }
+
     // Fetch gift before update so we know if this is a new payment transition
     const [existing] = await db.select().from(gifts).where(eq(gifts.id, giftId)).limit(1);
     const alreadyPaid = existing?.paid ?? false;

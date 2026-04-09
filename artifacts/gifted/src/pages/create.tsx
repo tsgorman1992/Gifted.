@@ -854,6 +854,18 @@ export default function CreatePage() {
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    // If the user has a paid gift that hasn't been shared yet, redirect back to
+    // the preview confirmation screen. This prevents accidentally creating a
+    // duplicate gift (and being double-charged) after hitting the back button
+    // or clicking "Build a moment" before sharing the first paid gift.
+    // Once the link is shared (gifted_link_shared is set) we allow a fresh start.
+    const hasPaidUnshared =
+      localStorage.getItem("gifted_paid_id") &&
+      !localStorage.getItem("gifted_link_shared");
+    if (hasPaidUnshared) {
+      setLocation("/preview");
+      return;
+    }
     // Clear any completed-gift state from a prior gift so the preview page
     // cannot accidentally restore a stale gift ID into this new session.
     resetCompletedGiftState();

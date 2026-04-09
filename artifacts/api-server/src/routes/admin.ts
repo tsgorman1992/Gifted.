@@ -239,6 +239,23 @@ router.patch("/admin/gifts/:id/mark-paid", async (req, res) => {
   }
 });
 
+// DELETE /api/admin/gifts/:id — permanently removes a single gift record
+router.delete("/admin/gifts/:id", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const deleted = await db
+      .delete(gifts)
+      .where(eq(gifts.id, req.params.id))
+      .returning({ id: gifts.id });
+    if (deleted.length === 0) { res.status(404).json({ error: "Gift not found" }); return; }
+    console.log(`[admin] gift deleted: ${req.params.id}`);
+    res.json({ ok: true, deleted: deleted[0].id });
+  } catch (err) {
+    console.error("[admin] delete gift error:", err);
+    res.status(500).json({ error: "Failed to delete gift" });
+  }
+});
+
 // DELETE /api/admin/wipe — wipes all gift/transaction data, keeps user accounts
 // Body must include { confirm: "WIPE" }
 router.delete("/admin/wipe", async (req, res) => {

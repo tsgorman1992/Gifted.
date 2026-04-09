@@ -656,6 +656,19 @@ export default function AdminPage() {
     } finally { setMarkingGiftPaid(null); }
   }
 
+  const [deletingGift, setDeletingGift] = useState<string | null>(null);
+  async function deleteGift(id: string, recipientName: string) {
+    if (!window.confirm(`Permanently delete gift for ${recipientName}? This cannot be undone.`)) return;
+    setDeletingGift(id);
+    try {
+      const r = await fetch(`${API}/api/admin/gifts/${id}`, { method: "DELETE", headers });
+      if (r.ok) {
+        setGiftRows(prev => prev.filter(g => g.id !== id));
+        setCashouts(prev => prev.filter(c => c.id !== id));
+      }
+    } finally { setDeletingGift(null); }
+  }
+
   async function handleWipe() {
     if (wipeInput !== "WIPE") return;
     setWiping(true); setWipeMsg(null);
@@ -1116,6 +1129,16 @@ export default function AdminPage() {
                                 : <BadgeCheck className="w-3.5 h-3.5" />}
                             </button>
                           )}
+                          <button
+                            onClick={() => deleteGift(g.id, g.recipientName)}
+                            disabled={deletingGift === g.id}
+                            className="text-destructive/50 hover:text-destructive transition-colors p-1"
+                            title="Permanently delete this gift"
+                          >
+                            {deletingGift === g.id
+                              ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
                         </div>
                       </td>
                     </tr>
