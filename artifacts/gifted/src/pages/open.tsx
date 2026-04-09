@@ -272,6 +272,9 @@ export default function OpenPage() {
               </Button>
             </Link>
           </div>
+          <Link href={`${window.location.pathname}?preview=true`} className="text-xs text-muted-foreground hover:text-foreground text-center transition-colors mt-1">
+            Not the sender? See the reveal →
+          </Link>
         </div>
       </div>
     );

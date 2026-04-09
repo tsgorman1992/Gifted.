@@ -1582,7 +1582,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
     Number(giftAmount || 0),
     1600,
     300,
-    cfg.amountStyle === "count-up" && (amountInView || isPreview),
+    cfg.amountStyle === "count-up" && (amountInView || isPreview || isOpen),
   );
 
   const reducedMotion = useReducedMotion();
