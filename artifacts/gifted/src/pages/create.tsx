@@ -56,6 +56,7 @@ const EXPERIENCE_ICONS: Record<ExperienceId, React.ComponentType<{ className?: s
 const INTENT_MAP: Record<string, string[]> = {
   "Birthday":     ["Treat yourself", "Night out", "That thing you've been eyeing", "Weekend away", "Birthday dinner"],
   "Anniversary":  ["Date night", "Weekend getaway", "Something special", "Just for you", "Our tradition"],
+  "Love":         ["Something from the heart", "Date night", "Just because I love you", "Treat yourself, love", "Because you're everything"],
   "Graduation":   ["First apartment fund", "Travel before life gets busy", "New chapter, your choice", "Celebrate yourself", "Next adventure"],
   "New Baby":     ["Baby essentials", "Coffee & survival", "Self-care, seriously", "Family day out", "Nesting fund"],
   "Holiday":      ["Holiday treat", "Something you need", "Festive dinner", "Your wishlist", "Cozy night in"],
@@ -69,7 +70,7 @@ const INTENT_MAP: Record<string, string[]> = {
 const DEFAULT_INTENTS = ["Coffee on me", "Treat yourself", "Date night", "Something special", "Take a break"];
 const ALL_PRESET_INTENTS = new Set(Object.values(INTENT_MAP).flat());
 const AMOUNTS = ["10", "25", "50", "100", "250"];
-const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Thank You", "Mother's Day", "Father's Day", "Other"];
+const OCCASIONS = ["Birthday", "Anniversary", "Love", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Thank You", "Mother's Day", "Father's Day", "Other"];
 
 const MAX_PHOTOS = 6;
 const MAX_PHOTO_SIZE = 20 * 1024 * 1024;
@@ -1708,6 +1709,7 @@ export default function CreatePage() {
                       const placeholders: Record<string, string> = {
                         Birthday: `e.g. Happy Birthday, ${name}!`,
                         Anniversary: `e.g. Here's to you, ${name}.`,
+                        Love: `e.g. You mean the world to me, ${name}.`,
                         Graduation: `e.g. So proud of you, ${name}.`,
                         "New Baby": `e.g. Welcome to the world, little one.`,
                         Holiday: `e.g. Happy holidays, ${name}!`,

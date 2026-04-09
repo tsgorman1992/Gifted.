@@ -68,7 +68,7 @@ export const EXPERIENCE_LIST: ExperienceMeta[] = [
     id: "rose-petal",
     name: "Rose Petal",
     tagline: "Elegant & timeless",
-    suggestedFor: ["Wedding"],
+    suggestedFor: ["Wedding", "Love"],
     palette: { from: "#FFB7C5", via: "#FF8FAB", to: "#E8A7B1" },
     isDark: false,
     premium: false,
