@@ -350,6 +350,45 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       }
     }
 
+    // Self-heal fallback: no checkout session ID stored (pre-fix gifts or failed DB write).
+    // Search Stripe by gift metadata to find a completed session.
+    if (
+      !gift.paid &&
+      gift.amount && parseFloat(gift.amount) > 0 &&
+      !gift.stripeCheckoutSessionId
+    ) {
+      try {
+        const stripe = getStripe();
+        const results = await stripe.checkout.sessions.search({
+          query: `metadata["giftId"]:"${gift.id}" AND status:"complete"`,
+          limit: 5,
+        });
+        const paidSession = results.data.find((s) => s.payment_status === "paid");
+        if (paidSession) {
+          const senderEmail = paidSession.customer_details?.email ?? null;
+          const [updated] = await db
+            .update(gifts)
+            .set({
+              paid: true,
+              stripeCheckoutSessionId: paidSession.id,
+              senderEmail: senderEmail ?? gift.senderEmail,
+              stripePaymentIntentId:
+                typeof paidSession.payment_intent === "string"
+                  ? paidSession.payment_intent
+                  : (paidSession.payment_intent?.id ?? null),
+            })
+            .where(eq(gifts.id, gift.id))
+            .returning();
+          if (updated) {
+            console.log(`[self-heal] Marked gift ${gift.id} as paid via Stripe metadata search`);
+            gift = updated;
+          }
+        }
+      } catch (searchErr) {
+        console.warn(`[self-heal] Stripe search failed for gift ${gift.id}:`, searchErr);
+      }
+    }
+
     res.json({
       id: gift.id,
       senderUserId: gift.senderUserId,
