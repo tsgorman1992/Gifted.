@@ -1136,119 +1136,7 @@ function formatPhone(raw: string): string {
 
 function AddContactForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [importing, setImporting] = useState(false);
-  const [pendingOccasions, setPendingOccasions] = useState<PendingOccasion[]>([]);
-
-  function addOccasionRow() { setPendingOccasions(r => [...r, { label: "Birthday", month: 1, day: 1 }]); }
-  function updateOccasionRow(i: number, patch: Partial<PendingOccasion>) {
-    setPendingOccasions(r => r.map((row, idx) => idx === i ? { ...row, ...patch } : row));
-  }
-  function removeOccasionRow(i: number) { setPendingOccasions(r => r.filter((_, idx) => idx !== i)); }
-
-  async function handleImportFromContacts() {
-    setImporting(true);
-    try {
-      const contacts = await (navigator as any).contacts.select(["name", "tel"], { multiple: false });
-      if (contacts && contacts.length > 0) {
-        const c = contacts[0];
-        if (c.name?.[0]) setName(c.name[0]);
-        if (c.tel?.[0]) setPhone(c.tel[0].replace(/\D/g, "").replace(/^1?(\d{3})(\d{3})(\d{4})$/, "($1) $2-$3") || c.tel[0]);
-      }
-    } catch { /* User cancelled */ } finally {
-      setImporting(false);
-    }
-  }
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) { setError("Name is required"); return; }
-    setSaving(true);
-    try {
-      const res = await fetch(`${BASE}/api/gifted/contacts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name, phone }),
-      });
-      if (!res.ok) throw new Error("Failed to save");
-      const contact = await res.json() as { id: string };
-      if (pendingOccasions.length > 0) {
-        await Promise.all(pendingOccasions.map(occ =>
-          fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(buildOccasionPayload(occ.label, occ.month, occ.day)),
-          })
-        ));
-      }
-      onSaved();
-    } catch {
-      setError("Couldn't save — please try again.");
-      setSaving(false);
-    }
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className="bg-card border border-primary/20 rounded-2xl p-5"
-    >
-      <form onSubmit={handleSave} className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-base">New contact</h3>
-          {contactsApiSupported && (
-            <Button type="button" variant="outline" size="sm" onClick={handleImportFromContacts} disabled={importing} className="rounded-full h-8 text-xs gap-1.5 border-primary/30 text-primary">
-              <BookUser className="w-3.5 h-3.5" />
-              {importing ? "Opening…" : "From contacts"}
-            </Button>
-          )}
-        </div>
-        <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name*" className="rounded-xl h-10" autoFocus />
-        <Input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="Phone (optional)" className="rounded-xl h-10" />
-        {pendingOccasions.length > 0 && (
-          <div className="flex flex-col gap-2 pt-2 border-t border-border">
-            <span className="text-xs font-medium text-muted-foreground">Occasions</span>
-            {pendingOccasions.map((occ, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-2">
-                <select value={occ.label} onChange={e => updateOccasionRow(i, { label: e.target.value })} className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background text-foreground flex-1 min-w-[120px]">
-                  {OCCASION_LABELS.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-                <OccasionDateFields label={occ.label} month={occ.month} day={occ.day} onMonthChange={m => updateOccasionRow(i, { month: m })} onDayChange={d => updateOccasionRow(i, { day: d })} />
-                <button type="button" onClick={() => removeOccasionRow(i)} className="text-muted-foreground/60 hover:text-destructive transition-colors">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <button type="button" onClick={addOccasionRow} className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors self-start">
-          <Cake className="w-3.5 h-3.5" />
-          {pendingOccasions.length === 0 ? "Add an occasion (optional)" : "Add another occasion"}
-        </button>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onCancel} className="rounded-full">Cancel</Button>
-          <Button type="submit" size="sm" disabled={saving} className="rounded-full">{saving ? "Saving…" : "Add contact"}</Button>
-        </div>
-      </form>
-    </motion.div>
-  );
-}
-
-// ─── Quick Birthday Form ──────────────────────────────────────────────────────
-
-function QuickAddBirthdayForm({ onSaved, onCancel, onFullForm }: {
-  onSaved: () => void;
-  onCancel: () => void;
-  onFullForm: () => void;
-}) {
-  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [day, setDay] = useState(new Date().getDate());
   const [saving, setSaving] = useState(false);
@@ -1263,9 +1151,9 @@ function QuickAddBirthdayForm({ onSaved, onCancel, onFullForm }: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim() || undefined }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error("Failed to save");
       const contact = await res.json() as { id: string };
       await fetch(`${BASE}/api/gifted/contacts/${contact.id}/occasions`, {
         method: "POST",
@@ -1289,58 +1177,28 @@ function QuickAddBirthdayForm({ onSaved, onCancel, onFullForm }: {
     >
       <form onSubmit={handleSave} className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Cake className="w-4 h-4 text-primary" />
-            <h3 className="font-medium text-base">Add a birthday</h3>
-          </div>
+          <h3 className="font-medium text-base">New contact</h3>
           <button type="button" onClick={onCancel} className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        <Input
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Their name"
-          className="rounded-xl h-11"
-          autoFocus
-        />
-
+        <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name" className="rounded-xl h-11" autoFocus />
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-2">Birthday</p>
           <div className="grid grid-cols-2 gap-2">
-            <select
-              value={month}
-              onChange={e => setMonth(Number(e.target.value))}
-              className="h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
-            >
+            <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground">
               {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
-            <select
-              value={day}
-              onChange={e => setDay(Number(e.target.value))}
-              className="h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
-            >
-              {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
+            <select value={day} onChange={e => setDay(Number(e.target.value))} className="h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground">
+              {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
         </div>
-
+        <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" className="rounded-xl h-11" />
         {error && <p className="text-xs text-destructive">{error}</p>}
-
         <Button type="submit" disabled={saving} className="rounded-full h-11">
-          {saving ? "Saving…" : "Save birthday"}
+          {saving ? "Saving…" : "Save contact"}
         </Button>
-
-        <button
-          type="button"
-          onClick={onFullForm}
-          className="text-xs text-muted-foreground/55 hover:text-muted-foreground transition-colors text-center"
-        >
-          Add phone &amp; more occasions instead →
-        </button>
       </form>
     </motion.div>
   );
@@ -1859,7 +1717,6 @@ export default function MyGiftsPage() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [localName, setLocalName] = useState<{ first: string; last: string } | null>(null);
   const [showAddContact, setShowAddContact] = useState(false);
-  const [showQuickBirthday, setShowQuickBirthday] = useState(false);
   const [showAddPhysical, setShowAddPhysical] = useState(false);
   const [showAllReceived, setShowAllReceived] = useState(false);
   const [copiedGiftId, setCopiedGiftId] = useState<string | null>(null);
@@ -2562,33 +2419,16 @@ export default function MyGiftsPage() {
                 <p className="text-sm text-muted-foreground">Save contacts and occasion dates.</p>
                 <p className="text-xs text-muted-foreground/70">We'll remind you 7 days before and again on the day.</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={() => { setShowQuickBirthday(true); setShowAddContact(false); }} className="rounded-full gap-1.5">
-                  <Cake className="w-3.5 h-3.5" />
-                  Add birthday
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => { setShowAddContact(true); setShowQuickBirthday(false); }}
-                  className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors whitespace-nowrap"
-                >
-                  Full contact
-                </button>
-              </div>
+              <Button size="sm" onClick={() => setShowAddContact(true)} className="rounded-full gap-1.5">
+                <Plus className="w-3.5 h-3.5" />
+                Add contact
+              </Button>
             </motion.div>
 
             <AnimatePresence mode="wait">
-              {showQuickBirthday && (
-                <QuickAddBirthdayForm
-                  key="quick"
-                  onSaved={() => { setShowQuickBirthday(false); refetchContacts(); }}
-                  onCancel={() => setShowQuickBirthday(false)}
-                  onFullForm={() => { setShowQuickBirthday(false); setShowAddContact(true); }}
-                />
-              )}
               {showAddContact && (
                 <AddContactForm
-                  key="full"
+                  key="form"
                   onSaved={() => { setShowAddContact(false); refetchContacts(); }}
                   onCancel={() => setShowAddContact(false)}
                 />
@@ -2613,21 +2453,10 @@ export default function MyGiftsPage() {
                 <p className="text-muted-foreground mb-6 max-w-xs mx-auto text-sm">
                   Save birthdays and anniversaries for the people you care about. We'll remind you when something special is coming up.
                 </p>
-                <Button onClick={() => { setShowQuickBirthday(true); setShowAddContact(false); }} className="rounded-full px-6 h-11 gap-2">
-                  <Cake className="w-4 h-4" />
-                  Add a birthday
+                <Button onClick={() => setShowAddContact(true)} className="rounded-full px-6 h-11 gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add a contact
                 </Button>
-                <p className="text-xs text-muted-foreground/50 mt-3">
-                  or{" "}
-                  <button
-                    type="button"
-                    onClick={() => { setShowAddContact(true); setShowQuickBirthday(false); }}
-                    className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
-                  >
-                    add a full contact
-                  </button>
-                  {" "}with phone &amp; more
-                </p>
               </motion.div>
             ) : (
               <div className="border border-border/60 rounded-xl bg-card overflow-hidden px-5">
