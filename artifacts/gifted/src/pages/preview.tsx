@@ -265,7 +265,7 @@ export default function PreviewPage() {
         body: JSON.stringify({ sessionId, giftId: giftParam }),
       })
         .then(async (res) => {
-          if (!res.ok) throw new Error("Confirm failed");
+          if (!res.ok) throw new Error(`Confirm failed: ${res.status}`);
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", giftParam);
           const paidAmt = localStorage.getItem("gifted_amount");
@@ -275,8 +275,12 @@ export default function PreviewPage() {
             gift_id:  giftParam,
           });
         })
-        .catch(() => {
-          // Even if confirm fails (e.g. already confirmed), treat as paid
+        .catch((err) => {
+          // Confirmation network call failed. The server self-heals when the
+          // recipient opens the link (checks Stripe directly), so the gift will
+          // still work. Show "confirmed" so the sender can share the link — the
+          // recipient's experience is unaffected thanks to the server-side check.
+          console.error("[confirm-payment] failed:", err);
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", giftParam);
           const paidAmt = localStorage.getItem("gifted_amount");

@@ -4,6 +4,13 @@ import { nanoid } from "nanoid";
 import { createHmac, timingSafeEqual } from "crypto";
 import { db, gifts, usersTable, contacts as contactsTable, contactOccasions } from "@workspace/db";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
+import Stripe from "stripe";
+
+function getStripe(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
+  return new Stripe(key);
+}
 import twilio from "twilio";
 import { sendGiftOpenedNotice, sendPackageDeliveredEmail, sendGiftLinkEmail } from "../../lib/email";
 import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
@@ -301,11 +308,46 @@ router.get("/gifted/gifts/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [gift] = await db.select().from(gifts).where(eq(gifts.id, id)).limit(1);
+    let [gift] = await db.select().from(gifts).where(eq(gifts.id, id)).limit(1);
 
     if (!gift) {
       res.status(404).json({ error: "Gift not found" });
       return;
+    }
+
+    // Self-heal: if the gift shows as unpaid but we have a checkout session ID,
+    // ask Stripe directly whether the payment completed. This fixes gifts where
+    // the sender's browser failed to call confirm-payment after checkout.
+    if (
+      !gift.paid &&
+      gift.amount && parseFloat(gift.amount) > 0 &&
+      gift.stripeCheckoutSessionId
+    ) {
+      try {
+        const stripe = getStripe();
+        const session = await stripe.checkout.sessions.retrieve(gift.stripeCheckoutSessionId);
+        if (session.payment_status === "paid" && session.metadata?.giftId === gift.id) {
+          const senderEmail = session.customer_details?.email ?? null;
+          const [updated] = await db
+            .update(gifts)
+            .set({
+              paid: true,
+              senderEmail: senderEmail ?? gift.senderEmail,
+              stripePaymentIntentId:
+                typeof session.payment_intent === "string"
+                  ? session.payment_intent
+                  : (session.payment_intent?.id ?? null),
+            })
+            .where(eq(gifts.id, gift.id))
+            .returning();
+          if (updated) {
+            console.log(`[self-heal] Marked gift ${gift.id} as paid via Stripe session check`);
+            gift = updated;
+          }
+        }
+      } catch (stripeErr) {
+        console.warn(`[self-heal] Stripe check failed for gift ${gift.id}:`, stripeErr);
+      }
     }
 
     res.json({

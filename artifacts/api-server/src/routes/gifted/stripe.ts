@@ -135,6 +135,13 @@ router.post("/gifted/checkout-session", async (req, res) => {
       cancel_url: `${returnUrl}?cancelled=true`,
     });
 
+    // Store the checkout session ID so the server can self-heal payment status
+    // if the sender's browser fails to call confirm-payment after checkout.
+    await db
+      .update(gifts)
+      .set({ stripeCheckoutSessionId: session.id })
+      .where(eq(gifts.id, giftId));
+
     res.json({ url: session.url });
   } catch (err) {
     console.error("Stripe checkout error:", err);

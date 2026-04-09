@@ -29,6 +29,7 @@ export const gifts = pgTable("gifts", {
   intent: text("intent"),
   paid: boolean("paid").default(false),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeCheckoutSessionId: text("stripe_checkout_session_id"),
   senderPhone: text("sender_phone"),
   senderEmail: text("sender_email"),
   redemptionOtp: text("redemption_otp"),
