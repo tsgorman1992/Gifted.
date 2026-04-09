@@ -329,6 +329,10 @@ export default function PreviewPage() {
         if (gift.personalNote) { localStorage.setItem("gifted_personal_note", gift.personalNote); setPersonalNote(gift.personalNote); }
         if (gift.intent) { localStorage.setItem("gifted_intent", gift.intent); setGiftIntent(gift.intent); }
         if (gift.experience) { localStorage.setItem("gifted_experience", gift.experience); setExperience(gift.experience); }
+        if (typeof gift.paid === "boolean" && gift.paid) {
+          setPaymentStatus("confirmed");
+          localStorage.setItem("gifted_paid_id", gift.id);
+        }
         if (Array.isArray(gift.extraLinks) && gift.extraLinks.length > 0) {
           localStorage.setItem("gifted_extra_links", JSON.stringify(gift.extraLinks));
           const normalized = gift.extraLinks

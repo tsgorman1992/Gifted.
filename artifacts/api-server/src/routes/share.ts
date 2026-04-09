@@ -35,7 +35,10 @@ router.get("/share/:id", async (req, res) => {
   const ogImage   = `${baseUrl}/api/og/gift/${id}`;
   const ogTitle   = `A moment for ${name} ✨`;
   const ogDesc    = `${from} put something together just for you. Open your moment.`;
-  const redirectUrl = `/open/${id}`;
+  const qs = Object.keys(req.query).length > 0
+    ? "?" + new URLSearchParams(req.query as Record<string, string>).toString()
+    : "";
+  const redirectUrl = `/open/${id}${qs}`;
   const canonicalUrl = `${baseUrl}/share/${id}`;
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
