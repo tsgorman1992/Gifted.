@@ -1843,6 +1843,30 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
     if (intn) setGiftIntent(intn);
   }, []);
 
+  // Poll payment status when gift shows as unpaid but has a balance.
+  // Handles the race where the recipient opens before the webhook fires.
+  useEffect(() => {
+    if (giftPaid || !giftId || !giftAmount || parseFloat(giftAmount) <= 0) return;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    let attempts = 0;
+    const MAX = 10;
+    const id = setInterval(async () => {
+      attempts++;
+      try {
+        const r = await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}`, { credentials: "include" });
+        if (!r.ok) return;
+        const gift = await r.json();
+        if (gift.paid === true) {
+          setGiftPaid(true);
+          localStorage.setItem("gifted_gift_paid", "true");
+          clearInterval(id);
+        }
+      } catch { /* ignore */ }
+      if (attempts >= MAX) clearInterval(id);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [giftPaid, giftId, giftAmount]);
+
   useEffect(() => {
     document.body.style.overflow = isOpen ? "auto" : "hidden";
     return () => { document.body.style.overflow = "auto"; };
