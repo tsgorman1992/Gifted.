@@ -1097,6 +1097,7 @@ export default function AdminPage() {
                             <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" title="Claimed by an account" />
                           )}
                         </div>
+                        <div className="text-[10px] text-muted-foreground/40 font-mono mt-0.5 select-all">{g.id}</div>
                       </td>
                       <td className="px-3 sm:px-4 py-3 text-muted-foreground whitespace-nowrap">{g.senderName}</td>
                       <td className="px-3 sm:px-4 py-3 font-semibold text-primary whitespace-nowrap">{fmtAmt(g.amount)}</td>
