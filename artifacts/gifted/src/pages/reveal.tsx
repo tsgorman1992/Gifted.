@@ -1550,8 +1550,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   });
   const [giftAmount, setGiftAmount]       = useState<string | null>(null);
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
-  const [giftPaid, setGiftPaid]           = useState<boolean>(true);
-  const [giftPaidLoaded, setGiftPaidLoaded] = useState(false);
+  const [giftPaid, setGiftPaid]                   = useState<boolean>(true);
+  const [giftPaidLoaded, setGiftPaidLoaded]         = useState(false);
+  const [paymentPollingExhausted, setPaymentPollingExhausted] = useState(false);
   const [isPreview, setIsPreview]         = useState(false);
   const [isEmbed, setIsEmbed]             = useState(false);
   const [senderBannerDismissed, setSenderBannerDismissed] = useState(false);
@@ -1848,11 +1849,13 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
 
   // Poll payment status when gift shows as unpaid but has a balance.
   // Handles the race where the recipient opens before the webhook fires.
+  // Shows a spinner while checking; only shows "payment pending" after all retries fail.
   useEffect(() => {
     if (giftPaid || !giftId || !giftAmount || parseFloat(giftAmount) <= 0) return;
+    setPaymentPollingExhausted(false);
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     let attempts = 0;
-    const MAX = 10;
+    const MAX = 12;
     const id = setInterval(async () => {
       attempts++;
       try {
@@ -1863,9 +1866,13 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
           setGiftPaid(true);
           localStorage.setItem("gifted_gift_paid", "true");
           clearInterval(id);
+          return;
         }
       } catch { /* ignore */ }
-      if (attempts >= MAX) clearInterval(id);
+      if (attempts >= MAX) {
+        setPaymentPollingExhausted(true);
+        clearInterval(id);
+      }
     }, 5000);
     return () => clearInterval(id);
   }, [giftPaid, giftId, giftAmount]);
@@ -2142,23 +2149,30 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                 A gift for
               </motion.p>
 
-              {/* Recipient name — character stagger */}
+              {/* Recipient name — character stagger, word-safe wrapping */}
               <h1
                 aria-label={recipientName}
-                className={`font-serif text-5xl sm:text-6xl md:text-7xl mb-10 break-words max-w-xs sm:max-w-sm ${isDark ? "text-white" : ""}`}
-                style={{ display: "flex", flexWrap: "wrap", justifyContent: "center" }}
+                className={`font-serif text-5xl sm:text-6xl md:text-7xl mb-10 max-w-xs sm:max-w-sm ${isDark ? "text-white" : ""}`}
+                style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "0 0.18em" }}
               >
-                {recipientName.split("").map((char, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ opacity: 0, y: 22, filter: "blur(6px)" }}
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                    transition={{ delay: 0.6 + i * 0.042, type: "spring", stiffness: 380, damping: 30 }}
-                    style={{ display: "inline-block" }}
-                  >
-                    {char === " " ? "\u00A0" : char}
-                  </motion.span>
-                ))}
+                {recipientName.split(" ").map((word, wi, words) => {
+                  const charOffset = words.slice(0, wi).reduce((acc, w) => acc + w.length + 1, 0);
+                  return (
+                    <span key={wi} style={{ whiteSpace: "nowrap", display: "inline-block" }}>
+                      {word.split("").map((char, ci) => (
+                        <motion.span
+                          key={ci}
+                          initial={{ opacity: 0, y: 22, filter: "blur(6px)" }}
+                          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                          transition={{ delay: 0.6 + (charOffset + ci) * 0.042, type: "spring", stiffness: 380, damping: 30 }}
+                          style={{ display: "inline-block" }}
+                        >
+                          {char}
+                        </motion.span>
+                      ))}
+                    </span>
+                  );
+                })}
               </h1>
 
               {/* Sender attribution — appears just below name */}
@@ -2747,10 +2761,13 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                   </Button>
                                 </Link>
                               )
+                            ) : paymentPollingExhausted ? (
+                              <p className="text-sm text-white/40 italic">Payment pending — check back soon.</p>
                             ) : (
-                              giftPaidLoaded
-                                ? <p className="text-sm text-white/40 italic">Payment pending — check back soon.</p>
-                                : <Loader2 className="w-5 h-5 animate-spin text-white/40" />
+                              <div className="flex items-center gap-2 text-white/50 text-sm">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Confirming payment…</span>
+                              </div>
                             )}
                           </motion.div>
                         </div>
@@ -2861,10 +2878,13 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                   </Button>
                                 </Link>
                               )
+                            ) : paymentPollingExhausted ? (
+                              <p className="text-sm opacity-60 italic">Payment pending — check back soon.</p>
                             ) : (
-                              giftPaidLoaded
-                                ? <p className="text-sm opacity-60 italic">Payment pending — check back soon.</p>
-                                : <Loader2 className="w-5 h-5 animate-spin opacity-40" />
+                              <div className="flex items-center gap-2 opacity-60 text-sm">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Confirming payment…</span>
+                              </div>
                             )}
                           </motion.div>
                         </div>

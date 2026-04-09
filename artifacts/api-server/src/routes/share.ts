@@ -61,7 +61,6 @@ router.get("/share/:id", async (req, res) => {
   <meta name="twitter:title" content="${ogTitle}" />
   <meta name="twitter:description" content="${ogDesc}" />
   <meta name="twitter:image" content="${ogImage}" />
-  <meta http-equiv="refresh" content="0;url=${redirectUrl}" />
 </head>
 <body style="background:#faf8f5;font-family:Georgia,serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:2rem;box-sizing:border-box;">
   <div style="text-align:center;">
