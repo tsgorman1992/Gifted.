@@ -1666,7 +1666,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
       if (paid === "false") setGiftPaid(false);
     }
 
-    const storedGiftId = localStorage.getItem("gifted_gift_id");
+    const storedGiftId = localStorage.getItem("gifted_open_gift_id") || localStorage.getItem("gifted_gift_id");
     const resolvedGiftId = giftIdParam || storedGiftId;
 
     if (resolvedGiftId) {
@@ -3002,7 +3002,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                       "gifted_occasion", "gifted_gift_title", "gifted_personal_note",
                       "gifted_extra_links", "gifted_playlist_url", "gifted_amount",
                       "gifted_intent", "gifted_experience", "gifted_video_path",
-                      "gifted_photo_paths", "gifted_gift_id", "gifted_gift_paid",
+                      "gifted_photo_paths", "gifted_gift_id", "gifted_open_gift_id", "gifted_gift_paid",
                       "gifted_scheduled_for", "gifted_scheduled_time",
                       "gifted_tracking_carrier", "gifted_tracking_number",
                     ];

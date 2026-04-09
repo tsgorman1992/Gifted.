@@ -18,6 +18,7 @@ const GIFT_KEYS = [
   "gifted_free_gift_id",
   "gifted_free_gift_url",
   "gifted_gift_id",
+  "gifted_open_gift_id",
   "gifted_gift_paid",
   "gifted_link_shared",
   "gifted_session_start",
