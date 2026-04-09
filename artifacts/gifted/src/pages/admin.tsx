@@ -1118,28 +1118,30 @@ export default function AdminPage() {
                             className="text-muted-foreground hover:text-primary transition-colors p-1 block">
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
-                          {!g.paid && g.amount && parseFloat(g.amount) > 0 && (
+                          <div className="flex items-center ml-2 pl-2 border-l border-border gap-1">
+                            {!g.paid && g.amount && parseFloat(g.amount) > 0 && (
+                              <button
+                                onClick={() => markGiftAsPaid(g.id)}
+                                disabled={markingGiftPaid === g.id}
+                                className="text-amber-600 hover:text-amber-700 transition-colors p-1.5"
+                                title="Mark gift as paid (use when Stripe webhook missed)"
+                              >
+                                {markingGiftPaid === g.id
+                                  ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  : <BadgeCheck className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
                             <button
-                              onClick={() => markGiftAsPaid(g.id)}
-                              disabled={markingGiftPaid === g.id}
-                              className="text-amber-600 hover:text-amber-700 transition-colors p-1"
-                              title="Mark gift as paid (use when Stripe webhook missed)"
+                              onClick={() => deleteGift(g.id, g.recipientName)}
+                              disabled={deletingGift === g.id}
+                              className="text-destructive/40 hover:text-destructive transition-colors p-1.5"
+                              title="Permanently delete this gift"
                             >
-                              {markingGiftPaid === g.id
+                              {deletingGift === g.id
                                 ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                : <BadgeCheck className="w-3.5 h-3.5" />}
+                                : <Trash2 className="w-3.5 h-3.5" />}
                             </button>
-                          )}
-                          <button
-                            onClick={() => deleteGift(g.id, g.recipientName)}
-                            disabled={deletingGift === g.id}
-                            className="text-destructive/50 hover:text-destructive transition-colors p-1"
-                            title="Permanently delete this gift"
-                          >
-                            {deletingGift === g.id
-                              ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              : <Trash2 className="w-3.5 h-3.5" />}
-                          </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
