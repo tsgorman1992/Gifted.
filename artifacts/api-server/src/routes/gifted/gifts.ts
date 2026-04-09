@@ -427,15 +427,37 @@ router.get("/gifted/my-gifts", async (req, res) => {
     return;
   }
 
+  const userEmail = (req as any).user?.email as string | null | undefined;
+
   try {
-    const rows = await db
+    const ownedRows = await db
       .select()
       .from(gifts)
       .where(and(eq(gifts.senderUserId, userId), sql`(${gifts.senderHidden} IS NULL OR ${gifts.senderHidden} = false)`))
       .orderBy(desc(gifts.createdAt));
 
+    let emailMatchedRows: typeof ownedRows = [];
+    if (userEmail) {
+      emailMatchedRows = await db
+        .select()
+        .from(gifts)
+        .where(
+          and(
+            isNull(gifts.senderUserId),
+            sql`lower(${gifts.senderEmail}) = lower(${userEmail})`,
+            sql`(${gifts.senderHidden} IS NULL OR ${gifts.senderHidden} = false)`
+          )
+        )
+        .orderBy(desc(gifts.createdAt));
+    }
+
+    const ownedIds = new Set(ownedRows.map((g) => g.id));
+    const deduped = emailMatchedRows.filter((g) => !ownedIds.has(g.id));
+
+    const allRows = [...ownedRows, ...deduped];
+
     res.json(
-      rows.map((g) => ({
+      allRows.map((g) => ({
         id: g.id,
         recipientName: g.recipientName,
         senderName: g.senderName,
@@ -452,6 +474,7 @@ router.get("/gifted/my-gifts", async (req, res) => {
         scheduledFor: g.scheduledFor,
         scheduleDelivered: g.scheduleDelivered,
         createdAt: g.createdAt,
+        senderUserId: g.senderUserId,
       }))
     );
   } catch (err) {

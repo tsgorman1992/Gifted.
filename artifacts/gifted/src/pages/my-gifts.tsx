@@ -41,6 +41,7 @@ interface GiftSummary {
   scheduledFor: string | null;
   scheduleDelivered: boolean;
   createdAt: string;
+  senderUserId: string | null;
 }
 
 interface ReceivedGiftSummary {
@@ -1772,6 +1773,20 @@ export default function MyGiftsPage() {
     staleTime: 20_000,
     refetchInterval: 30_000,
   });
+
+  useEffect(() => {
+    if (!myGifts || myGifts.length === 0) return;
+    const unclaimed = myGifts.filter((g) => g.senderUserId === null);
+    if (unclaimed.length === 0) return;
+    unclaimed.forEach((g) => {
+      fetch(`${BASE}/api/gifted/gifts/${g.id}/claim`, {
+        method: "PATCH",
+        credentials: "include",
+      })
+        .then(() => queryClient.invalidateQueries({ queryKey: ["my-gifts"] }))
+        .catch(() => {});
+    });
+  }, [myGifts]);
 
   const { data: receivedGifts, isLoading: receivedLoading } = useQuery({
     queryKey: ["received-gifts"],

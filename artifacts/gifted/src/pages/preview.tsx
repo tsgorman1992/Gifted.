@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -95,6 +96,7 @@ export default function PreviewPage() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading: authLoading, refetch } = useAuth();
   const isMobileOrTablet = useIsMobileOrTablet();
+  const queryClient = useQueryClient();
 
   const [experience,     setExperience]     = useState(DEFAULT_EXPERIENCE);
   const [recipientName,  setRecipientName]  = useState(() => localStorage.getItem("gifted_recipient_name") || "");
@@ -364,14 +366,25 @@ export default function PreviewPage() {
   const claimedRef = useRef(false);
   useEffect(() => {
     if (!isAuthenticated || authLoading || claimedRef.current) return;
-    const id = giftId || localStorage.getItem("gifted_gift_id");
-    if (!id) return;
     claimedRef.current = true;
+    const id = giftId || localStorage.getItem("gifted_gift_id");
+    if (!id) {
+      // No local gift ID — cross-device flow; trigger dashboard to pick up email-matched gifts
+      queryClient.invalidateQueries({ queryKey: ["my-gifts"] });
+      return;
+    }
     fetch(`${base}/api/gifted/gifts/${id}/claim`, {
       method: "PATCH",
       credentials: "include",
-    }).catch(() => {});
-  }, [isAuthenticated, authLoading, giftId, base]);
+    }).then((res) => {
+      if (!res.ok) {
+        // Claim failed (e.g. already owned by another account); refresh dashboard to pick up email-matched gifts
+        queryClient.invalidateQueries({ queryKey: ["my-gifts"] });
+      }
+    }).catch(() => {
+      queryClient.invalidateQueries({ queryKey: ["my-gifts"] });
+    });
+  }, [isAuthenticated, authLoading, giftId, base, queryClient]);
 
   // Fire signup_nudge_shown once when the paid nudge becomes visible
   const nudgeShownFiredRef = useRef(false);
