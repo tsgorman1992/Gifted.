@@ -99,6 +99,13 @@ export default function RedeemPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Pre-filled support email so every help request includes gift context
+  const supportHref = `mailto:help@gifted.page?subject=${encodeURIComponent(
+    `Redemption help — gift ${giftId ?? "unknown"}`
+  )}&body=${encodeURIComponent(
+    `Hi gifted. team,\n\nI'm having trouble redeeming my gift.\n\nGift ID: ${giftId ?? "unknown"}\nAmount: $${parseFloat(amount || "0").toFixed(2)}${senderName ? `\nFrom: ${senderName}` : ""}\n\n[Please describe your issue here]\n`
+  )}`;
+
   useEffect(() => {
     const stored = localStorage.getItem("gifted_amount");
     if (stored) setAmount(stored);
@@ -354,7 +361,7 @@ export default function RedeemPage() {
         <h1 className="font-serif text-4xl font-medium mb-3">Already redeemed</h1>
         <p className="text-muted-foreground max-w-sm mb-8">
           This moment has already been redeemed. If you think this is a mistake, please contact{" "}
-          <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a>.
+          <a href={supportHref} className="underline hover:text-foreground">help@gifted.page</a>.
         </p>
         <Link href={giftId ? `/open/${giftId}` : "/"}>
           <Button variant="outline" className="rounded-full h-12 px-8">Back to moment</Button>
@@ -409,7 +416,7 @@ export default function RedeemPage() {
                     <p>{otpError}</p>
                     <p className="text-xs text-destructive/80">
                       Need help?{" "}
-                      <a href="mailto:help@gifted.page" className="underline font-medium hover:opacity-80">
+                      <a href={supportHref} className="underline font-medium hover:opacity-80">
                         Email us at help@gifted.page →
                       </a>
                     </p>
@@ -427,10 +434,11 @@ export default function RedeemPage() {
                 </Button>
 
                 <p className="text-center text-xs text-muted-foreground">
-                  Having trouble?{" "}
-                  <a href="mailto:help@gifted.page" className="underline hover:text-foreground transition-colors">
-                    Contact support
+                  Wrong number or having trouble?{" "}
+                  <a href={supportHref} className="underline hover:text-foreground transition-colors">
+                    Email us
                   </a>
+                  {" "}and we'll verify you another way.
                 </p>
 
                 <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-center">
@@ -483,7 +491,7 @@ export default function RedeemPage() {
                     <p>{otpError}</p>
                     <p className="text-xs text-destructive/80">
                       Need help?{" "}
-                      <a href="mailto:help@gifted.page" className="underline font-medium hover:opacity-80">
+                      <a href={supportHref} className="underline font-medium hover:opacity-80">
                         Email us at help@gifted.page →
                       </a>
                     </p>
@@ -511,7 +519,7 @@ export default function RedeemPage() {
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
                   </button>
                   <a
-                    href="mailto:help@gifted.page"
+                    href={supportHref}
                     className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
                   >
                     Need help?
@@ -549,7 +557,7 @@ export default function RedeemPage() {
                     <div className="w-full border-t border-border pt-4 mt-1">
                       <div className="flex items-start gap-2 text-xs text-muted-foreground text-left">
                         <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span>We'll send your balance directly — usually within a few hours. Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground">help@gifted.page</a></span>
+                        <span>We'll send your balance directly — usually within a few hours. Questions? <a href={supportHref} className="underline hover:text-foreground">help@gifted.page</a></span>
                       </div>
                     </div>
                   </div>
@@ -900,7 +908,7 @@ export default function RedeemPage() {
 
                 {/* Support note */}
                 <p className="text-xs text-muted-foreground/70">
-                  Questions? <a href="mailto:help@gifted.page" className="underline hover:text-foreground transition-colors">help@gifted.page</a>
+                  Questions? <a href={supportHref} className="underline hover:text-foreground transition-colors">help@gifted.page</a>
                 </p>
 
                 <Button
