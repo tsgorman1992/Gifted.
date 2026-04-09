@@ -1790,7 +1790,17 @@ export default function CreatePage() {
                     </AnimatePresence>
                     <Textarea
                       id="message"
-                      placeholder="Write a personal note (optional)..."
+                      placeholder={(() => {
+                        const name = recipientName || "them";
+                        const notePlaceholders: Record<string, string> = {
+                          Love:         `e.g. You mean the world to me, ${name}.`,
+                          Anniversary:  `e.g. Every year with you is my favorite, ${name}.`,
+                          Wedding:      `e.g. Wishing you both a lifetime of joy.`,
+                          "Mother's Day": `e.g. Thank you for everything you do, ${name}.`,
+                          "Father's Day": `e.g. So grateful for you every day, ${name}.`,
+                        };
+                        return notePlaceholders[occasion] ?? "Write a personal note (optional)...";
+                      })()}
                       className="min-h-[160px] rounded-xl text-base resize-none relative z-10"
                       value={personalNote}
                       onChange={(e) => setPersonalNote(e.target.value)}
