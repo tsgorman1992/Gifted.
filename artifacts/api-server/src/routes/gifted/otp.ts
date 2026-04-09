@@ -2,8 +2,19 @@ import { Router } from "express";
 import { db, gifts } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import twilio from "twilio";
+import rateLimit from "express-rate-limit";
 
 const router = Router();
+
+// Limit OTP sends to 5 per IP per 10 minutes.
+// Prevents Twilio cost abuse and phone number harassment.
+const otpSendLimit = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many verification attempts — please wait 10 minutes and try again." },
+});
 
 function getTwilioClient() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -31,7 +42,7 @@ function normalizePhone(phone: string): string {
  * Sends a verification code via Twilio Verify to the recipient's phone on file.
  * The code is managed entirely by Twilio — nothing is stored in our database.
  */
-router.post("/gifted/send-otp", async (req, res) => {
+router.post("/gifted/send-otp", otpSendLimit, async (req, res) => {
   try {
     const { giftId } = req.body as { giftId: string };
     if (!giftId) {

@@ -2,8 +2,30 @@ import { Router } from "express";
 import { db, gifts, usersTable } from "@workspace/db";
 import { desc, isNotNull, eq, ilike, count, gte, sql } from "drizzle-orm";
 import { physicalGifts, conversations, messages } from "@workspace/db";
+import rateLimit from "express-rate-limit";
 
 const router = Router();
+
+// Protect all admin endpoints — 30 requests per 5 minutes per IP.
+// A real operator will never come close to this; it stops brute-force
+// password guessing without locking out legitimate access.
+const adminRateLimit = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests — please wait before trying again." },
+  skip: (req) => {
+    // Never rate-limit correctly authenticated requests
+    const pw = process.env.ADMIN_PASSWORD;
+    const provided =
+      (req.headers["x-admin-key"] as string | undefined) ||
+      (req.query.key as string | undefined);
+    return !!pw && provided === pw;
+  },
+});
+
+router.use(adminRateLimit);
 
 function checkAuth(req: import("express").Request, res: import("express").Response): boolean {
   const pw = process.env.ADMIN_PASSWORD;
