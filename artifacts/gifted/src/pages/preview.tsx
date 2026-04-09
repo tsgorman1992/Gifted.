@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
-  CheckCircle2, Send, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download, Mail,
+  CheckCircle2, Send, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download,
 } from "lucide-react";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { useAuth } from "@/lib/auth-context";
@@ -666,29 +666,6 @@ export default function PreviewPage() {
     }
   };
 
-  // Email-me-this-link state (unauthenticated senders only)
-  const [emailMeOpen,    setEmailMeOpen]    = useState(false);
-  const [emailMeAddress, setEmailMeAddress] = useState("");
-  const [emailMeStatus,  setEmailMeStatus]  = useState<"idle" | "sending" | "sent" | "error">("idle");
-
-  const handleEmailMe = async () => {
-    if (!emailMeAddress.trim()) return;
-    const saved = giftId ? { id: giftId } : await saveGift();
-    if (!saved) return;
-    setEmailMeStatus("sending");
-    try {
-      const res = await fetch(`${base}/api/gifted/email-link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ giftId: saved.id, email: emailMeAddress.trim() }),
-      });
-      if (!res.ok) throw new Error("failed");
-      setEmailMeStatus("sent");
-    } catch {
-      setEmailMeStatus("error");
-    }
-  };
-
   // ── Contact save prompt ──────────────────────────────────────────────────────
   const [contactPromptDismissed, setContactPromptDismissed] = useState(false);
   const [contactName,     setContactName]     = useState("");
@@ -1169,68 +1146,6 @@ export default function PreviewPage() {
               </div>
             )}
 
-            {/* ── Email me this link (unauthenticated senders) ── */}
-            {!isAuthenticated && !authLoading && (!hasBalance || isPaid) && (
-              <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                {emailMeStatus !== "sent" ? (
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setEmailMeOpen(v => !v)}
-                      className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span>{emailMeOpen ? "Hide" : "Email me this link"}</span>
-                    </button>
-                    <AnimatePresence>
-                      {emailMeOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="flex gap-2 pt-1">
-                            <input
-                              type="email"
-                              value={emailMeAddress}
-                              onChange={e => { setEmailMeAddress(e.target.value); setEmailMeStatus("idle"); }}
-                              placeholder="your@email.com"
-                              className="flex-1 h-9 px-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                              onKeyDown={e => { if (e.key === "Enter") handleEmailMe(); }}
-                              disabled={emailMeStatus === "sending"}
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={handleEmailMe}
-                              disabled={!emailMeAddress.trim() || emailMeStatus === "sending"}
-                              className="h-9 px-4 rounded-xl text-xs shrink-0"
-                            >
-                              {emailMeStatus === "sending"
-                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                : "Send"}
-                            </Button>
-                          </div>
-                          {emailMeStatus === "error" && (
-                            <p className="text-xs text-destructive mt-1.5">Couldn't send — try again.</p>
-                          )}
-                          <p className="text-[11px] text-muted-foreground/60 mt-1.5 leading-relaxed">
-                            We'll email you the link so you can find and share it later.
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ) : (
-                  <p className="text-xs text-green-700 dark:text-green-400 flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" />
-                    Check your inbox — the link is on its way!
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* ── Post-send confirmation + notification opt-in ── */}
             <AnimatePresence>
@@ -1316,56 +1231,6 @@ export default function PreviewPage() {
                   </div>
                   )}
 
-                  {/* CTA — authenticated: phone notification; anonymous: optional sign-up nudge */}
-                  {isAuthenticated ? (
-                    <div>
-                      {!notifySaved ? (
-                        <div className="space-y-1.5">
-                          <p className="text-xs text-green-700/80 dark:text-green-400/80 font-medium">
-                            Get a text when {recipientName} opens it
-                          </p>
-                          <form onSubmit={handleNotifyPhoneSave} className="flex flex-col sm:flex-row gap-2">
-                            <input
-                              type="tel"
-                              value={notifyPhone}
-                              onChange={e => setNotifyPhone(e.target.value)}
-                              placeholder="Your mobile number"
-                              className="flex-1 h-9 px-3 rounded-xl border border-green-200 dark:border-green-700 bg-white dark:bg-green-950/20 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/30"
-                            />
-                            <Button type="submit" size="sm" disabled={!notifyPhone.trim() || notifySaving}
-                              className="h-9 px-4 rounded-xl bg-green-700 hover:bg-green-800 text-white border-0 text-xs shrink-0 w-full sm:w-auto">
-                              {notifySaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Bell className="w-3 h-3 mr-1.5" /> Notify me</>}
-                            </Button>
-                          </form>
-                          <p className="text-[11px] text-green-700/50 dark:text-green-400/40 leading-relaxed">
-                            By adding your number, you agree to receive SMS updates about this gift from gifted. Msg &amp; data rates may apply. Reply STOP to opt out.
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-green-700/70 dark:text-green-400/70 text-center">
-                          ✓ We'll text you when {recipientName} opens and redeems their gift.
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    /* ── Unauthenticated tracking nudge — compact, no duplicate form ── */
-                    <div className="pt-2 border-t border-green-200 dark:border-green-800 flex items-center justify-between gap-3">
-                      <p className="text-xs text-green-700/70 dark:text-green-400/70">
-                        Sign in to get notified when {recipientName} opens it.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (giftId) localStorage.setItem("gifted_auth_return", `/preview?gift_id=${giftId}`);
-                          window.location.href = `${base}/api/auth/google`;
-                        }}
-                        className="shrink-0 h-8 px-3 flex items-center gap-1.5 rounded-xl border border-green-300 dark:border-green-700 bg-white dark:bg-green-950/30 hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors text-xs font-medium text-green-900 dark:text-green-300"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
-                        Sign in
-                      </button>
-                    </div>
-                  )}
                 </motion.div>
               )}
             </AnimatePresence>
