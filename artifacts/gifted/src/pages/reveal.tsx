@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { trackEvent } from "@/lib/analytics";
 
@@ -1551,6 +1551,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [giftAmount, setGiftAmount]       = useState<string | null>(null);
   const [giftIntent, setGiftIntent]       = useState<string | null>(null);
   const [giftPaid, setGiftPaid]           = useState<boolean>(true);
+  const [giftPaidLoaded, setGiftPaidLoaded] = useState(false);
   const [isPreview, setIsPreview]         = useState(false);
   const [isEmbed, setIsEmbed]             = useState(false);
   const [senderBannerDismissed, setSenderBannerDismissed] = useState(false);
@@ -1658,6 +1659,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
     if (isPreviewMode) {
       setIsPreview(true);
       setGiftPaid(true);
+      setGiftPaidLoaded(true);
     } else {
       const paid = localStorage.getItem("gifted_gift_paid");
       if (paid === "false") setGiftPaid(false);
@@ -1716,6 +1718,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
           if (gift.amount && parseFloat(gift.amount) > 0) setGiftAmount(gift.amount);
           if (gift.intent) setGiftIntent(gift.intent);
           if (typeof gift.paid === "boolean") setGiftPaid(gift.paid);
+          setGiftPaidLoaded(true);
 
           const rawLinks: Array<string | {url: string; label: string; subtitle?: string}> =
             Array.isArray(gift.extraLinks) ? gift.extraLinks : [];
@@ -2745,7 +2748,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                 </Link>
                               )
                             ) : (
-                              <p className="text-sm text-white/40 italic">Payment pending — check back soon.</p>
+                              giftPaidLoaded
+                                ? <p className="text-sm text-white/40 italic">Payment pending — check back soon.</p>
+                                : <Loader2 className="w-5 h-5 animate-spin text-white/40" />
                             )}
                           </motion.div>
                         </div>
@@ -2857,7 +2862,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                 </Link>
                               )
                             ) : (
-                              <p className="text-sm opacity-60 italic">Payment pending — check back soon.</p>
+                              giftPaidLoaded
+                                ? <p className="text-sm opacity-60 italic">Payment pending — check back soon.</p>
+                                : <Loader2 className="w-5 h-5 animate-spin opacity-40" />
                             )}
                           </motion.div>
                         </div>

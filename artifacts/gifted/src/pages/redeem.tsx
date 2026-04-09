@@ -160,6 +160,7 @@ export default function RedeemPage() {
       .catch(() => setAuthChecked(true));
 
     // Check Google OAuth availability
+    // (auth bypass for logged-in users is handled in a separate useEffect below)
     fetch(`${BASE}/api/auth/google/enabled`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.enabled) setGoogleEnabled(true); })
@@ -182,6 +183,13 @@ export default function RedeemPage() {
       })
       .catch(() => {});
   }, []);
+
+  // Authenticated users skip the OTP gate entirely — we already know who they are.
+  useEffect(() => {
+    if (authChecked && isAuthenticated && screen === "otp-gate" && !alreadyRedeemed) {
+      setScreen("banking");
+    }
+  }, [authChecked, isAuthenticated, screen, alreadyRedeemed]);
 
   const displayAmount = parseFloat(amount) > 0 ? parseFloat(amount).toFixed(2) : null;
   const activeMethod  = METHODS.find(m => m.id === selectedMethod);

@@ -1772,6 +1772,7 @@ export default function MyGiftsPage() {
     enabled: isAuthenticated,
     staleTime: 20_000,
     refetchInterval: 30_000,
+    refetchOnMount: "always",
   });
 
   useEffect(() => {
