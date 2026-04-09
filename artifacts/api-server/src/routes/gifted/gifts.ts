@@ -727,6 +727,7 @@ router.get("/gifted/received-gifts", async (req, res) => {
         occasion: g.occasion,
         experience: g.experience,
         amount: (g.amount && parseFloat(g.amount) > 0) ? g.amount : null,
+        paid: g.paid ?? false,
         openedAt: g.openedAt,
         redeemedAt: g.redeemedAt,
         cashoutPaidAt: g.cashoutPaidAt ?? null,

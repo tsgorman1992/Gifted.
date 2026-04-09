@@ -220,6 +220,25 @@ router.patch("/admin/gifts/:id/mark-cashout-paid", async (req, res) => {
   }
 });
 
+// PATCH /api/admin/gifts/:id/mark-paid
+router.patch("/admin/gifts/:id/mark-paid", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const updated = await db
+      .update(gifts)
+      .set({ paid: true })
+      .where(eq(gifts.id, req.params.id))
+      .returning({ id: gifts.id, paid: gifts.paid });
+
+    if (updated.length === 0) { res.status(404).json({ error: "Gift not found" }); return; }
+    console.log(`[admin] gift marked paid: ${req.params.id}`);
+    res.json({ ok: true, ...updated[0] });
+  } catch (err) {
+    console.error("[admin] mark-paid error:", err);
+    res.status(500).json({ error: "Failed to mark gift paid" });
+  }
+});
+
 // DELETE /api/admin/wipe — wipes all gift/transaction data, keeps user accounts
 // Body must include { confirm: "WIPE" }
 router.delete("/admin/wipe", async (req, res) => {

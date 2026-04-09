@@ -52,6 +52,7 @@ interface ReceivedGiftSummary {
   occasion: string;
   experience: string;
   amount: string | null;
+  paid: boolean;
   openedAt: string | null;
   redeemedAt: string | null;
   cashoutPaidAt: string | null;
@@ -589,7 +590,7 @@ function ReceivedGiftCard({ gift, idx }: { gift: ReceivedGiftSummary; idx: numbe
     }
   }, [gift.id, queryClient]);
 
-  const hasUnclaimedBalance = !!(gift.amount && parseFloat(gift.amount) > 0 && gift.openedAt && !gift.redeemedAt);
+  const hasUnclaimedBalance = !!(gift.amount && parseFloat(gift.amount) > 0 && gift.paid && gift.openedAt && !gift.redeemedAt);
 
   return (
     <motion.div
@@ -1855,7 +1856,7 @@ export default function MyGiftsPage() {
 
   // Received gifts with unclaimed balance (for the action banner)
   const unclaimedGifts = receivedGifts?.filter(g =>
-    g.amount && parseFloat(g.amount) > 0 && g.openedAt && !g.redeemedAt
+    g.amount && parseFloat(g.amount) > 0 && g.paid && g.openedAt && !g.redeemedAt
   ) ?? [];
   const totalUnclaimedBalance = unclaimedGifts.reduce((sum, g) => sum + parseFloat(g.amount!), 0);
 

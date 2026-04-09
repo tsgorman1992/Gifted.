@@ -76,6 +76,10 @@ router.post("/gifted/checkout-session", async (req, res) => {
       res.status(400).json({ error: "Gift has no balance to pay" });
       return;
     }
+    if (gift.paid) {
+      res.status(400).json({ error: "This gift has already been paid." });
+      return;
+    }
 
     const stripe = getStripe();
     const giftAmount     = parseFloat(gift.amount);

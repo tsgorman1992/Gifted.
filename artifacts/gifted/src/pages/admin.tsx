@@ -645,6 +645,17 @@ export default function AdminPage() {
     } finally { setMarkingPaid(null); }
   }
 
+  const [markingGiftPaid, setMarkingGiftPaid] = useState<string | null>(null);
+  async function markGiftAsPaid(id: string) {
+    setMarkingGiftPaid(id);
+    try {
+      const r = await fetch(`${API}/api/admin/gifts/${id}/mark-paid`, { method: "PATCH", headers });
+      if (r.ok) {
+        setGiftRows(prev => prev.map(g => g.id === id ? { ...g, paid: true } : g));
+      }
+    } finally { setMarkingGiftPaid(null); }
+  }
+
   async function handleWipe() {
     if (wipeInput !== "WIPE") return;
     setWiping(true); setWipeMsg(null);
@@ -1093,6 +1104,18 @@ export default function AdminPage() {
                             className="text-muted-foreground hover:text-primary transition-colors p-1 block">
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
+                          {!g.paid && g.amount && parseFloat(g.amount) > 0 && (
+                            <button
+                              onClick={() => markGiftAsPaid(g.id)}
+                              disabled={markingGiftPaid === g.id}
+                              className="text-amber-600 hover:text-amber-700 transition-colors p-1"
+                              title="Mark gift as paid (use when Stripe webhook missed)"
+                            >
+                              {markingGiftPaid === g.id
+                                ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                : <BadgeCheck className="w-3.5 h-3.5" />}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
