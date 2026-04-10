@@ -112,7 +112,8 @@ export default function RedeemPage() {
     const sn = localStorage.getItem("gifted_sender_name");
     if (sn) setSenderName(sn);
 
-    const storedId = localStorage.getItem("gifted_gift_id");
+    const urlGiftId = new URLSearchParams(window.location.search).get("giftId");
+    const storedId = urlGiftId || localStorage.getItem("gifted_open_gift_id") || localStorage.getItem("gifted_gift_id");
     if (storedId) {
       setGiftId(storedId);
       fetch(`${BASE}/api/gifted/gifts/${encodeURIComponent(storedId)}`, { credentials: "include" })

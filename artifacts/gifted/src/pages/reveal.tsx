@@ -2755,7 +2755,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                   Redeem your balance
                                 </Button>
                               ) : (
-                                <Link href="/redeem">
+                                <Link href={giftId ? `/redeem?giftId=${encodeURIComponent(giftId)}` : "/redeem"}>
                                   <Button size="lg" className="rounded-full h-16 px-10 text-xl shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto" style={{ background: "rgba(255,255,255,0.12)", color: "white", border: "1px solid rgba(255,255,255,0.25)" }}>
                                     Redeem your balance
                                   </Button>
@@ -2872,7 +2872,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                   Redeem your balance
                                 </Button>
                               ) : (
-                                <Link href="/redeem">
+                                <Link href={giftId ? `/redeem?giftId=${encodeURIComponent(giftId)}` : "/redeem"}>
                                   <Button size="lg" className="rounded-full h-16 px-10 text-xl bg-white text-primary hover:bg-white/90 shadow-xl hover:-translate-y-1 transition-all w-full sm:w-auto">
                                     Redeem your balance
                                   </Button>

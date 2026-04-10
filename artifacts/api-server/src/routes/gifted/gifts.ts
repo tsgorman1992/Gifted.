@@ -375,11 +375,10 @@ router.get("/gifted/gifts/:id", async (req, res) => {
     ) {
       try {
         const stripe = getStripe();
-        const results = await stripe.checkout.sessions.search({
-          query: `metadata["giftId"]:"${gift.id}" AND status:"complete"`,
-          limit: 5,
-        });
-        const paidSession = results.data.find((s) => s.payment_status === "paid");
+        const results = await stripe.checkout.sessions.list({ limit: 100, status: "complete" });
+        const paidSession = results.data.find(
+          (s) => s.metadata?.giftId === gift.id && s.payment_status === "paid"
+        );
         if (paidSession) {
           const senderEmail = paidSession.customer_details?.email ?? null;
           const [updated] = await db

@@ -132,6 +132,7 @@ router.post("/gifted/checkout-session", async (req, res) => {
         },
       ],
       metadata: { giftId },
+      payment_intent_data: { metadata: { giftId } },
       success_url: `${returnUrl}?paid=true&gift_id=${giftId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${returnUrl}?cancelled=true`,
     });
