@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, gifts, usersTable } from "@workspace/db";
-import { desc, isNotNull, eq, ilike, count, gte, sql } from "drizzle-orm";
+import { desc, isNotNull, eq, ilike, count, gte, lte, ne, and, sql } from "drizzle-orm";
 import { physicalGifts, conversations, messages } from "@workspace/db";
 import rateLimit from "express-rate-limit";
 
@@ -485,6 +485,98 @@ router.get("/admin/trends", async (req, res) => {
   } catch (err) {
     console.error("[admin] trends error:", err);
     res.status(500).json({ error: "Failed to load trends" });
+  }
+});
+
+/**
+ * POST /api/admin/gifts/:id/heal-payment
+ * Manually triggers the sibling-payment self-heal for a specific gift.
+ * Finds a paid sibling gift (same sender, same recipient+amount, ±5 min window)
+ * and propagates paid=true to the target gift. Used for operational remediation
+ * of orphaned duplicate gifts that bypassed idempotency guards.
+ */
+router.post("/admin/gifts/:id/heal-payment", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  const giftId = req.params.id;
+
+  try {
+    const [gift] = await db
+      .select()
+      .from(gifts)
+      .where(eq(gifts.id, giftId))
+      .limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    if (gift.paid) {
+      res.json({ alreadyPaid: true, gift: { id: gift.id, paid: gift.paid } });
+      return;
+    }
+
+    if (!gift.amount || parseFloat(gift.amount) <= 0) {
+      res.status(400).json({ error: "Gift has no payable amount" });
+      return;
+    }
+
+    if (!gift.senderUserId && !gift.senderEmail) {
+      res.status(400).json({ error: "Gift has no sender identifier" });
+      return;
+    }
+
+    const windowMs = 5 * 60 * 1000;
+    const createdAt   = new Date(gift.createdAt);
+    const windowStart = new Date(createdAt.getTime() - windowMs);
+    const windowEnd   = new Date(createdAt.getTime() + windowMs);
+
+    const senderCondition = gift.senderUserId
+      ? eq(gifts.senderUserId, gift.senderUserId)
+      : eq(gifts.senderEmail, gift.senderEmail!);
+
+    const [paidSibling] = await db
+      .select({
+        id:                     gifts.id,
+        paid:                   gifts.paid,
+        stripePaymentIntentId:  gifts.stripePaymentIntentId,
+        senderEmail:            gifts.senderEmail,
+      })
+      .from(gifts)
+      .where(and(
+        senderCondition,
+        eq(gifts.recipientName, gift.recipientName),
+        eq(gifts.amount, gift.amount!),
+        ne(gifts.id, gift.id),
+        eq(gifts.paid, true),
+        gte(gifts.createdAt, windowStart),
+        lte(gifts.createdAt, windowEnd),
+      ))
+      .limit(1);
+
+    if (!paidSibling) {
+      res.status(422).json({
+        error: "No paid sibling found within 5-minute window",
+        hint: "Confirm the canonical gift was actually paid in Stripe before running heal",
+      });
+      return;
+    }
+
+    const [updated] = await db
+      .update(gifts)
+      .set({
+        paid:                  true,
+        stripePaymentIntentId: paidSibling.stripePaymentIntentId,
+        senderEmail:           paidSibling.senderEmail ?? gift.senderEmail,
+      })
+      .where(eq(gifts.id, gift.id))
+      .returning();
+
+    console.log(`[admin/heal-payment] Healed gift ${giftId} via sibling ${paidSibling.id}`);
+    res.json({ healed: true, from: paidSibling.id, gift: updated });
+  } catch (err) {
+    console.error("[admin/heal-payment] Error:", err);
+    res.status(500).json({ error: "Failed to heal payment status" });
   }
 });
 
