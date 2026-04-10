@@ -2,7 +2,7 @@ import { Router } from "express";
 import Stripe from "stripe";
 import twilio from "twilio";
 import { db, gifts, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, ne, isNotNull } from "drizzle-orm";
 import {
   sendSenderReceipt,
   sendSenderRedemptionNotice,
@@ -226,6 +226,25 @@ router.post("/gifted/confirm-payment", async (req, res) => {
           recipientName: existing.recipientName,
           giftId:        existing.id,
         }).catch(() => {});
+      }
+    }
+
+    // Propagate payment to sibling gifts that share the same idempotency key
+    // (duplicates created by remount-triggered saves). Hide all siblings since
+    // the canonical gift (this one) is the one that was paid.
+    if (existing?.idempotencyKey) {
+      try {
+        await db
+          .update(gifts)
+          .set({ paid: true, senderHidden: true })
+          .where(and(
+            eq(gifts.idempotencyKey, existing.idempotencyKey),
+            ne(gifts.id, giftId),
+            isNotNull(gifts.idempotencyKey),
+          ));
+        console.log(`[confirm-payment] Propagated paid=true to siblings of ${giftId} (key=${existing.idempotencyKey})`);
+      } catch (sibErr) {
+        console.warn(`[confirm-payment] Sibling propagation failed:`, sibErr);
       }
     }
 
@@ -454,6 +473,23 @@ router.post("/stripe/webhook", async (req, res) => {
           occasion:      existing.occasion,
           giftTitle:     existing.giftTitle,
         }).catch(() => {});
+      }
+
+      // Propagate payment to sibling gifts sharing the same idempotency key
+      if (existing?.idempotencyKey) {
+        try {
+          await db
+            .update(gifts)
+            .set({ paid: true, senderHidden: true })
+            .where(and(
+              eq(gifts.idempotencyKey, existing.idempotencyKey),
+              ne(gifts.id, giftId),
+              isNotNull(gifts.idempotencyKey),
+            ));
+          console.log(`[stripe/webhook] Propagated paid=true to siblings of ${giftId}`);
+        } catch (sibErr) {
+          console.warn(`[stripe/webhook] Sibling propagation failed:`, sibErr);
+        }
       }
     }
   }

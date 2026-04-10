@@ -3,7 +3,7 @@ import { Readable } from "stream";
 import { nanoid } from "nanoid";
 import { createHmac, timingSafeEqual } from "crypto";
 import { db, gifts, usersTable, contacts as contactsTable, contactOccasions } from "@workspace/db";
-import { eq, desc, isNull, and, sql } from "drizzle-orm";
+import { eq, desc, isNull, and, ne, gte, lte, sql } from "drizzle-orm";
 import Stripe from "stripe";
 
 function getStripe(): Stripe {
@@ -429,6 +429,65 @@ router.get("/gifted/gifts/:id", async (req, res) => {
         }
       } catch (searchErr) {
         console.warn(`[self-heal] Stripe search failed for gift ${gift.id}:`, searchErr);
+      }
+    }
+
+    // Self-heal: orphaned duplicate — look for a sibling gift by the same sender
+    // with matching recipient and amount created within 5 minutes that IS paid.
+    // Fixes the case where 3 duplicates exist but only 1 was paid and no shared
+    // idempotency key links them (key was cleared before duplicates were made).
+    if (
+      !gift.paid &&
+      gift.amount && parseFloat(gift.amount) > 0 &&
+      (gift.senderUserId || gift.senderEmail)
+    ) {
+      try {
+        const windowMs = 5 * 60 * 1000;
+        const createdAt = new Date(gift.createdAt);
+        const windowStart = new Date(createdAt.getTime() - windowMs);
+        const windowEnd   = new Date(createdAt.getTime() + windowMs);
+
+        const senderCondition = gift.senderUserId
+          ? eq(gifts.senderUserId, gift.senderUserId)
+          : eq(gifts.senderEmail, gift.senderEmail!);
+
+        const [paidSibling] = await db
+          .select({
+            id: gifts.id,
+            paid: gifts.paid,
+            stripePaymentIntentId: gifts.stripePaymentIntentId,
+            stripeCheckoutSessionId: gifts.stripeCheckoutSessionId,
+            senderEmail: gifts.senderEmail,
+          })
+          .from(gifts)
+          .where(and(
+            senderCondition,
+            eq(gifts.recipientName, gift.recipientName),
+            eq(gifts.amount, gift.amount!),
+            ne(gifts.id, gift.id),
+            eq(gifts.paid, true),
+            gte(gifts.createdAt, windowStart),
+            lte(gifts.createdAt, windowEnd),
+          ))
+          .limit(1);
+
+        if (paidSibling) {
+          const [updated] = await db
+            .update(gifts)
+            .set({
+              paid: true,
+              stripePaymentIntentId: paidSibling.stripePaymentIntentId,
+              senderEmail: paidSibling.senderEmail ?? gift.senderEmail,
+            })
+            .where(eq(gifts.id, gift.id))
+            .returning();
+          if (updated) {
+            console.log(`[self-heal] Propagated paid=true from sibling ${paidSibling.id} to ${gift.id}`);
+            gift = updated;
+          }
+        }
+      } catch (sibErr) {
+        console.warn(`[self-heal] Sibling paid check failed for gift ${gift.id}:`, sibErr);
       }
     }
 

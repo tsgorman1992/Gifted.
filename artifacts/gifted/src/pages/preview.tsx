@@ -117,8 +117,25 @@ export default function PreviewPage() {
 
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [giftId,    setGiftId]    = useState<string | null>(null);
-  const [shareUrl,  setShareUrl]  = useState<string | null>(null);
+  const [giftId,    setGiftId]    = useState<string | null>(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("gift_id")
+      || localStorage.getItem("gifted_paid_id")
+      || localStorage.getItem("gifted_free_gift_id")
+      || localStorage.getItem("gifted_gift_id")
+      || null;
+  });
+  const [shareUrl,  setShareUrl]  = useState<string | null>(() => {
+    const p = new URLSearchParams(window.location.search);
+    const id = p.get("gift_id")
+      || localStorage.getItem("gifted_paid_id")
+      || localStorage.getItem("gifted_free_gift_id")
+      || localStorage.getItem("gifted_gift_id")
+      || null;
+    if (!id) return null;
+    const b = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    return `${window.location.origin}${b}/api/share/${id}`;
+  });
 
   const [selfPhone,         setSelfPhone]         = useState("");
   const [selfSendStatus,    setSelfSendStatus]    = useState<"idle" | "sending" | "sent">("idle");
@@ -491,7 +508,6 @@ export default function PreviewPage() {
         setShareUrl(url);
 
         localStorage.setItem("gifted_gift_id", id);
-        localStorage.removeItem("gifted_create_ikey");
 
         const amt2 = localStorage.getItem("gifted_amount");
         if (!amt2 || parseFloat(amt2) <= 0) {
