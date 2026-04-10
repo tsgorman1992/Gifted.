@@ -1,5 +1,16 @@
 import app from "./app";
 import { startScheduler } from "./scheduler";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
+
+async function runStartupMigrations() {
+  try {
+    await db.execute(sql`ALTER TABLE gifts ADD COLUMN IF NOT EXISTS idempotency_key TEXT`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS gifts_idempotency_key_unique ON gifts(idempotency_key) WHERE idempotency_key IS NOT NULL`);
+  } catch (err) {
+    console.warn("[migrations] Non-fatal migration warning:", err);
+  }
+}
 
 const rawPort = process.env["PORT"];
 
@@ -24,12 +35,14 @@ if (!process.env.GIFTED_BASE_URL) {
   console.warn("WARNING: GIFTED_BASE_URL is not set. OG share image URLs will use the request host, which may be incorrect in production.");
 }
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-  if (process.env.GIFTED_BASE_URL) {
-    console.log(`Share base URL: ${process.env.GIFTED_BASE_URL}`);
-  }
-  const twilioNum = process.env.TWILIO_PHONE_NUMBER;
-  console.log(`[config] TWILIO_PHONE_NUMBER=${twilioNum ? twilioNum.slice(0, 6) + "****" + twilioNum.slice(-2) : "NOT SET"}`);
-  startScheduler();
+runStartupMigrations().then(() => {
+  app.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+    if (process.env.GIFTED_BASE_URL) {
+      console.log(`Share base URL: ${process.env.GIFTED_BASE_URL}`);
+    }
+    const twilioNum = process.env.TWILIO_PHONE_NUMBER;
+    console.log(`[config] TWILIO_PHONE_NUMBER=${twilioNum ? twilioNum.slice(0, 6) + "****" + twilioNum.slice(-2) : "NOT SET"}`);
+    startScheduler();
+  });
 });
