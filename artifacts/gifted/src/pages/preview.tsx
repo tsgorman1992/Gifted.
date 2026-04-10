@@ -414,95 +414,104 @@ export default function PreviewPage() {
       ? "text-3xl"
       : "text-4xl";
 
+  const saveInFlightRef = React.useRef<Promise<{ id: string; url: string } | null> | null>(null);
+
   const saveGift = useCallback(async (): Promise<{ id: string; url: string } | null> => {
     if (giftId && shareUrl) return { id: giftId, url: shareUrl };
 
-    setSaving(true);
-    setSaveError(null);
+    if (saveInFlightRef.current) return saveInFlightRef.current;
 
-    try {
-      const payload: Record<string, unknown> = {
-        recipientName: localStorage.getItem("gifted_recipient_name") || recipientName,
-        senderName:    localStorage.getItem("gifted_sender_name")    || senderName,
-        experience:    localStorage.getItem("gifted_experience")     || experience,
-        occasion:      localStorage.getItem("gifted_occasion")       || "general",
-        giftTitle:     localStorage.getItem("gifted_gift_title")     || giftTitle,
-      };
+    const promise = (async () => {
+      setSaving(true);
+      setSaveError(null);
 
-      const rp = localStorage.getItem("gifted_recipient_phone");
-      if (rp) payload.recipientPhone = rp;
+      try {
+        const payload: Record<string, unknown> = {
+          recipientName: localStorage.getItem("gifted_recipient_name") || recipientName,
+          senderName:    localStorage.getItem("gifted_sender_name")    || senderName,
+          experience:    localStorage.getItem("gifted_experience")     || experience,
+          occasion:      localStorage.getItem("gifted_occasion")       || "general",
+          giftTitle:     localStorage.getItem("gifted_gift_title")     || giftTitle,
+        };
 
-      const spRaw = localStorage.getItem("gifted_sender_phone");
-      if (spRaw) payload.senderPhone = spRaw.replace(/\D/g, "").replace(/^(\d{3})(\d{3})(\d{4})$/, "+1$1$2$3") || spRaw;
+        const rp = localStorage.getItem("gifted_recipient_phone");
+        if (rp) payload.recipientPhone = rp;
 
-      const pn = localStorage.getItem("gifted_personal_note");
-      if (pn) payload.personalNote = pn;
+        const spRaw = localStorage.getItem("gifted_sender_phone");
+        if (spRaw) payload.senderPhone = spRaw.replace(/\D/g, "").replace(/^(\d{3})(\d{3})(\d{4})$/, "+1$1$2$3") || spRaw;
 
-      const vp = localStorage.getItem("gifted_video_path");
-      if (vp) payload.videoPath = vp;
+        const pn = localStorage.getItem("gifted_personal_note");
+        if (pn) payload.personalNote = pn;
 
-      const pp = localStorage.getItem("gifted_photo_paths");
-      if (pp) { try { payload.photoPaths = JSON.parse(pp); } catch { /* ignore */ } }
+        const vp = localStorage.getItem("gifted_video_path");
+        if (vp) payload.videoPath = vp;
 
-      const el = localStorage.getItem("gifted_extra_links");
-      if (el) { try { const parsed = JSON.parse(el); if (Array.isArray(parsed) && parsed.length > 0) payload.extraLinks = parsed; } catch { /* ignore */ } }
-      else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) payload.extraLinks = [pl]; }
+        const pp = localStorage.getItem("gifted_photo_paths");
+        if (pp) { try { payload.photoPaths = JSON.parse(pp); } catch { /* ignore */ } }
 
-      const amt = localStorage.getItem("gifted_amount");
-      if (amt) payload.amount = amt;
+        const el = localStorage.getItem("gifted_extra_links");
+        if (el) { try { const parsed = JSON.parse(el); if (Array.isArray(parsed) && parsed.length > 0) payload.extraLinks = parsed; } catch { /* ignore */ } }
+        else { const pl = localStorage.getItem("gifted_playlist_url"); if (pl) payload.extraLinks = [pl]; }
 
-      const intn = localStorage.getItem("gifted_intent");
-      if (intn) payload.intent = intn;
+        const amt = localStorage.getItem("gifted_amount");
+        if (amt) payload.amount = amt;
 
-      const sf = localStorage.getItem("gifted_scheduled_for");
-      const st = localStorage.getItem("gifted_scheduled_time") || "09:00";
-      if (sf) payload.scheduledFor = `${sf}T${st}:00`;
+        const intn = localStorage.getItem("gifted_intent");
+        if (intn) payload.intent = intn;
 
-      const tc = localStorage.getItem("gifted_tracking_carrier");
-      const tn = localStorage.getItem("gifted_tracking_number");
-      if (tc && tn) { payload.trackingCarrier = tc; payload.trackingNumber = tn; }
+        const sf = localStorage.getItem("gifted_scheduled_for");
+        const st = localStorage.getItem("gifted_scheduled_time") || "09:00";
+        if (sf) payload.scheduledFor = `${sf}T${st}:00`;
 
-      const res = await fetch(`${base}/api/gifted/gifts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
+        const tc = localStorage.getItem("gifted_tracking_carrier");
+        const tn = localStorage.getItem("gifted_tracking_number");
+        if (tc && tn) { payload.trackingCarrier = tc; payload.trackingNumber = tn; }
 
-      if (!res.ok) throw new Error("Save failed");
+        const res = await fetch(`${base}/api/gifted/gifts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
 
-      const { id } = await res.json();
-      setGiftId(id);
+        if (!res.ok) throw new Error("Save failed");
 
-      const url = `${window.location.origin}${base}/api/share/${id}`;
-      setShareUrl(url);
+        const { id } = await res.json();
+        setGiftId(id);
 
-      // Always persist gift ID for recovery banner
-      localStorage.setItem("gifted_gift_id", id);
+        const url = `${window.location.origin}${base}/api/share/${id}`;
+        setShareUrl(url);
 
-      // Persist for free gifts so giftId + shareUrl survive the OAuth redirect
-      const amt2 = localStorage.getItem("gifted_amount");
-      if (!amt2 || parseFloat(amt2) <= 0) {
-        localStorage.setItem("gifted_free_gift_id", id);
-        localStorage.setItem("gifted_free_gift_url", url);
+        localStorage.setItem("gifted_gift_id", id);
+
+        const amt2 = localStorage.getItem("gifted_amount");
+        if (!amt2 || parseFloat(amt2) <= 0) {
+          localStorage.setItem("gifted_free_gift_id", id);
+          localStorage.setItem("gifted_free_gift_url", url);
+        }
+
+        setSaving(false);
+
+        trackEvent("gift_created", {
+          experience:  localStorage.getItem("gifted_experience") || experience,
+          occasion:    localStorage.getItem("gifted_occasion")   || "general",
+          hasBalance:  !!(amt && parseFloat(amt) > 0),
+          hasVideo:    !!(localStorage.getItem("gifted_video_path")),
+          photoCount:  (() => { try { return JSON.parse(localStorage.getItem("gifted_photo_paths") || "[]").length; } catch { return 0; } })(),
+        });
+
+        return { id, url };
+      } catch {
+        setSaveError("Could not save your gift. Please try again.");
+        setSaving(false);
+        return null;
+      } finally {
+        saveInFlightRef.current = null;
       }
+    })();
 
-      setSaving(false);
-
-      trackEvent("gift_created", {
-        experience:  localStorage.getItem("gifted_experience") || experience,
-        occasion:    localStorage.getItem("gifted_occasion")   || "general",
-        hasBalance:  !!(amt && parseFloat(amt) > 0),
-        hasVideo:    !!(localStorage.getItem("gifted_video_path")),
-        photoCount:  (() => { try { return JSON.parse(localStorage.getItem("gifted_photo_paths") || "[]").length; } catch { return 0; } })(),
-      });
-
-      return { id, url };
-    } catch {
-      setSaveError("Could not save your gift. Please try again.");
-      setSaving(false);
-      return null;
-    }
+    saveInFlightRef.current = promise;
+    return promise;
   }, [giftId, shareUrl, base, recipientName, senderName, experience, giftTitle]);
 
   // Auto-save a draft gift as soon as an authenticated sender lands on preview,
