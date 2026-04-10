@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Loader2, AlertCircle, Gift, LogIn, Copy, Check, X, ChevronDown, Settings, LogOut, Sparkles } from "lucide-react";
+import { Loader2, AlertCircle, Gift, LogIn, Check, X, ChevronDown, Settings, LogOut, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { clearGiftSession } from "@/lib/session";
 
@@ -55,26 +55,13 @@ export default function OpenPage() {
   const [barVisible, setBarVisible] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "claimed">("idle");
   const [claimPending, setClaimPending] = useState(false);
-  const [senderCopied, setSenderCopied] = useState(false);
   const [savePromptDismissed, setSavePromptDismissed] = useState(false);
-  // True when this browser created this gift (guest / not signed-in sender)
-  // Detected before the fetch overwrites localStorage, so we can preserve the "preview" state.
-  const [isGuestSender, setIsGuestSender] = useState(false);
 
   useEffect(() => {
     if (!id) {
       setStatus("error");
       setErrorMsg("No gift ID provided");
       return;
-    }
-
-    // Detect guest sender: localStorage has this exact gift ID AND the link-shared flag.
-    // Both keys are set by preview.tsx after the sender shares the gift link, and cleared
-    // when they start a new gift. Check BEFORE the fetch overwrites gifted_gift_id below.
-    const storedId = localStorage.getItem("gifted_gift_id");
-    const linkShared = localStorage.getItem("gifted_link_shared");
-    if (storedId === id && linkShared === "1") {
-      setIsGuestSender(true);
     }
 
     fetch(`${BASE}/api/gifted/gifts/${id}`)
@@ -142,7 +129,6 @@ export default function OpenPage() {
   // Skip prompt if this user is already the confirmed recipient (re-watching).
   useEffect(() => {
     if (!giftId || authLoading || !isAuthenticated) return;
-    if (new URLSearchParams(window.location.search).get("preview") === "true") return;
     if (user && giftSenderUserId && user.id === giftSenderUserId) return;
     // Only skip the prompt when this user has genuinely been here before:
     // recipientUserId matches them AND openedAt is set (they've already watched it).
@@ -221,64 +207,7 @@ export default function OpenPage() {
     );
   }
 
-  // Sender view — shown when the logged-in user is the one who created this gift
-  const isSender = !authLoading && isAuthenticated && user && giftSenderUserId && user.id === giftSenderUserId;
-  // When coming from the dashboard, the URL has ?preview=true — let the sender through to the full experience
-  const isPreviewMode = new URLSearchParams(window.location.search).get("preview") === "true";
   const isEmbed = new URLSearchParams(window.location.search).get("embed") === "true";
-
-  const handleSenderCopy = async () => {
-    // Always copy the /api/share/:id URL — this is the OG-enabled link
-    // that generates the gift-specific preview card in iMessage, WhatsApp, etc.
-    // Never copy window.location.href (/open/:id) — that's the React SPA and
-    // returns the generic index.html with no gift-specific OG tags.
-    const shareUrl = `${window.location.origin}${BASE}/api/share/${giftId}`;
-    await navigator.clipboard.writeText(shareUrl);
-    setSenderCopied(true);
-    setTimeout(() => setSenderCopied(false), 2000);
-  };
-
-  // Only block with the info screen when NOT in preview mode (e.g. raw direct link, link unfurl)
-  if (isSender && !isPreviewMode) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-          <Gift className="w-9 h-9 text-primary" />
-        </div>
-        <h1 className="font-serif text-3xl mb-3">Your moment for {giftRecipientName}</h1>
-        <p className="text-muted-foreground mb-6 max-w-sm">
-          Share the link below when you're ready. <span className="font-medium text-foreground">{giftRecipientName}</span> will see the full surprise when they open it.
-        </p>
-        <div className="flex flex-col gap-3 w-full max-w-xs">
-          <Button
-            onClick={handleSenderCopy}
-            className="w-full rounded-xl gap-2"
-          >
-            {senderCopied ? (
-              <><Check className="w-4 h-4" /> Copied!</>
-            ) : (
-              <><Copy className="w-4 h-4" /> Copy link</>
-            )}
-          </Button>
-          <div className="flex gap-3">
-            <Link href="/my-gifts" className="flex-1">
-              <Button variant="outline" className="rounded-xl w-full">
-                Your moments
-              </Button>
-            </Link>
-            <Link href="/" className="flex-1">
-              <Button variant="outline" className="rounded-xl w-full">
-                Go home
-              </Button>
-            </Link>
-          </div>
-          <Link href={`${window.location.pathname}?preview=true`} className="text-xs text-muted-foreground hover:text-foreground text-center transition-colors mt-1">
-            Not the sender? See the reveal →
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const displayName = user?.firstName || user?.email?.split("@")[0] || "Account";
   const initials = user?.firstName
@@ -408,7 +337,7 @@ export default function OpenPage() {
           </div>
         }
       >
-        <RevealPage onRevealComplete={handleRevealComplete} senderPreview={isGuestSender && !isPreviewMode} />
+        <RevealPage onRevealComplete={handleRevealComplete} senderPreview={false} />
       </React.Suspense>
 
       {/* "Is this for you?" confirmation — shown for authenticated non-senders.
@@ -447,9 +376,8 @@ export default function OpenPage() {
 
       {/* Save-to-account prompt — shown as soon as gift loads for signed-out users.
           Intentionally NOT gated on `revealed` — if the user closes the tab before
-          finishing the reveal they should have already had a chance to save it.
-          Not shown for guest senders previewing their own gift. */}
-      {status === "ready" && !authLoading && !isAuthenticated && !isGuestSender && !savePromptDismissed && !isEmbed && (
+          finishing the reveal they should have already had a chance to save it. */}
+      {status === "ready" && !authLoading && !isAuthenticated && !savePromptDismissed && !isEmbed && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
           <div className="bg-card border border-border rounded-2xl shadow-xl p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

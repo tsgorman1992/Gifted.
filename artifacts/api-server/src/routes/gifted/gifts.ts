@@ -343,6 +343,22 @@ router.get("/gifted/gifts/:id", async (req, res) => {
           if (updated) {
             console.log(`[self-heal] Marked gift ${gift.id} as paid via Stripe session check`);
             gift = updated;
+            if (updated.openedAt) {
+              if (updated.senderPhone) {
+                smsSender(
+                  updated.senderPhone,
+                  `gifted. 🎁\n${updated.recipientName} already opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
+                );
+              }
+              if (updated.senderEmail) {
+                sendGiftOpenedNotice({
+                  to: updated.senderEmail,
+                  senderName: updated.senderName,
+                  recipientName: updated.recipientName,
+                  giftId: updated.id,
+                }).catch(() => {});
+              }
+            }
           }
         }
       } catch (stripeErr) {
@@ -382,6 +398,22 @@ router.get("/gifted/gifts/:id", async (req, res) => {
           if (updated) {
             console.log(`[self-heal] Marked gift ${gift.id} as paid via Stripe metadata search`);
             gift = updated;
+            if (updated.openedAt) {
+              if (updated.senderPhone) {
+                smsSender(
+                  updated.senderPhone,
+                  `gifted. 🎁\n${updated.recipientName} already opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
+                );
+              }
+              if (updated.senderEmail) {
+                sendGiftOpenedNotice({
+                  to: updated.senderEmail,
+                  senderName: updated.senderName,
+                  recipientName: updated.recipientName,
+                  giftId: updated.id,
+                }).catch(() => {});
+              }
+            }
           }
         }
       } catch (searchErr) {
@@ -439,7 +471,8 @@ router.patch("/gifted/gifts/:id/opened", async (req, res) => {
           gift.senderPhone,
           `gifted. 🎁\n${gift.recipientName} just opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
         );
-      } else if (gift.senderEmail) {
+      }
+      if (gift.senderEmail) {
         sendGiftOpenedNotice({
           to: gift.senderEmail,
           senderName: gift.senderName,

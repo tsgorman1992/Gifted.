@@ -39,7 +39,6 @@ const COMPLETED_GIFT_KEYS = [
   "gifted_paid_id",
   "gifted_gift_id",
   "gifted_gift_paid",
-  "gifted_link_shared",
 ];
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
@@ -64,8 +63,7 @@ export function touchGiftSession() {
 export function resetCompletedGiftState() {
   const prevCompleted =
     localStorage.getItem("gifted_free_gift_id") ||
-    localStorage.getItem("gifted_paid_id") ||
-    localStorage.getItem("gifted_link_shared");
+    localStorage.getItem("gifted_paid_id");
 
   if (prevCompleted) {
     GIFT_KEYS.forEach((k) => localStorage.removeItem(k));

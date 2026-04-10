@@ -8,6 +8,7 @@ import {
   sendSenderRedemptionNotice,
   sendOperatorCashoutAlert,
   sendRecipientPayoutConfirmation,
+  sendGiftOpenedNotice,
 } from "../../lib/email";
 
 function getTwilioClient() {
@@ -208,6 +209,25 @@ router.post("/gifted/confirm-payment", async (req, res) => {
       }).catch(() => {});
     }
 
+    // Missed-window: recipient already opened before payment was confirmed — notify sender now
+    if (!alreadyPaid && existing?.openedAt) {
+      const notifyEmail = senderEmail ?? existing.senderEmail;
+      if (existing.senderPhone) {
+        smsTo(
+          existing.senderPhone,
+          `gifted. 🎁\n${existing.recipientName} already opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
+        );
+      }
+      if (notifyEmail) {
+        sendGiftOpenedNotice({
+          to:            notifyEmail,
+          senderName:    existing.senderName,
+          recipientName: existing.recipientName,
+          giftId:        existing.id,
+        }).catch(() => {});
+      }
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error("Confirm payment error:", err);
@@ -244,12 +264,33 @@ router.post("/gifted/redeem", async (req, res) => {
       return;
     }
 
+    const authUser = (req as any).user;
+    const callerUserId = authUser?.id as string | undefined;
+    const callerEmail  = (authUser?.email as string | undefined)?.toLowerCase();
+
+    if (callerUserId && gift.senderUserId && callerUserId === gift.senderUserId) {
+      res.status(403).json({ error: "Senders cannot redeem their own gift." });
+      return;
+    }
+    if (callerEmail && gift.senderEmail && callerEmail === gift.senderEmail.toLowerCase()) {
+      res.status(403).json({ error: "Senders cannot redeem their own gift." });
+      return;
+    }
+
+    if (gift.recipientUserId && callerUserId && callerUserId !== gift.recipientUserId) {
+      res.status(403).json({ error: "This gift is linked to a different recipient account." });
+      return;
+    }
+
+    if (gift.recipientPhone && !gift.redemptionVerified) {
+      res.status(403).json({ error: "Phone verification required before redemption.", requiresOtp: true });
+      return;
+    }
+
     if (gift.amount && parseFloat(gift.amount) > 0 && !gift.paid) {
       res.status(402).json({ error: "This gift balance has not been paid yet. Please ask the sender to complete payment." });
       return;
     }
-
-    const authUser = (req as any).user;
     const recipientIdUpdate = (authUser?.id && !gift.recipientUserId)
       ? { recipientUserId: authUser.id as string }
       : {};
