@@ -832,6 +832,7 @@ export default function CreatePage() {
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Physical gift tracking state
   const [trackingCarrier, setTrackingCarrier] = useState("");
@@ -1315,7 +1316,66 @@ export default function CreatePage() {
       return;
     }
     saveToLocalStorage();
-    setLocation("/preview");
+
+    setIsCreating(true);
+    setStepError(null);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      let iKey = localStorage.getItem("gifted_create_ikey");
+      if (!iKey) {
+        iKey = crypto.randomUUID();
+        localStorage.setItem("gifted_create_ikey", iKey);
+      }
+
+      const nonEmptyLinks = extraLinks.filter(l => l.url.trim()).map(l => ({
+        url: l.url.trim(),
+        label: l.label.trim(),
+      }));
+
+      const senderPhoneRaw = localStorage.getItem("gifted_sender_phone");
+      const senderPhone = senderPhoneRaw
+        ? senderPhoneRaw.replace(/\D/g, "").replace(/^(\d{3})(\d{3})(\d{4})$/, "+1$1$2$3") || senderPhoneRaw
+        : undefined;
+
+      const payload: Record<string, unknown> = {
+        recipientName,
+        senderName,
+        experience: selectedExperience,
+        occasion,
+        giftTitle: giftTitle.trim() || giftTitle,
+        idempotencyKey: iKey,
+      };
+      if (recipientPhone) payload.recipientPhone = recipientPhone;
+      if (senderPhone) payload.senderPhone = senderPhone;
+      if (personalNote.trim()) payload.personalNote = personalNote.trim();
+      if (videoObjectPath) payload.videoPath = videoObjectPath;
+      if (photos.length > 0) payload.photoPaths = photos.map(p => p.objectPath);
+      if (nonEmptyLinks.length > 0) payload.extraLinks = nonEmptyLinks;
+      if (amount && parseFloat(amount) > 0) payload.amount = amount;
+      if (intent) payload.intent = intent;
+      if (scheduleEnabled && scheduledFor) payload.scheduledFor = `${scheduledFor}T${scheduledTime}:00`;
+      if (trackingCarrier && trackingNumber) {
+        payload.trackingCarrier = trackingCarrier;
+        payload.trackingNumber = trackingNumber;
+      }
+
+      const res = await fetch(`${base}/api/gifted/gifts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Failed to create gift");
+
+      const { id } = await res.json() as { id: string };
+      localStorage.setItem("gifted_gift_id", id);
+
+      setLocation("/preview");
+    } catch {
+      setStepError("Something went wrong — please try again.");
+      setIsCreating(false);
+    }
   };
 
   const handleAI = async (mode: "rewrite" | "regenerate") => {
@@ -2506,12 +2566,16 @@ export default function CreatePage() {
                   type="button"
                   size="lg"
                   onClick={handlePreview}
-                  disabled={isUploading}
+                  disabled={isUploading || isCreating}
                   className="w-full sm:w-auto rounded-full h-13 px-8 text-base shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                 >
                   {isUploading ? (
                     <>
                       <Loader2 className="mr-2 w-4 h-4 animate-spin" /> Video uploading…
+                    </>
+                  ) : isCreating ? (
+                    <>
+                      <Loader2 className="mr-2 w-4 h-4 animate-spin" /> Creating your gift…
                     </>
                   ) : (
                     <>

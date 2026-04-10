@@ -539,16 +539,7 @@ export default function PreviewPage() {
     return promise;
   }, [giftId, shareUrl, base, recipientName, senderName, experience, giftTitle]);
 
-  // Auto-save a draft gift as soon as an authenticated sender lands on preview,
-  // so giftId is available immediately (enables contact-save prompt before sharing).
-  const autoSaveRef = React.useRef(false);
-  React.useEffect(() => {
-    if (!isAuthenticated || authLoading || giftId || autoSaveRef.current) return;
-    const rn = localStorage.getItem("gifted_recipient_name");
-    if (!rn?.trim()) return;
-    autoSaveRef.current = true;
-    saveGift().catch(() => { autoSaveRef.current = false; });
-  }, [isAuthenticated, authLoading, giftId, saveGift]);
+  // Gift is now created on the create page before navigation — no auto-save needed here.
 
   // ─── Stripe Pay & Send ───────────────────────────────────────────────────────
   const handlePayAndSend = async () => {
@@ -823,6 +814,10 @@ export default function PreviewPage() {
 
   const handleDesktopRevealLoad = async () => {
     if (revealUrl) return;
+    if (giftId) {
+      setRevealUrl(buildRevealUrl(giftId, { embed: true }));
+      return;
+    }
     const saved = await saveGift();
     if (!saved) return;
     const url = buildRevealUrl(saved.id, { embed: true });

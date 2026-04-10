@@ -52,6 +52,11 @@ function normalizePhone(raw: string): string {
 
 const router = Router();
 
+// In-memory cache: prevents hammering Stripe sessions.list for unpaid gifts that
+// were already checked within the last 60 seconds and found nothing.
+const _stripeListMissCache = new Map<string, number>(); // giftId → timestamp
+const STRIPE_LIST_MISS_TTL = 60_000;
+
 async function assertGiftIsDeletable(giftId: string): Promise<void> {
   const [gift] = await db
     .select({ paid: gifts.paid, amount: gifts.amount, redeemedAt: gifts.redeemedAt })
@@ -380,96 +385,122 @@ router.get("/gifted/gifts/:id", async (req, res) => {
 
     // Self-heal fallback: no checkout session ID stored (pre-fix gifts or failed DB write).
     // Search Stripe by gift metadata to find a completed session.
+    // Cache misses for 60 seconds to avoid hammering the Stripe API on every recipient poll.
     if (
       !gift.paid &&
       gift.amount && parseFloat(gift.amount) > 0 &&
       !gift.stripeCheckoutSessionId
     ) {
-      try {
-        const stripe = getStripe();
-        const results = await stripe.checkout.sessions.list({ limit: 100, status: "complete" });
-        const paidSession = results.data.find(
-          (s) => s.metadata?.giftId === gift.id && s.payment_status === "paid"
-        );
-        if (paidSession) {
-          const senderEmail = paidSession.customer_details?.email ?? null;
-          const [updated] = await db
-            .update(gifts)
-            .set({
-              paid: true,
-              stripeCheckoutSessionId: paidSession.id,
-              senderEmail: senderEmail ?? gift.senderEmail,
-              stripePaymentIntentId:
-                typeof paidSession.payment_intent === "string"
-                  ? paidSession.payment_intent
-                  : (paidSession.payment_intent?.id ?? null),
-            })
-            .where(eq(gifts.id, gift.id))
-            .returning();
-          if (updated) {
-            console.log(`[self-heal] Marked gift ${gift.id} as paid via Stripe metadata search`);
-            gift = updated;
-            if (updated.openedAt) {
-              if (updated.senderPhone) {
-                smsSender(
-                  updated.senderPhone,
-                  `gifted. 🎁\n${updated.recipientName} already opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
-                );
-              }
-              if (updated.senderEmail) {
-                sendGiftOpenedNotice({
-                  to: updated.senderEmail,
-                  senderName: updated.senderName,
-                  recipientName: updated.recipientName,
-                  giftId: updated.id,
-                }).catch(() => {});
+      const lastMiss = _stripeListMissCache.get(gift.id);
+      const skipStripeList = lastMiss != null && Date.now() - lastMiss < STRIPE_LIST_MISS_TTL;
+      if (!skipStripeList) {
+        try {
+          const stripe = getStripe();
+          const results = await stripe.checkout.sessions.list({ limit: 100, status: "complete" });
+          const paidSession = results.data.find(
+            (s) => s.metadata?.giftId === gift.id && s.payment_status === "paid"
+          );
+          if (paidSession) {
+            const senderEmail = paidSession.customer_details?.email ?? null;
+            const [updated] = await db
+              .update(gifts)
+              .set({
+                paid: true,
+                stripeCheckoutSessionId: paidSession.id,
+                senderEmail: senderEmail ?? gift.senderEmail,
+                stripePaymentIntentId:
+                  typeof paidSession.payment_intent === "string"
+                    ? paidSession.payment_intent
+                    : (paidSession.payment_intent?.id ?? null),
+              })
+              .where(eq(gifts.id, gift.id))
+              .returning();
+            if (updated) {
+              console.log(`[self-heal] Marked gift ${gift.id} as paid via Stripe metadata search`);
+              gift = updated;
+              if (updated.openedAt) {
+                if (updated.senderPhone) {
+                  smsSender(
+                    updated.senderPhone,
+                    `gifted. 🎁\n${updated.recipientName} already opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
+                  );
+                }
+                if (updated.senderEmail) {
+                  sendGiftOpenedNotice({
+                    to: updated.senderEmail,
+                    senderName: updated.senderName,
+                    recipientName: updated.recipientName,
+                    giftId: updated.id,
+                  }).catch(() => {});
+                }
               }
             }
+          } else {
+            // Cache the miss so we don't hit Stripe again for 60 seconds
+            _stripeListMissCache.set(gift.id, Date.now());
           }
+        } catch (searchErr) {
+          console.warn(`[self-heal] Stripe search failed for gift ${gift.id}:`, searchErr);
         }
-      } catch (searchErr) {
-        console.warn(`[self-heal] Stripe search failed for gift ${gift.id}:`, searchErr);
       }
     }
 
-    // Self-heal: orphaned duplicate — look for a sibling gift by the same sender
-    // with matching recipient and amount created within 5 minutes that IS paid.
-    // Fixes the case where 3 duplicates exist but only 1 was paid and no shared
-    // idempotency key links them (key was cleared before duplicates were made).
-    if (
-      !gift.paid &&
-      gift.amount && parseFloat(gift.amount) > 0 &&
-      (gift.senderUserId || gift.senderEmail)
-    ) {
+    // Self-heal: orphaned duplicate — look for a paid sibling with matching
+    // recipient + amount within a 15-minute window. For gifts with a known sender
+    // identity (userId or email), we add that as an extra filter for safety.
+    // For fully anonymous gifts (no sender identity), we require exactly one
+    // paid sibling in the window to avoid false positives.
+    if (!gift.paid && gift.amount && parseFloat(gift.amount) > 0) {
       try {
-        const windowMs = 5 * 60 * 1000;
+        const windowMs = 15 * 60 * 1000;
         const createdAt = new Date(gift.createdAt);
         const windowStart = new Date(createdAt.getTime() - windowMs);
         const windowEnd   = new Date(createdAt.getTime() + windowMs);
 
+        const hasSenderIdentity = !!(gift.senderUserId || gift.senderEmail);
         const senderCondition = gift.senderUserId
           ? eq(gifts.senderUserId, gift.senderUserId)
-          : eq(gifts.senderEmail, gift.senderEmail!);
+          : gift.senderEmail
+            ? eq(gifts.senderEmail, gift.senderEmail)
+            : null;
 
-        const [paidSibling] = await db
+        const siblingWhere = senderCondition
+          ? and(
+              senderCondition,
+              eq(gifts.recipientName, gift.recipientName),
+              eq(gifts.amount, gift.amount!),
+              ne(gifts.id, gift.id),
+              eq(gifts.paid, true),
+              gte(gifts.createdAt, windowStart),
+              lte(gifts.createdAt, windowEnd),
+            )
+          : and(
+              eq(gifts.recipientName, gift.recipientName),
+              eq(gifts.amount, gift.amount!),
+              ne(gifts.id, gift.id),
+              eq(gifts.paid, true),
+              gte(gifts.createdAt, windowStart),
+              lte(gifts.createdAt, windowEnd),
+            );
+
+        const paidSiblings = await db
           .select({
             id: gifts.id,
-            paid: gifts.paid,
             stripePaymentIntentId: gifts.stripePaymentIntentId,
-            stripeCheckoutSessionId: gifts.stripeCheckoutSessionId,
             senderEmail: gifts.senderEmail,
           })
           .from(gifts)
-          .where(and(
-            senderCondition,
-            eq(gifts.recipientName, gift.recipientName),
-            eq(gifts.amount, gift.amount!),
-            ne(gifts.id, gift.id),
-            eq(gifts.paid, true),
-            gte(gifts.createdAt, windowStart),
-            lte(gifts.createdAt, windowEnd),
-          ))
-          .limit(1);
+          .where(siblingWhere)
+          .limit(2);
+
+        // For gifts without sender identity, require exactly one match in the
+        // window to avoid accidentally healing unrelated gifts.
+        const paidSibling =
+          hasSenderIdentity
+            ? paidSiblings[0]
+            : paidSiblings.length === 1
+              ? paidSiblings[0]
+              : undefined;
 
         if (paidSibling) {
           const [updated] = await db
@@ -640,8 +671,30 @@ router.get("/gifted/my-gifts", async (req, res) => {
 
     const allRows = [...ownedRows, ...deduped];
 
+    // Deduplicate within-session duplicates by idempotencyKey.
+    // When multiple gifts share the same key, keep the canonical one:
+    // prefer paid over unpaid; break ties by most recently updated/created.
+    const ikeyGroups = new Map<string, typeof allRows>();
+    const noIkey: typeof allRows = [];
+    for (const g of allRows) {
+      const ikey = (g as any).idempotencyKey as string | null | undefined;
+      if (!ikey) { noIkey.push(g); continue; }
+      if (!ikeyGroups.has(ikey)) ikeyGroups.set(ikey, []);
+      ikeyGroups.get(ikey)!.push(g);
+    }
+    const deduplicatedRows: typeof allRows = [...noIkey];
+    for (const group of ikeyGroups.values()) {
+      if (group.length === 1) { deduplicatedRows.push(group[0]); continue; }
+      const canonical = group.slice().sort((a, b) => {
+        if (a.paid !== b.paid) return a.paid ? -1 : 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })[0];
+      deduplicatedRows.push(canonical);
+    }
+    deduplicatedRows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
     res.json(
-      allRows.map((g) => ({
+      deduplicatedRows.map((g) => ({
         id: g.id,
         recipientName: g.recipientName,
         senderName: g.senderName,
@@ -1406,6 +1459,151 @@ router.patch("/gifted/profile", async (req, res) => {
   } catch (err) {
     console.error("Error updating profile:", err);
     res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+// ─── Admin endpoints ──────────────────────────────────────────────────────────
+
+function checkAdminAuth(req: any, res: any): boolean {
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword) { res.status(503).json({ error: "Admin not configured" }); return false; }
+  const provided = req.headers["x-admin-password"] as string | undefined;
+  if (provided !== adminPassword) { res.status(401).json({ error: "Unauthorized" }); return false; }
+  return true;
+}
+
+// POST /api/admin/gifts/bulk-heal — run payment self-heal on all unpaid gifts with a balance
+router.post("/admin/gifts/bulk-heal", async (req, res) => {
+  if (!checkAdminAuth(req, res)) return;
+  try {
+    const unpaid = await db
+      .select()
+      .from(gifts)
+      .where(and(
+        eq(gifts.paid, false),
+        sql`${gifts.amount} IS NOT NULL AND CAST(${gifts.amount} AS numeric) > 0`
+      ));
+
+    let healed = 0;
+    const windowMs = 15 * 60 * 1000;
+
+    for (const gift of unpaid) {
+      try {
+        // Try Stripe session ID first
+        if (gift.stripeCheckoutSessionId) {
+          const stripe = getStripe();
+          const session = await stripe.checkout.sessions.retrieve(gift.stripeCheckoutSessionId);
+          if (session.payment_status === "paid" && session.metadata?.giftId === gift.id) {
+            await db.update(gifts).set({
+              paid: true,
+              senderEmail: session.customer_details?.email ?? gift.senderEmail,
+              stripePaymentIntentId: typeof session.payment_intent === "string"
+                ? session.payment_intent : (session.payment_intent as any)?.id ?? null,
+            }).where(eq(gifts.id, gift.id));
+            healed++;
+            continue;
+          }
+        }
+
+        // Try sibling self-heal
+        const createdAt = new Date(gift.createdAt);
+        const windowStart = new Date(createdAt.getTime() - windowMs);
+        const windowEnd   = new Date(createdAt.getTime() + windowMs);
+        const hasSenderIdentity = !!(gift.senderUserId || gift.senderEmail);
+        const senderCondition = gift.senderUserId
+          ? eq(gifts.senderUserId, gift.senderUserId)
+          : gift.senderEmail
+            ? eq(gifts.senderEmail, gift.senderEmail)
+            : null;
+
+        const siblingWhere = senderCondition
+          ? and(
+              senderCondition,
+              eq(gifts.recipientName, gift.recipientName),
+              eq(gifts.amount, gift.amount!),
+              ne(gifts.id, gift.id),
+              eq(gifts.paid, true),
+              gte(gifts.createdAt, windowStart),
+              lte(gifts.createdAt, windowEnd),
+            )
+          : and(
+              eq(gifts.recipientName, gift.recipientName),
+              eq(gifts.amount, gift.amount!),
+              ne(gifts.id, gift.id),
+              eq(gifts.paid, true),
+              gte(gifts.createdAt, windowStart),
+              lte(gifts.createdAt, windowEnd),
+            );
+
+        const paidSiblings = await db
+          .select({ id: gifts.id, stripePaymentIntentId: gifts.stripePaymentIntentId, senderEmail: gifts.senderEmail })
+          .from(gifts)
+          .where(siblingWhere)
+          .limit(2);
+
+        const paidSibling = hasSenderIdentity
+          ? paidSiblings[0]
+          : paidSiblings.length === 1 ? paidSiblings[0] : undefined;
+
+        if (paidSibling) {
+          await db.update(gifts).set({
+            paid: true,
+            stripePaymentIntentId: paidSibling.stripePaymentIntentId,
+            senderEmail: paidSibling.senderEmail ?? gift.senderEmail,
+          }).where(eq(gifts.id, gift.id));
+          healed++;
+        }
+      } catch (err) {
+        console.error(`[bulk-heal] Error healing gift ${gift.id}:`, err);
+      }
+    }
+
+    res.json({ checked: unpaid.length, healed });
+  } catch (err) {
+    console.error("Error in bulk-heal:", err);
+    res.status(500).json({ error: "Bulk heal failed" });
+  }
+});
+
+// POST /api/admin/gifts/deduplicate — mark non-canonical ikey duplicates as senderHidden
+router.post("/admin/gifts/deduplicate", async (req, res) => {
+  if (!checkAdminAuth(req, res)) return;
+  try {
+    const all = await db
+      .select({ id: gifts.id, idempotencyKey: gifts.idempotencyKey, paid: gifts.paid, createdAt: gifts.createdAt, senderHidden: gifts.senderHidden })
+      .from(gifts)
+      .where(sql`${gifts.idempotencyKey} IS NOT NULL`);
+
+    // Group by ikey
+    const groups = new Map<string, typeof all>();
+    for (const g of all) {
+      const k = g.idempotencyKey!;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k)!.push(g);
+    }
+
+    let hiddenCount = 0;
+    let groupsProcessed = 0;
+
+    for (const group of groups.values()) {
+      if (group.length <= 1) continue;
+      groupsProcessed++;
+      const canonical = group.slice().sort((a, b) => {
+        if (a.paid !== b.paid) return a.paid ? -1 : 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })[0];
+      for (const g of group) {
+        if (g.id === canonical.id) continue;
+        if (g.senderHidden) continue;
+        await db.update(gifts).set({ senderHidden: true }).where(eq(gifts.id, g.id));
+        hiddenCount++;
+      }
+    }
+
+    res.json({ hidden: hiddenCount, groups: groupsProcessed });
+  } catch (err) {
+    console.error("Error in deduplicate:", err);
+    res.status(500).json({ error: "Deduplicate failed" });
   }
 });
 
