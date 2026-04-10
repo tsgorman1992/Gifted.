@@ -22,6 +22,7 @@ const GIFT_KEYS = [
   "gifted_gift_paid",
   "gifted_link_shared",
   "gifted_session_start",
+  "gifted_create_ikey",
 ];
 
 export function clearGiftSession() {

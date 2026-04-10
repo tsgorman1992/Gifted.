@@ -231,11 +231,25 @@ router.post("/gifted/gifts", async (req, res) => {
       intent,
       trackingCarrier,
       trackingNumber,
+      idempotencyKey,
     } = req.body;
 
     if (!recipientName || !senderName || !experience || !occasion || !giftTitle) {
       res.status(400).json({ error: "Missing required fields" });
       return;
+    }
+
+    // Idempotency: if key provided and gift already exists, return the existing ID
+    if (idempotencyKey && typeof idempotencyKey === "string") {
+      const [existing] = await db
+        .select({ id: gifts.id })
+        .from(gifts)
+        .where(eq(gifts.idempotencyKey, idempotencyKey))
+        .limit(1);
+      if (existing) {
+        res.json({ id: existing.id });
+        return;
+      }
     }
 
     const VALID_CARRIERS = new Set(["usps", "ups", "fedex", "dhl", "canada-post", "amazon", "lasership", "ontrac"]);
@@ -285,6 +299,7 @@ router.post("/gifted/gifts", async (req, res) => {
       scheduledFor: scheduledFor,
       trackingCarrier: trackingCarrier || null,
       trackingNumber: trackingNumber || null,
+      idempotencyKey: (idempotencyKey && typeof idempotencyKey === "string") ? idempotencyKey : null,
     });
 
     if (trackingCarrier && trackingNumber) {

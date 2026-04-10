@@ -426,12 +426,20 @@ export default function PreviewPage() {
       setSaveError(null);
 
       try {
+        // Ensure a stable idempotency key exists for this creation session
+        let iKey = localStorage.getItem("gifted_create_ikey");
+        if (!iKey) {
+          iKey = crypto.randomUUID();
+          localStorage.setItem("gifted_create_ikey", iKey);
+        }
+
         const payload: Record<string, unknown> = {
           recipientName: localStorage.getItem("gifted_recipient_name") || recipientName,
           senderName:    localStorage.getItem("gifted_sender_name")    || senderName,
           experience:    localStorage.getItem("gifted_experience")     || experience,
           occasion:      localStorage.getItem("gifted_occasion")       || "general",
           giftTitle:     localStorage.getItem("gifted_gift_title")     || giftTitle,
+          idempotencyKey: iKey,
         };
 
         const rp = localStorage.getItem("gifted_recipient_phone");
@@ -483,6 +491,7 @@ export default function PreviewPage() {
         setShareUrl(url);
 
         localStorage.setItem("gifted_gift_id", id);
+        localStorage.removeItem("gifted_create_ikey");
 
         const amt2 = localStorage.getItem("gifted_amount");
         if (!amt2 || parseFloat(amt2) <= 0) {

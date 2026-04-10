@@ -73,6 +73,7 @@ function GlobalClaimOnLogin() {
       .then((res) => {
         if (res.ok || res.status === 409) {
           localStorage.removeItem("gifted_gift_id");
+          localStorage.removeItem("gifted_create_ikey");
           claimedRef.current = true;
         }
         qc.invalidateQueries({ queryKey: ["my-gifts"] });
