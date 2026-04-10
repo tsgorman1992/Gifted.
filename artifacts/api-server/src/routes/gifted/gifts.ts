@@ -239,19 +239,6 @@ router.post("/gifted/gifts", async (req, res) => {
       return;
     }
 
-    // Idempotency: if key provided and gift already exists, return the existing ID
-    if (idempotencyKey && typeof idempotencyKey === "string") {
-      const [existing] = await db
-        .select({ id: gifts.id })
-        .from(gifts)
-        .where(eq(gifts.idempotencyKey, idempotencyKey))
-        .limit(1);
-      if (existing) {
-        res.json({ id: existing.id });
-        return;
-      }
-    }
-
     const VALID_CARRIERS = new Set(["usps", "ups", "fedex", "dhl", "canada-post", "amazon", "lasership", "ontrac"]);
     const hasCarrier = !!trackingCarrier;
     const hasNumber = !!trackingNumber;
@@ -277,7 +264,9 @@ router.post("/gifted/gifts", async (req, res) => {
     const scheduledForRaw = req.body.scheduledFor as string | undefined;
     const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
 
-    await db.insert(gifts).values({
+    const iKey = (idempotencyKey && typeof idempotencyKey === "string") ? idempotencyKey : null;
+
+    const inserted = await db.insert(gifts).values({
       id,
       senderUserId,
       senderEmail,
@@ -299,20 +288,28 @@ router.post("/gifted/gifts", async (req, res) => {
       scheduledFor: scheduledFor,
       trackingCarrier: trackingCarrier || null,
       trackingNumber: trackingNumber || null,
-      idempotencyKey: (idempotencyKey && typeof idempotencyKey === "string") ? idempotencyKey : null,
-    });
+      idempotencyKey: iKey,
+    }).onConflictDoNothing().returning({ id: gifts.id });
+
+    // Idempotency: if conflict suppressed the insert (same key from concurrent request),
+    // fetch the existing record's ID instead of failing.
+    let resultId = inserted[0]?.id ?? id;
+    if (inserted.length === 0 && iKey) {
+      const [existing] = await db.select({ id: gifts.id }).from(gifts).where(eq(gifts.idempotencyKey, iKey)).limit(1);
+      if (existing) resultId = existing.id;
+    }
 
     if (trackingCarrier && trackingNumber) {
-      registerAfterShipTracking(trackingCarrier, trackingNumber, id)
+      registerAfterShipTracking(trackingCarrier, trackingNumber, resultId)
         .then((aftershipId) => {
           if (aftershipId) {
-            db.update(gifts).set({ aftershipTrackingId: aftershipId }).where(eq(gifts.id, id)).catch(() => {});
+            db.update(gifts).set({ aftershipTrackingId: aftershipId }).where(eq(gifts.id, resultId)).catch(() => {});
           }
         })
         .catch(() => {});
     }
 
-    res.json({ id });
+    res.json({ id: resultId });
   } catch (err) {
     console.error("Error creating gift:", err);
     res.status(500).json({ error: "Failed to create gift" });
