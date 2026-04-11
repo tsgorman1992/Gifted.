@@ -1269,7 +1269,7 @@ export default function PreviewPage() {
             </AnimatePresence>
 
             {/* Scheduled delivery badge */}
-            {scheduledFor && !isPaid && (
+            {scheduledFor && (
               <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5">
                 <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
                   <Send className="w-4 h-4 text-primary" />

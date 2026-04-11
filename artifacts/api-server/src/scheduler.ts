@@ -300,6 +300,8 @@ async function nudgeStaleGifts() {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     // ── First nudge: 24 hours after creation, not yet opened, no nudge yet ──
+    // Skip gifts that are still waiting for their scheduled delivery — the scheduler
+    // will notify the sender at the right time; nudging early would be confusing.
     const firstNudge = await db
       .select({
         id: gifts.id,
@@ -315,6 +317,7 @@ async function nudgeStaleGifts() {
           isNull(gifts.openedAt),
           isNull(gifts.nudgeSentAt),
           lte(gifts.createdAt, oneDayAgo),
+          or(isNull(gifts.scheduledFor), eq(gifts.scheduleDelivered, true)),
         ),
       );
 
@@ -365,6 +368,7 @@ async function nudgeStaleGifts() {
           isNotNull(gifts.nudgeSentAt),
           isNull(gifts.nudge2SentAt),
           lte(gifts.createdAt, sevenDaysAgo),
+          or(isNull(gifts.scheduledFor), eq(gifts.scheduleDelivered, true)),
         ),
       );
 
