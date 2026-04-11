@@ -22,6 +22,33 @@ function normPhone(raw: string): string {
   return `+${d}`;
 }
 
+/**
+ * Parse a scheduled datetime string as America/New_York (Eastern time).
+ * If the string already carries timezone info (Z or ±HH:MM), parse as-is.
+ * Otherwise treat the naive local time as Eastern and return the correct UTC Date.
+ */
+function parseScheduledFor(raw: string): Date {
+  if (/Z|[+-]\d{2}:\d{2}$/.test(raw)) return new Date(raw);
+  // Parse the naive string as if it were UTC, then find the Eastern offset at
+  // that instant and shift so the wall-clock time in Eastern matches what the
+  // user entered.
+  const naiveUtc = new Date(raw + "Z");
+  const easternStr = naiveUtc.toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  });
+  // toLocaleString returns "MM/DD/YYYY, HH:mm:ss" — normalise to ISO then parse as UTC
+  const iso = easternStr
+    .replace(/(\d{2})\/(\d{2})\/(\d{4}),\s*/, "$3-$1-$2T")
+    .replace(" ", "")
+    + "Z";
+  const easternAsUtc = new Date(iso);
+  const offsetMs = naiveUtc.getTime() - easternAsUtc.getTime();
+  return new Date(naiveUtc.getTime() + offsetMs);
+}
+
 async function smsSender(senderPhone: string | null, body: string) {
   if (!senderPhone) return;
   const from = process.env.TWILIO_PHONE_NUMBER;
@@ -267,7 +294,7 @@ router.post("/gifted/gifts", async (req, res) => {
     const senderPhone   = typeof senderPhoneRaw === "string" && senderPhoneRaw.trim() ? senderPhoneRaw.trim() : null;
 
     const scheduledForRaw = req.body.scheduledFor as string | undefined;
-    const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
+    const scheduledFor = scheduledForRaw ? parseScheduledFor(scheduledForRaw) : null;
 
     const iKey = (idempotencyKey && typeof idempotencyKey === "string") ? idempotencyKey : null;
 
