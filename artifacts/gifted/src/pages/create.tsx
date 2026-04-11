@@ -2549,7 +2549,7 @@ export default function CreatePage() {
                           You'll get a link to share on{" "}
                           {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}{" "}
                           at{" "}
-                          {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.
+                          {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ET.
                         </p>
                       )}
                     </motion.div>

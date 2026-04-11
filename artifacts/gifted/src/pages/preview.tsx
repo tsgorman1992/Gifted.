@@ -7,6 +7,7 @@ import {
   Copy, MessageCircle, Share2, Check,
   Sparkles, Video, Music, Image as ImageIcon, Loader2,
   CheckCircle2, Send, ArrowLeft, Eye, X, ExternalLink, Gift, Bell, QrCode, Download,
+  Calendar, Clock,
 } from "lucide-react";
 import { EXPERIENCE_MAP, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { useAuth } from "@/lib/auth-context";
@@ -112,8 +113,13 @@ export default function PreviewPage() {
   const [giftAmount,     setGiftAmount]     = useState<string | null>(null);
   const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
   const [personalNote,   setPersonalNote]   = useState<string | null>(null);
-  const [scheduledFor,   setScheduledFor]   = useState<string | null>(null);
-  const [scheduledTime,  setScheduledTime]  = useState<string>("09:00");
+  const [scheduledFor,     setScheduledFor]     = useState<string | null>(null);
+  const [scheduledTime,    setScheduledTime]    = useState<string>("09:00");
+  const [scheduleDelivered, setScheduleDelivered] = useState(false);
+  const [isRescheduling,   setIsRescheduling]   = useState(false);
+  const [rescheduleDate,   setRescheduleDate]   = useState("");
+  const [rescheduleTime,   setRescheduleTime]   = useState("09:00");
+  const [scheduleSaving,   setScheduleSaving]   = useState(false);
 
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -371,6 +377,31 @@ export default function PreviewPage() {
         if (Array.isArray(gift.photoPaths) && gift.photoPaths.length > 0) {
           localStorage.setItem("gifted_photo_paths", JSON.stringify(gift.photoPaths));
           setPhotoCount(gift.photoPaths.length);
+        }
+        // Hydrate scheduled delivery info — convert UTC timestamp back to Eastern for display
+        if (gift.scheduledFor) {
+          const sfDate = new Date(gift.scheduledFor);
+          const etParts = new Intl.DateTimeFormat("en-US", {
+            timeZone: "America/New_York",
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", hour12: false,
+          }).formatToParts(sfDate);
+          const y = etParts.find(p => p.type === "year")?.value   ?? "";
+          const m = etParts.find(p => p.type === "month")?.value  ?? "";
+          const d = etParts.find(p => p.type === "day")?.value    ?? "";
+          const h = etParts.find(p => p.type === "hour")?.value   ?? "09";
+          const mi = etParts.find(p => p.type === "minute")?.value ?? "00";
+          const datePart = `${y}-${m}-${d}`;
+          const timePart = `${h}:${mi}`;
+          localStorage.setItem("gifted_scheduled_for",  datePart);
+          localStorage.setItem("gifted_scheduled_time", timePart);
+          setScheduledFor(datePart);
+          setScheduledTime(timePart);
+          setRescheduleDate(datePart);
+          setRescheduleTime(timePart);
+        }
+        if (typeof gift.scheduleDelivered === "boolean") {
+          setScheduleDelivered(gift.scheduleDelivered);
         }
         localStorage.setItem("gifted_gift_id", gift.id);
       })
@@ -692,6 +723,47 @@ export default function PreviewPage() {
       setSelfSendStatus("sent");
       setLinkShared(true);
       localStorage.setItem("gifted_link_shared", "1");
+    }
+  };
+
+  // ── Schedule management ──────────────────────────────────────────────────────
+  const handleCancelSchedule = async () => {
+    if (!giftId) return;
+    setScheduleSaving(true);
+    try {
+      await fetch(`${base}/api/gifted/gifts/${giftId}/schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ scheduledFor: null }),
+      });
+      setScheduledFor(null);
+      setIsRescheduling(false);
+      localStorage.removeItem("gifted_scheduled_for");
+      localStorage.removeItem("gifted_scheduled_time");
+    } catch { /* ignore */ } finally {
+      setScheduleSaving(false);
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!giftId || !rescheduleDate) return;
+    setScheduleSaving(true);
+    try {
+      await fetch(`${base}/api/gifted/gifts/${giftId}/schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ scheduledFor: `${rescheduleDate}T${rescheduleTime}:00` }),
+      });
+      setScheduledFor(rescheduleDate);
+      setScheduledTime(rescheduleTime);
+      setScheduleDelivered(false);
+      setIsRescheduling(false);
+      localStorage.setItem("gifted_scheduled_for", rescheduleDate);
+      localStorage.setItem("gifted_scheduled_time", rescheduleTime);
+    } catch { /* ignore */ } finally {
+      setScheduleSaving(false);
     }
   };
 
@@ -1270,22 +1342,91 @@ export default function PreviewPage() {
 
             {/* Scheduled delivery badge */}
             {scheduledFor && (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary/20 bg-primary/5">
-                <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
-                  <Send className="w-4 h-4 text-primary" />
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 overflow-hidden">
+                <div className="flex items-start gap-3 px-4 py-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Send className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      {scheduleDelivered ? "Delivery sent" : "Scheduled delivery"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {scheduleDelivered
+                        ? <>We notified you on {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} to share this moment.</>
+                        : <>We'll notify you on{" "}
+                            {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}{" "}
+                            at {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ET.
+                          </>
+                      }
+                    </p>
+                    {!scheduleDelivered && !isRescheduling && giftId && (
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => { setRescheduleDate(scheduledFor); setRescheduleTime(scheduledTime); setIsRescheduling(true); }}
+                          className="text-xs text-primary hover:underline font-medium"
+                        >
+                          Change date
+                        </button>
+                        <span className="text-xs text-muted-foreground/50">·</span>
+                        <button
+                          type="button"
+                          onClick={handleCancelSchedule}
+                          disabled={scheduleSaving}
+                          className="text-xs text-muted-foreground hover:text-destructive hover:underline"
+                        >
+                          {scheduleSaving ? "Cancelling…" : "Cancel delivery"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Scheduled delivery</p>
-                  <p className="text-xs text-muted-foreground">
-                    You'll get a link to share on{" "}
-                    {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", {
-                      weekday: "long", month: "long", day: "numeric",
-                    })}{" "}at{" "}
-                    {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", {
-                      hour: "numeric", minute: "2-digit",
-                    })}.
-                  </p>
-                </div>
+                {/* Inline reschedule picker */}
+                {isRescheduling && (
+                  <div className="px-4 pb-4 space-y-3 border-t border-primary/10 pt-3">
+                    <div className="flex gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <input
+                          type="date"
+                          value={rescheduleDate}
+                          min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                          onChange={e => setRescheduleDate(e.target.value)}
+                          className="flex-1 h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <input
+                          type="time"
+                          value={rescheduleTime}
+                          onChange={e => setRescheduleTime(e.target.value)}
+                          className="h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleReschedule}
+                        disabled={!rescheduleDate || scheduleSaving}
+                        className="flex-1 h-8 rounded-lg text-xs"
+                      >
+                        {scheduleSaving ? <><Loader2 className="w-3 h-3 animate-spin mr-1" />Saving…</> : "Update delivery"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setIsRescheduling(false)}
+                        className="h-8 rounded-lg text-xs"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">All times are Eastern (ET).</p>
+                  </div>
+                )}
               </div>
             )}
 

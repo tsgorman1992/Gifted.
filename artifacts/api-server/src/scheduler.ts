@@ -71,6 +71,7 @@ async function sendScheduledGifts() {
           isNotNull(gifts.scheduledFor),
           lte(gifts.scheduledFor, now),
           eq(gifts.scheduleDelivered, false),
+          eq(gifts.paid, true),           // never notify for unpaid gifts
         ),
       );
 
@@ -82,13 +83,19 @@ async function sendScheduledGifts() {
 
     for (const gift of pending) {
       try {
-        const giftUrl = `${appOrigin}/open/${gift.id}`;
+        const giftUrl    = `${appOrigin}/open/${gift.id}`;
+        const previewUrl = `${appOrigin}/open/${gift.id}?preview=true`;
 
-        // Build the forward-ready SMS for the sender
+        // Build the forward-ready SMS for the sender.
+        // Give both a safe preview link (won't mark as opened) and the clean
+        // forward link they'll copy-paste to the recipient.
         const smsBody = [
-          `gifted. ✨ Your moment for ${gift.recipientName} is live!`,
+          `gifted. ✨ Your moment for ${gift.recipientName} is ready to share!`,
           ``,
-          `Copy this link and send it to them — when it comes from you, it lands differently:`,
+          `Preview it first (won't mark as opened):`,
+          previewUrl,
+          ``,
+          `Forward this link to ${gift.recipientName}:`,
           giftUrl,
           ``,
           `Reply STOP to opt out.`,
@@ -121,20 +128,32 @@ async function sendScheduledGifts() {
             .where(eq(gifts.id, gift.id));
           console.log(`[scheduler] Gift ${gift.id} marked delivered`);
         } else if (!gift.senderPhone) {
-          // No phone on file — try email fallback, then mark delivered so we don't loop forever
+          // No phone on file — try email fallback, retry on failure.
+          let emailSent = false;
           if (gift.senderEmail) {
-            await sendScheduledGiftReadyEmail({
-              to: gift.senderEmail,
-              senderName: gift.senderName,
-              recipientName: gift.recipientName,
-              giftId: gift.id,
-            }).catch(() => {});
+            try {
+              await sendScheduledGiftReadyEmail({
+                to: gift.senderEmail,
+                senderName: gift.senderName,
+                recipientName: gift.recipientName,
+                giftId: gift.id,
+              });
+              emailSent = true;
+            } catch (emailErr) {
+              console.error(`[scheduler] Email failed for gift ${gift.id}:`, emailErr);
+            }
           }
-          await db
-            .update(gifts)
-            .set({ scheduleDelivered: true })
-            .where(eq(gifts.id, gift.id));
-          console.warn(`[scheduler] Gift ${gift.id} has no sender phone — marked delivered${gift.senderEmail ? " (email fallback sent)" : " without notification"}`);
+          if (emailSent || !gift.senderEmail) {
+            // Either email succeeded, or there's no contact info at all — mark done
+            await db
+              .update(gifts)
+              .set({ scheduleDelivered: true })
+              .where(eq(gifts.id, gift.id));
+            console.warn(`[scheduler] Gift ${gift.id} has no sender phone — marked delivered${emailSent ? " (email fallback sent)" : " without notification"}`);
+          } else {
+            // Email failed — leave scheduleDelivered=false so next tick retries
+            console.warn(`[scheduler] Gift ${gift.id} — email failed, will retry next tick`);
+          }
         } else {
           console.warn(`[scheduler] Gift ${gift.id} — SMS failed, will retry next tick`);
         }

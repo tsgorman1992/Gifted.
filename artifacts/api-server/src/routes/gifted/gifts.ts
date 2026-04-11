@@ -634,6 +634,50 @@ router.patch("/gifted/gifts/:id/sender-phone", async (req, res) => {
   }
 });
 
+// PATCH /api/gifted/gifts/:id/schedule — update or cancel the scheduled delivery date
+router.patch("/gifted/gifts/:id/schedule", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const { scheduledFor: scheduledForRaw } = req.body as { scheduledFor?: string | null };
+
+    const [gift] = await db
+      .select({ id: gifts.id, senderUserId: gifts.senderUserId, scheduleDelivered: gifts.scheduleDelivered })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) { res.status(404).json({ error: "Gift not found" }); return; }
+
+    // Only the sender (or unauthenticated owner via localStorage) can modify the schedule.
+    // If the gift is owned by an authenticated user, require that user to be logged in.
+    if (gift.senderUserId && user?.id && gift.senderUserId !== user.id) {
+      res.status(403).json({ error: "Not authorized" }); return;
+    }
+
+    if (gift.scheduleDelivered) {
+      res.status(409).json({ error: "Scheduled delivery has already been sent." }); return;
+    }
+
+    if (!scheduledForRaw) {
+      // Cancel — clear the schedule entirely
+      await db.update(gifts).set({ scheduledFor: null, scheduleDelivered: false }).where(eq(gifts.id, id));
+    } else {
+      // Reschedule — parse as Eastern and store
+      const newDate = parseScheduledFor(scheduledForRaw);
+      if (isNaN(newDate.getTime()) || newDate <= new Date()) {
+        res.status(400).json({ error: "scheduledFor must be a valid future date." }); return;
+      }
+      await db.update(gifts).set({ scheduledFor: newDate, scheduleDelivered: false }).where(eq(gifts.id, id));
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error updating schedule:", err);
+    res.status(500).json({ error: "Failed to update schedule" });
+  }
+});
+
 router.patch("/gifted/gifts/:id/reaction", async (req, res) => {
   try {
     const { id } = req.params;
