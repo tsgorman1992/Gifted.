@@ -146,6 +146,7 @@ export default function PreviewPage() {
   const [selfPhone,         setSelfPhone]         = useState("");
   const [selfSendStatus,    setSelfSendStatus]    = useState<"idle" | "sending" | "sent">("idle");
   const [linkShared,        setLinkShared]        = useState(false);
+  const [showEarlyShare,    setShowEarlyShare]    = useState(false);
   const [showQr,            setShowQr]            = useState(false);
 
   // Stripe payment state
@@ -1123,13 +1124,19 @@ export default function PreviewPage() {
                     <CheckCircle2 className="w-5 h-5 text-green-600" />
                   </motion.div>
                   <h1 className="font-serif text-3xl md:text-4xl font-medium">
-                    {paymentStatus === "confirming" ? "Confirming…" : `Now send it to ${recipientName}.`}
+                    {paymentStatus === "confirming"
+                      ? "Confirming…"
+                      : (scheduledFor && !scheduleDelivered)
+                        ? "All set — we'll remind you."
+                        : `Now send it to ${recipientName}.`}
                   </h1>
                 </div>
                 <p className="text-muted-foreground mb-7 text-base">
                   {paymentStatus === "confirming"
                     ? "Just a moment while we confirm everything…"
-                    : "The experience begins the moment they tap the link — share it now."}
+                    : (scheduledFor && !scheduleDelivered)
+                      ? <>On {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} at {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ET we'll send you the link to forward to {recipientName}.</>
+                      : "The experience begins the moment they tap the link — share it now."}
                 </p>
               </>
             ) : (
@@ -1149,7 +1156,7 @@ export default function PreviewPage() {
           <motion.div {...fade(0.15)} className="space-y-3">
 
             {/* ── Share / copy — mobile/tablet: native share + copy (shown first, above confirmation) ── */}
-            {(!hasBalance || isPaid) && isMobileOrTablet && (
+            {(!hasBalance || isPaid) && (!scheduledFor || scheduleDelivered || showEarlyShare) && isMobileOrTablet && (
               <div className="flex gap-3">
                 <Button
                   onClick={canShare ? handleShare : handleSMS}
@@ -1175,7 +1182,7 @@ export default function PreviewPage() {
             )}
 
             {/* ── Desktop share section — shown on desktop/non-touch devices ── */}
-            {(!hasBalance || isPaid) && !isMobileOrTablet && (
+            {(!hasBalance || isPaid) && (!scheduledFor || scheduleDelivered || showEarlyShare) && !isMobileOrTablet && (
               <div className="flex flex-col gap-3.5">
 
                 {/* Hero: text to my phone (recommended — comes from sender's own number) */}
@@ -1361,7 +1368,7 @@ export default function PreviewPage() {
                       }
                     </p>
                     {!scheduleDelivered && !isRescheduling && giftId && (
-                      <div className="flex items-center gap-3 mt-1.5">
+                      <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                         <button
                           type="button"
                           onClick={() => { setRescheduleDate(scheduledFor); setRescheduleTime(scheduledTime); setIsRescheduling(true); }}
@@ -1378,6 +1385,18 @@ export default function PreviewPage() {
                         >
                           {scheduleSaving ? "Cancelling…" : "Cancel delivery"}
                         </button>
+                        {isPaid && !showEarlyShare && (
+                          <>
+                            <span className="text-xs text-muted-foreground/50">·</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowEarlyShare(true)}
+                              className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                            >
+                              Share now instead
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1693,7 +1712,12 @@ export default function PreviewPage() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      {isPaid ? (
+                      {isPaid && scheduledFor && !scheduleDelivered ? (
+                        <>
+                          <p className="text-sm font-semibold text-foreground">Find this gift in your dashboard</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">Create a free account to track this moment and get notified when {recipientName} redeems it.</p>
+                        </>
+                      ) : isPaid ? (
                         <>
                           <p className="text-sm font-semibold text-foreground">Know the moment {recipientName} opens it</p>
                           <p className="text-[11px] text-muted-foreground mt-0.5">We'll text you when they open and redeem your gift. Takes 10 seconds.</p>
@@ -1728,7 +1752,7 @@ export default function PreviewPage() {
                       ) : (
                         <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
                       )}
-                      {isPaid ? "Turn on notifications" : "Continue with Google"}
+                      {isPaid && scheduledFor && !scheduleDelivered ? "Create a free account" : isPaid ? "Turn on notifications" : "Continue with Google"}
                     </button>
                   )}
 
