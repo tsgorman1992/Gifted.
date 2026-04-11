@@ -327,6 +327,10 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
       setLocation(`/preview?gift_id=${gift.id}`);
       return;
     }
+    if (gift.scheduledFor && !gift.scheduleDelivered) {
+      setLocation(`/preview?gift_id=${gift.id}`);
+      return;
+    }
     setLocation(`/open/${gift.id}?preview=true`);
   }
 

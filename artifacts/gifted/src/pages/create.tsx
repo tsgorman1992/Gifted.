@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone, Play, Users,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone, Play, Users, Lock,
 } from "lucide-react";
 import QRCodeLib from "qrcode";
 import { useUpload } from "@workspace/object-storage-web";
@@ -834,6 +834,12 @@ export default function CreatePage() {
   const [showAiGlow, setShowAiGlow] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
+  // Edit mode — set when launched with ?edit_gift_id=GIFT_ID from the preview page
+  const [editGiftId,     setEditGiftId]     = useState<string | null>(null);
+  const [editGiftPaid,   setEditGiftPaid]   = useState(false);
+  const [editGiftAmount, setEditGiftAmount] = useState<string | null>(null);
+  const [editSaving,     setEditSaving]     = useState(false);
+
   // Physical gift tracking state
   const [trackingCarrier, setTrackingCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -856,6 +862,83 @@ export default function CreatePage() {
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+    // ── Edit mode: ?edit_gift_id=GIFT_ID ────────────────────────────────────
+    // Launched from preview.tsx when sender wants to edit an already-created gift.
+    // Skip the hasPaidUnshared guard and localStorage restore — fetch the gift
+    // directly from the API and pre-fill all fields.
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get("edit_gift_id");
+    if (editId) {
+      setEditGiftId(editId);
+      // Remove the param from the URL without reloading
+      window.history.replaceState({}, "", window.location.pathname);
+      fetch(`${base}/api/gifted/gifts/${editId}`, { credentials: "include" })
+        .then(r => r.json())
+        .then((gift: Record<string, unknown>) => {
+          if (typeof gift.recipientName === "string") setRecipientName(gift.recipientName);
+          if (typeof gift.senderName    === "string") setSenderName(gift.senderName);
+          if (typeof gift.occasion      === "string") setOccasion(gift.occasion);
+          if (typeof gift.giftTitle     === "string") setGiftTitle(gift.giftTitle);
+          if (typeof gift.personalNote  === "string") setPersonalNote(gift.personalNote);
+          if (typeof gift.recipientPhone === "string") setRecipientPhone(gift.recipientPhone);
+          if (typeof gift.experience === "string" && EXPERIENCE_LIST.find(e => e.id === gift.experience)) {
+            setSelectedExperience(gift.experience as ExperienceId);
+            setSuggestedExperience(gift.experience as ExperienceId);
+            setHasManuallyChosen(true);
+          }
+          if (Array.isArray(gift.extraLinks) && gift.extraLinks.length > 0) {
+            const normalized = (gift.extraLinks as Array<{url: string; label: string}>).map(l =>
+              typeof l === "string" ? { url: l, label: "" } : l
+            );
+            setExtraLinks([...normalized, { url: "", label: "" }]);
+          }
+          if (typeof gift.videoPath === "string") {
+            setVideoObjectPath(gift.videoPath);
+            setVideoPreviewUrl(`${base}/api/storage${gift.videoPath}`);
+          }
+          if (Array.isArray(gift.photoPaths) && gift.photoPaths.length > 0) {
+            const photoItems = (gift.photoPaths as string[]).map(p => ({
+              id: crypto.randomUUID(),
+              objectPath: p,
+              previewUrl: `${base}/api/storage${p}`,
+            }));
+            setPhotos(photoItems);
+          }
+          if (gift.paid) {
+            setEditGiftPaid(true);
+            if (typeof gift.amount === "string" && parseFloat(gift.amount) > 0) {
+              setEditGiftAmount(gift.amount);
+            }
+          } else {
+            // Not yet paid — allow editing amount freely
+            if (typeof gift.amount === "string" && parseFloat(gift.amount) > 0) {
+              setAmount(gift.amount);
+              if (!AMOUNTS.includes(gift.amount)) setCustomAmountInput(gift.amount);
+            }
+          }
+          if (typeof gift.scheduledFor === "string") {
+            // Convert UTC back to Eastern for display
+            const sfDate = new Date(gift.scheduledFor as string);
+            const etParts = new Intl.DateTimeFormat("en-US", {
+              timeZone: "America/New_York",
+              year: "numeric", month: "2-digit", day: "2-digit",
+              hour: "2-digit", minute: "2-digit", hour12: false,
+            }).formatToParts(sfDate);
+            const y  = etParts.find(p => p.type === "year")?.value   ?? "";
+            const m  = etParts.find(p => p.type === "month")?.value  ?? "";
+            const d  = etParts.find(p => p.type === "day")?.value    ?? "";
+            const h  = etParts.find(p => p.type === "hour")?.value   ?? "09";
+            const mi = etParts.find(p => p.type === "minute")?.value ?? "00";
+            setScheduledFor(`${y}-${m}-${d}`);
+            setScheduledTime(`${h}:${mi}`);
+            setScheduleEnabled(true);
+          }
+        })
+        .catch(() => {});
+      return; // skip normal init path
+    }
+
     // If the user has a paid gift that hasn't been shared yet, redirect back to
     // the preview confirmation screen. This prevents accidentally creating a
     // duplicate gift (and being double-charged) after hitting the back button
@@ -1318,19 +1401,53 @@ export default function CreatePage() {
     saveToLocalStorage();
 
     setIsCreating(true);
+    setEditSaving(true);
     setStepError(null);
     try {
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      let iKey = localStorage.getItem("gifted_create_ikey");
-      if (!iKey) {
-        iKey = crypto.randomUUID();
-        localStorage.setItem("gifted_create_ikey", iKey);
-      }
 
       const nonEmptyLinks = extraLinks.filter(l => l.url.trim()).map(l => ({
         url: l.url.trim(),
         label: l.label.trim(),
       }));
+
+      // ── Edit mode: PATCH content fields, skip payment entirely ──────────────
+      if (editGiftId) {
+        const patchPayload: Record<string, unknown> = {
+          recipientName,
+          senderName,
+          experience: selectedExperience,
+          occasion,
+          giftTitle: giftTitle.trim() || giftTitle,
+          personalNote: personalNote.trim() || null,
+          extraLinks: nonEmptyLinks,
+        };
+        if (recipientPhone) patchPayload.recipientPhone = recipientPhone;
+        if (videoObjectPath) patchPayload.videoPath = videoObjectPath;
+        if (photos.length > 0) patchPayload.photoPaths = photos.map(p => p.objectPath);
+
+        const patchRes = await fetch(`${base}/api/gifted/gifts/${editGiftId}/content`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(patchPayload),
+        });
+
+        if (!patchRes.ok) {
+          const err = await patchRes.json().catch(() => ({})) as { error?: string };
+          throw new Error(err.error || "Failed to save changes");
+        }
+
+        setLocation(`/preview?gift_id=${editGiftId}`);
+        return;
+      }
+
+      // ── Normal create flow ───────────────────────────────────────────────────
+      let iKey = localStorage.getItem("gifted_create_ikey");
+      if (!iKey) {
+        iKey = crypto.randomUUID();
+        localStorage.setItem("gifted_create_ikey", iKey);
+      }
 
       const senderPhoneRaw = localStorage.getItem("gifted_sender_phone");
       const senderPhone = senderPhoneRaw
@@ -1372,9 +1489,10 @@ export default function CreatePage() {
       localStorage.setItem("gifted_gift_id", id);
 
       setLocation("/preview");
-    } catch {
-      setStepError("Something went wrong — please try again.");
+    } catch (err) {
+      setStepError(err instanceof Error ? err.message : "Something went wrong — please try again.");
       setIsCreating(false);
+      setEditSaving(false);
     }
   };
 
@@ -1462,6 +1580,14 @@ export default function CreatePage() {
   return (
     <div className="min-h-screen relative">
       <GiftRecoveryBanner />
+
+      {/* Edit mode banner */}
+      {editGiftId && (
+        <div className="sticky top-0 z-50 bg-primary/10 border-b border-primary/20 px-4 py-2.5 flex items-center gap-2 text-sm text-primary font-medium">
+          <Lock className="w-3.5 h-3.5 shrink-0" />
+          Editing gift — balance is locked. Hit "Save changes" when done.
+        </div>
+      )}
 
       {/* Background tint — cross-fades with experience */}
       <AnimatePresence mode="sync">
@@ -2263,6 +2389,18 @@ export default function CreatePage() {
                   {/* Amount second */}
                   <div className="space-y-3 pt-2">
                     <Label className="text-sm font-semibold">How much to add?</Label>
+                    {editGiftPaid ? (
+                      /* Locked — balance was already paid */
+                      <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-border bg-muted/40">
+                        <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            {editGiftAmount ? `$${parseFloat(editGiftAmount).toFixed(2)} balance` : "No balance"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Locked — payment already received</p>
+                        </div>
+                      </div>
+                    ) : (
                     <div className="flex flex-wrap gap-2.5">
                       <button
                         type="button"
@@ -2300,6 +2438,7 @@ export default function CreatePage() {
                         />
                       </div>
                     </div>
+                    )}
 
                     {/* $10 minimum inline warning */}
                     <AnimatePresence>
@@ -2575,7 +2714,12 @@ export default function CreatePage() {
                     </>
                   ) : isCreating ? (
                     <>
-                      <Loader2 className="mr-2 w-4 h-4 animate-spin" /> Creating your gift…
+                      <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                      {editGiftId ? "Saving changes…" : "Creating your gift…"}
+                    </>
+                  ) : editGiftId ? (
+                    <>
+                      Save changes <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   ) : (
                     <>

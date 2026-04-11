@@ -678,6 +678,52 @@ router.patch("/gifted/gifts/:id/schedule", async (req, res) => {
   }
 });
 
+// PATCH /api/gifted/gifts/:id/content — edit non-payment fields on an existing gift
+router.patch("/gifted/gifts/:id/content", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const {
+      recipientName, senderName, experience, occasion, giftTitle,
+      personalNote, videoPath, photoPaths, extraLinks, recipientPhone,
+    } = req.body as Record<string, unknown>;
+
+    const [gift] = await db
+      .select({ id: gifts.id, senderUserId: gifts.senderUserId, openedAt: gifts.openedAt, paid: gifts.paid })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) { res.status(404).json({ error: "Gift not found" }); return; }
+    if (gift.senderUserId && user?.id && gift.senderUserId !== user.id) {
+      res.status(403).json({ error: "Not authorized" }); return;
+    }
+    if (gift.openedAt) {
+      res.status(409).json({ error: "Gift has already been opened by the recipient." }); return;
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (typeof recipientName === "string" && recipientName.trim()) updates.recipientName = recipientName.trim();
+    if (typeof senderName    === "string" && senderName.trim())    updates.senderName    = senderName.trim();
+    if (typeof experience    === "string" && experience.trim())     updates.experience    = experience.trim();
+    if (typeof occasion      === "string" && occasion.trim())       updates.occasion      = occasion.trim();
+    if (typeof giftTitle     === "string")                          updates.giftTitle     = giftTitle.trim();
+    if (typeof personalNote  === "string")                          updates.personalNote  = personalNote.trim() || null;
+    if (typeof videoPath     === "string" || videoPath === null)    updates.videoPath     = videoPath || null;
+    if (Array.isArray(photoPaths))                                  updates.photoPaths    = photoPaths;
+    if (Array.isArray(extraLinks))                                  updates.extraLinks    = extraLinks;
+    if (typeof recipientPhone === "string")                         updates.recipientPhone = recipientPhone.trim() || null;
+
+    if (Object.keys(updates).length > 0) {
+      await db.update(gifts).set(updates).where(eq(gifts.id, id));
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error updating gift content:", err);
+    res.status(500).json({ error: "Failed to update gift" });
+  }
+});
+
 router.patch("/gifted/gifts/:id/reaction", async (req, res) => {
   try {
     const { id } = req.params;

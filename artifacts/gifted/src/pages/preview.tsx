@@ -113,6 +113,7 @@ export default function PreviewPage() {
   const [giftAmount,     setGiftAmount]     = useState<string | null>(null);
   const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
   const [personalNote,   setPersonalNote]   = useState<string | null>(null);
+  const [openedAt,         setOpenedAt]         = useState<string | null>(null);
   const [scheduledFor,     setScheduledFor]     = useState<string | null>(null);
   const [scheduledTime,    setScheduledTime]    = useState<string>("09:00");
   const [scheduleDelivered, setScheduleDelivered] = useState(false);
@@ -404,6 +405,7 @@ export default function PreviewPage() {
         if (typeof gift.scheduleDelivered === "boolean") {
           setScheduleDelivered(gift.scheduleDelivered);
         }
+        if (gift.openedAt) setOpenedAt(gift.openedAt);
         localStorage.setItem("gifted_gift_id", gift.id);
       })
       .catch(() => {});
@@ -915,6 +917,11 @@ export default function PreviewPage() {
     setLocation("/create");
   };
 
+  const handleEditPaid = () => {
+    if (!giftId) return;
+    setLocation(`/create?edit_gift_id=${giftId}`);
+  };
+
   const displayUrl   = giftId ? `https://gifted.page/open/${giftId}` : "https://gifted.page/open/...";
   const displayAmt   = giftAmount ? parseFloat(giftAmount).toFixed(2) : null;
   const hasBalance   = !!displayAmt && parseFloat(displayAmt) > 0;
@@ -988,7 +995,7 @@ export default function PreviewPage() {
         <div className="flex-1 min-w-0 flex flex-col md:order-1">
 
           {/* Edit link — subtle, above the card */}
-          {!isPaid && (
+          {!isPaid ? (
             <button
               type="button"
               onClick={handleEdit}
@@ -996,7 +1003,15 @@ export default function PreviewPage() {
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Edit gift
             </button>
-          )}
+          ) : isPaid && !openedAt && giftId ? (
+            <button
+              type="button"
+              onClick={handleEditPaid}
+              className="self-start inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Edit gift details
+            </button>
+          ) : null}
 
           {/* Experience summary card — desktop only */}
           <motion.div {...fade(0)} className="hidden md:block rounded-[2rem] overflow-hidden mb-7 shadow-xl relative" style={{ minHeight: 160 }}>
