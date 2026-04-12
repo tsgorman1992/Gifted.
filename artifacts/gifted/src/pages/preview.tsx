@@ -1170,6 +1170,17 @@ export default function PreviewPage() {
 
           <motion.div {...fade(0.15)} className="space-y-3">
 
+            {/* ── Scheduled delivery arrival callout ── */}
+            {isPaid && scheduleDelivered && (
+              <div className="rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center gap-3">
+                <span className="text-xl">🎁</span>
+                <div>
+                  <p className="text-sm font-semibold text-primary leading-tight">The day is here — send it now.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Use the button below to send to {recipientName}.</p>
+                </div>
+              </div>
+            )}
+
             {/* ── Share / copy — mobile/tablet: native share + copy (shown first, above confirmation) ── */}
             {(!hasBalance || isPaid) && (!scheduledFor || scheduleDelivered || showEarlyShare) && isMobileOrTablet && (
               <div className="flex gap-3">

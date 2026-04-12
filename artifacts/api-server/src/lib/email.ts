@@ -339,15 +339,15 @@ export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams):
   if (!client) return;
 
   const { to, senderName, recipientName, giftId } = params;
-  const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
+  const giftUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
 
   const body = `
-    ${h1(`Your moment for ${recipientName} is live!`)}
-    ${p(`The moment you scheduled has arrived. It's ready — copy the link below and share it whenever you're ready.`)}
+    ${h1(`Your moment for ${recipientName} is ready to send.`)}
+    ${p(`The date you picked has arrived. Head in, look it over, and send it to ${recipientName} whenever you're ready.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("View moment link", giftUrl)}
-      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Copy the link and share it however feels right — when it comes from you, it lands differently.</p>
+      ${btn(`Send to ${recipientName}`, giftUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">When it comes from you directly, it lands differently.</p>
     </div>
   `;
 
