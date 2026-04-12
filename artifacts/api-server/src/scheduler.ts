@@ -84,26 +84,25 @@ async function sendScheduledGifts() {
     for (const gift of pending) {
       try {
         const giftUrl    = `${appOrigin}/open/${gift.id}`;
-        const previewUrl = `${appOrigin}/open/${gift.id}?preview=true`;
+        const senderUrl  = `${appOrigin}/preview?gift_id=${gift.id}`;
 
-        // Build the forward-ready SMS for the sender.
-        // Give both a safe preview link (won't mark as opened) and the clean
-        // forward link they'll copy-paste to the recipient.
+        // SMS body — sender taps the link to go straight to their share screen
         const smsBody = [
-          `gifted. ✨ Your moment for ${gift.recipientName} is ready to share!`,
+          `gifted. ✨ Your moment for ${gift.recipientName} is ready to send!`,
           ``,
-          `Preview it first (won't mark as opened):`,
-          previewUrl,
+          `Tap here to open and share it:`,
+          senderUrl,
           ``,
-          `Forward this link to ${gift.recipientName}:`,
+          `Forward this link directly to ${gift.recipientName}:`,
           giftUrl,
           ``,
           `Reply STOP to opt out.`,
         ].join("\n");
 
-        let smsSent = false;
+        let smsSent   = false;
+        let emailSent = false;
 
-        // ── SMS to the SENDER — they forward it themselves ──
+        // ── SMS to the SENDER (send if phone available) ──
         if (gift.senderPhone && client && fromPhone) {
           try {
             await client.messages.create({
@@ -118,44 +117,33 @@ async function sendScheduledGifts() {
           }
         }
 
-        // ── Mark delivered only if SMS succeeded ──
-        // If SMS fails (network issue, missing credentials), leave scheduleDelivered=false
-        // so the next scheduler tick picks it up and retries automatically.
-        if (smsSent) {
+        // ── Email to the SENDER (always send if email available, SMS + email together) ──
+        if (gift.senderEmail) {
+          try {
+            await sendScheduledGiftReadyEmail({
+              to: gift.senderEmail,
+              senderName: gift.senderName,
+              recipientName: gift.recipientName,
+              giftId: gift.id,
+            });
+            emailSent = true;
+            console.log(`[scheduler] Email sent to sender for gift ${gift.id}`);
+          } catch (emailErr) {
+            console.error(`[scheduler] Email failed for gift ${gift.id}:`, emailErr);
+          }
+        }
+
+        // ── Mark delivered if at least one channel succeeded, or no contact info at all ──
+        const hasContact = !!(gift.senderPhone || gift.senderEmail);
+        if (smsSent || emailSent || !hasContact) {
           await db
             .update(gifts)
             .set({ scheduleDelivered: true })
             .where(eq(gifts.id, gift.id));
-          console.log(`[scheduler] Gift ${gift.id} marked delivered`);
-        } else if (!gift.senderPhone) {
-          // No phone on file — try email fallback, retry on failure.
-          let emailSent = false;
-          if (gift.senderEmail) {
-            try {
-              await sendScheduledGiftReadyEmail({
-                to: gift.senderEmail,
-                senderName: gift.senderName,
-                recipientName: gift.recipientName,
-                giftId: gift.id,
-              });
-              emailSent = true;
-            } catch (emailErr) {
-              console.error(`[scheduler] Email failed for gift ${gift.id}:`, emailErr);
-            }
-          }
-          if (emailSent || !gift.senderEmail) {
-            // Either email succeeded, or there's no contact info at all — mark done
-            await db
-              .update(gifts)
-              .set({ scheduleDelivered: true })
-              .where(eq(gifts.id, gift.id));
-            console.warn(`[scheduler] Gift ${gift.id} has no sender phone — marked delivered${emailSent ? " (email fallback sent)" : " without notification"}`);
-          } else {
-            // Email failed — leave scheduleDelivered=false so next tick retries
-            console.warn(`[scheduler] Gift ${gift.id} — email failed, will retry next tick`);
-          }
+          console.log(`[scheduler] Gift ${gift.id} marked delivered (sms=${smsSent}, email=${emailSent})`);
         } else {
-          console.warn(`[scheduler] Gift ${gift.id} — SMS failed, will retry next tick`);
+          // Both channels failed — leave scheduleDelivered=false so next tick retries
+          console.warn(`[scheduler] Gift ${gift.id} — all notifications failed, will retry next tick`);
         }
       } catch (err) {
         console.error(`[scheduler] Failed to process gift ${gift.id}:`, err);

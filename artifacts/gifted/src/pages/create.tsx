@@ -791,7 +791,7 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
 
 export default function CreatePage() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   // Step state
   const [step, setStep] = useState(1);
@@ -839,6 +839,19 @@ export default function CreatePage() {
   const [editGiftPaid,   setEditGiftPaid]   = useState(false);
   const [editGiftAmount, setEditGiftAmount] = useState<string | null>(null);
   const [editSaving,     setEditSaving]     = useState(false);
+
+  // Sender notification phone — used by scheduler to text the sender when scheduled gift fires
+  // Pre-filled from user account (persistent) or localStorage (fallback for non-users)
+  const [senderNotifyPhone, setSenderNotifyPhone] = useState(() =>
+    localStorage.getItem("gifted_sender_phone") ?? ""
+  );
+
+  // Once auth loads, prefer the account phone over localStorage
+  useEffect(() => {
+    if (user?.phone && !senderNotifyPhone) {
+      setSenderNotifyPhone(formatPhoneNumber(user.phone));
+    }
+  }, [user?.phone]);
 
   // Physical gift tracking state
   const [trackingCarrier, setTrackingCarrier] = useState("");
@@ -1449,10 +1462,24 @@ export default function CreatePage() {
         localStorage.setItem("gifted_create_ikey", iKey);
       }
 
-      const senderPhoneRaw = localStorage.getItem("gifted_sender_phone");
-      const senderPhone = senderPhoneRaw
-        ? senderPhoneRaw.replace(/\D/g, "").replace(/^(\d{3})(\d{3})(\d{4})$/, "+1$1$2$3") || senderPhoneRaw
+      // Normalize sender notify phone — prefer state (which seeds from account > localStorage)
+      const senderPhoneClean = senderNotifyPhone.replace(/\D/g, "");
+      const senderPhone = senderPhoneClean.length >= 10
+        ? (senderPhoneClean.length === 10 ? `+1${senderPhoneClean}` : `+${senderPhoneClean}`)
         : undefined;
+
+      // Persist to localStorage for non-users; also save to account if logged in + phone changed
+      if (senderPhone) {
+        localStorage.setItem("gifted_sender_phone", senderNotifyPhone);
+        if (isAuthenticated && senderNotifyPhone !== (user?.phone ?? "")) {
+          fetch(`${base}/api/auth/profile`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ phone: senderNotifyPhone }),
+          }).catch(() => {});
+        }
+      }
 
       const payload: Record<string, unknown> = {
         recipientName,
@@ -2685,12 +2712,31 @@ export default function CreatePage() {
                       </div>
                       {scheduledFor && (
                         <p className="text-xs text-muted-foreground mt-1 pl-7">
-                          You'll get a link to share on{" "}
+                          We'll notify you on{" "}
                           {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}{" "}
                           at{" "}
-                          {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ET.
+                          {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ET — with the link to forward to {recipientName || "them"}.
                         </p>
                       )}
+
+                      {/* Sender notification phone — captured here so scheduler can text them on delivery day */}
+                      <div className="mt-3 space-y-1.5 pl-7">
+                        <label className="text-xs font-semibold text-foreground">
+                          Your phone number{" "}
+                          <span className="font-normal text-muted-foreground">— so we can text you when it's time</span>
+                        </label>
+                        <Input
+                          type="tel"
+                          inputMode="numeric"
+                          placeholder="(555) 000-0000"
+                          value={senderNotifyPhone}
+                          onChange={(e) => setSenderNotifyPhone(formatPhoneNumber(e.target.value))}
+                          className="h-11 rounded-xl text-base"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          We'll text{senderNotifyPhone ? ` ${senderNotifyPhone}` : " you"} on {scheduledFor ? new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "the day"} with the link to send to {recipientName || "them"}.{isAuthenticated ? " Saved to your account." : ""}
+                        </p>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>

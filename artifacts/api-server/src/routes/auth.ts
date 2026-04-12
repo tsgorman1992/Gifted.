@@ -10,11 +10,28 @@ const ADMIN_EMAILS = new Set([
   "brianreadnour2020@gmail.com",
 ]);
 
-router.get("/auth/me", (req: Request, res: Response) => {
+router.get("/auth/me", async (req: Request, res: Response) => {
   if (req.isAuthenticated() && req.user) {
     const email = (req.user as any).email as string | null;
     const isAdmin = !!(email && ADMIN_EMAILS.has(email.toLowerCase()));
-    res.json({ user: { ...req.user, isAdmin } });
+    // Always fetch fresh from DB so phone and other new fields are included
+    try {
+      const userId = (req.user as any).id as string;
+      const [fresh] = await db.select({
+        id: usersTable.id,
+        email: usersTable.email,
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+        profileImageUrl: usersTable.profileImageUrl,
+        phone: usersTable.phone,
+        payoutMethod: usersTable.payoutMethod,
+        payoutHandle: usersTable.payoutHandle,
+        birthday: usersTable.birthday,
+      }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      res.json({ user: fresh ? { ...fresh, isAdmin } : { ...req.user, isAdmin } });
+    } catch {
+      res.json({ user: { ...req.user, isAdmin } });
+    }
   } else {
     res.json({ user: null });
   }
@@ -81,10 +98,11 @@ router.patch("/auth/profile", async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
 
-  const { firstName, lastName, profileImageUrl } = req.body as {
+  const { firstName, lastName, profileImageUrl, phone } = req.body as {
     firstName?: string;
     lastName?: string;
     profileImageUrl?: string;
+    phone?: string;
   };
 
   try {
@@ -92,6 +110,10 @@ router.patch("/auth/profile", async (req: Request, res: Response) => {
     if (firstName !== undefined) setFields.firstName = firstName.trim() || null;
     if (lastName  !== undefined) setFields.lastName  = lastName.trim()  || null;
     if (profileImageUrl !== undefined) setFields.profileImageUrl = profileImageUrl || null;
+    if (phone !== undefined) {
+      const cleaned = phone.replace(/\D/g, "");
+      setFields.phone = cleaned.length >= 10 ? phone.trim() : null;
+    }
 
     const [updated] = await db
       .update(usersTable)
@@ -103,6 +125,7 @@ router.patch("/auth/profile", async (req: Request, res: Response) => {
         firstName: usersTable.firstName,
         lastName: usersTable.lastName,
         profileImageUrl: usersTable.profileImageUrl,
+        phone: usersTable.phone,
       });
 
     if (!updated) { res.status(404).json({ error: "User not found" }); return; }
@@ -112,6 +135,7 @@ router.patch("/auth/profile", async (req: Request, res: Response) => {
       (req.user as any).firstName = updated.firstName;
       (req.user as any).lastName = updated.lastName;
       (req.user as any).profileImageUrl = updated.profileImageUrl;
+      (req.user as any).phone = updated.phone;
     }
 
     res.json({ user: updated });
