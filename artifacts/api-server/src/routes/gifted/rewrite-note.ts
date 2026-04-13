@@ -30,21 +30,24 @@ Return only the note text with no explanation.`;
   let userPrompt: string;
 
   if (mode === "rewrite" && currentNote) {
-    userPrompt = `Polish the following personal note. Your only job is to improve the prose — make it flow more naturally, feel warmer, and read more beautifully.
+    userPrompt = `Rewrite the following personal gift note so it reads beautifully — like the sender at their absolute best.
+
+Your job is to capture the emotion and intent behind what they wrote, then express it in a way that feels genuinely warm and memorable. You have creative freedom with the words and phrasing, but must stay true to the spirit of what they meant.
 
 Rules:
-- Preserve EXACTLY what the sender chose to include. Do not add new information, references to the occasion, or context they didn't write.
-- Keep their voice and their specific words where possible — only refine, never replace their meaning.
-- Do NOT add greetings, sign-offs, or occasion references unless they already appear in the note.
-- Stay the same length or slightly shorter.
+- Match the sender's tone and register. If they wrote casually, stay casual but elevated. If they wrote warmly, make it warmer. Never turn a simple heartfelt note into something stiff or formal.
+- Do NOT invent new facts, memories, or details they did not include. Only work with what they gave you.
+- Do NOT add greetings (like "Dear ${recipientName}") or sign-offs (like "Love, ${senderName}") — those are handled separately.
+- Keep it concise — 2-4 sentences. Do not pad it out.
+- Return only the note text, no explanation, no quotation marks.
 
 Sender: ${senderName}
 Recipient: ${recipientName}
 
-Note to polish:
-"${currentNote}"
+Original note:
+${currentNote}
 
-Write the polished version only, no explanation.`;
+Write the rewritten note only.`;
   } else {
     userPrompt = `Write a short, heartfelt personal note for this gift.
 
