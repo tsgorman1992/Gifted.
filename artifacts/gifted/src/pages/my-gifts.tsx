@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import {
   Gift, ExternalLink, CheckCircle2, Clock, Plus, Copy,
   Check, Sparkles, TrendingUp, Heart, Star,
-  DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock,
+  DollarSign, Package, Flower2, Snowflake, Sun, Eye, CalendarClock, Calendar,
   Inbox, Trash2, X, Share2, Send, Users, Bell,
-  UserPlus, Cake, Pencil, BookUser, Truck, RefreshCw, ChevronRight, Wallet,
+  UserPlus, Cake, Pencil, BookUser, Truck, RefreshCw, ChevronRight, Wallet, Loader2,
 } from "lucide-react";
 import { formatDistanceToNow, format, differenceInCalendarDays } from "date-fns";
 import {
@@ -1727,6 +1727,42 @@ export default function MyGiftsPage() {
   const [showAllReceived, setShowAllReceived] = useState(false);
   const [copiedGiftId, setCopiedGiftId] = useState<string | null>(null);
 
+  // Inline reschedule state for the scheduled tab
+  const [rescheduleGiftId, setRescheduleGiftId] = useState<string | null>(null);
+  const [rescheduleDate,   setRescheduleDate]   = useState("");
+  const [rescheduleTime,   setRescheduleTime]   = useState("09:00");
+  const [rescheduleSaving, setRescheduleSaving] = useState(false);
+
+  async function handleReschedule(giftId: string) {
+    if (!rescheduleDate) return;
+    setRescheduleSaving(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/gifts/${giftId}/schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ scheduledFor: `${rescheduleDate}T${rescheduleTime}:00` }),
+      });
+      if (res.ok) {
+        setRescheduleGiftId(null);
+        queryClient.invalidateQueries({ queryKey: ["my-gifts"] });
+      }
+    } finally {
+      setRescheduleSaving(false);
+    }
+  }
+
+  function openReschedule(gift: { id: string; scheduledFor: string | null }) {
+    if (!gift.scheduledFor) return;
+    const d = new Date(gift.scheduledFor);
+    const etDate = new Date(d.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const dateStr = `${etDate.getFullYear()}-${String(etDate.getMonth() + 1).padStart(2, "0")}-${String(etDate.getDate()).padStart(2, "0")}`;
+    const timeStr = `${String(etDate.getHours()).padStart(2, "0")}:${String(etDate.getMinutes()).padStart(2, "0")}`;
+    setRescheduleDate(dateStr);
+    setRescheduleTime(timeStr);
+    setRescheduleGiftId(gift.id);
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(search);
     const tab = params.get("tab");
@@ -2354,73 +2390,158 @@ export default function MyGiftsPage() {
 
                   const initial = gift.recipientName?.[0]?.toUpperCase() ?? "?";
 
+                  const isRescheduling = rescheduleGiftId === gift.id;
+                  const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
                   return (
                     <motion.div
                       key={gift.id}
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
-                      className="flex items-center gap-4 px-5 py-4 border-b border-border/40 last:border-0"
+                      className="border-b border-border/40 last:border-0"
                     >
-                      {/* Recipient initial */}
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                        <span className="text-sm font-semibold text-foreground">{initial}</span>
-                      </div>
+                      {/* Main row */}
+                      <div className="flex items-center gap-4 px-5 py-4">
+                        {/* Recipient initial */}
+                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                          <span className="text-sm font-semibold text-foreground">{initial}</span>
+                        </div>
 
-                      {/* Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold truncate">{gift.recipientName}</p>
-                          {gift.occasion && (
-                            <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-                              {gift.occasion}
-                            </span>
-                          )}
-                          {gift.scheduleDelivered && (
-                            <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <Bell className="w-3 h-3" />
-                              Reminder sent
-                            </span>
+                        {/* Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold truncate">{gift.recipientName}</p>
+                            {gift.occasion && (
+                              <span className="text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
+                                {gift.occasion}
+                              </span>
+                            )}
+                            {gift.scheduleDelivered && (
+                              <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Bell className="w-3 h-3" />
+                                Reminder sent
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-xs mt-0.5 font-medium ${urgencyClass}`}>
+                            <CalendarClock className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+                            {urgencyLabel}
+                          </p>
+                          {gift.giftTitle && (
+                            <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{gift.giftTitle}</p>
                           )}
                         </div>
-                        <p className={`text-xs mt-0.5 font-medium ${urgencyClass}`}>
-                          <CalendarClock className="w-3 h-3 inline-block mr-1 -mt-0.5" />
-                          {urgencyLabel}
-                        </p>
-                        {gift.giftTitle && (
-                          <p className="text-xs text-muted-foreground/70 truncate mt-0.5">{gift.giftTitle}</p>
-                        )}
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* Edit gift content */}
+                          <button
+                            onClick={() => setLocation(`/create?edit_gift_id=${gift.id}`)}
+                            className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                            title="Edit gift"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Reschedule toggle */}
+                          {!gift.scheduleDelivered && (
+                            <button
+                              onClick={() => isRescheduling ? setRescheduleGiftId(null) : openReschedule(gift)}
+                              className={`p-1.5 rounded-full transition-all ${isRescheduling ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+                              title="Change date"
+                            >
+                              <Calendar className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Share / copy */}
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(shareUrl).then(() => {
+                                setCopiedGiftId(gift.id);
+                                setTimeout(() => setCopiedGiftId(null), 2000);
+                              }).catch(() => {});
+                            }}
+                            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ml-1 ${
+                              isCopied
+                                ? "text-green-700 bg-green-50 border border-green-200"
+                                : "text-white bg-primary hover:bg-primary/90 shadow-sm"
+                            }`}
+                          >
+                            {isCopied ? (
+                              <><Check className="w-3.5 h-3.5" /> Copied</>
+                            ) : (
+                              <><Share2 className="w-3.5 h-3.5" /> Share</>
+                            )}
+                          </button>
+
+                          {/* Preview */}
+                          <button
+                            onClick={() => setLocation(`/preview?gift_id=${gift.id}`)}
+                            className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                            title="View gift"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(shareUrl).then(() => {
-                              setCopiedGiftId(gift.id);
-                              setTimeout(() => setCopiedGiftId(null), 2000);
-                            }).catch(() => {});
-                          }}
-                          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all ${
-                            isCopied
-                              ? "text-green-700 bg-green-50 border border-green-200"
-                              : "text-white bg-primary hover:bg-primary/90 shadow-sm"
-                          }`}
-                        >
-                          {isCopied ? (
-                            <><Check className="w-3.5 h-3.5" /> Copied</>
-                          ) : (
-                            <><Share2 className="w-3.5 h-3.5" /> Share</>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => setLocation(`/open/${gift.id}`)}
-                          className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-                          title="View gift"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {/* Inline reschedule panel */}
+                      <AnimatePresence>
+                        {isRescheduling && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-5 pb-4 pt-1 bg-muted/30 border-t border-border/40 space-y-3">
+                              <p className="text-xs font-semibold text-foreground">Change delivery date</p>
+                              <div className="flex gap-2">
+                                <div className="flex items-center gap-1.5 flex-1">
+                                  <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                  <input
+                                    type="date"
+                                    value={rescheduleDate}
+                                    min={tomorrow}
+                                    onChange={(e) => setRescheduleDate(e.target.value)}
+                                    className="flex-1 h-9 rounded-lg border border-border bg-background px-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                  <input
+                                    type="time"
+                                    value={rescheduleTime}
+                                    onChange={(e) => setRescheduleTime(e.target.value)}
+                                    className="h-9 rounded-lg border border-border bg-background px-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                  />
+                                </div>
+                              </div>
+                              <p className="text-xs text-muted-foreground">All times Eastern (ET)</p>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleReschedule(gift.id)}
+                                  disabled={rescheduleSaving || !rescheduleDate}
+                                  className="rounded-full h-8 text-xs"
+                                >
+                                  {rescheduleSaving ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Saving…</> : "Save date"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setRescheduleGiftId(null)}
+                                  className="rounded-full h-8 text-xs"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   );
                 })}
