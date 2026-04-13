@@ -1958,46 +1958,6 @@ export default function MyGiftsPage() {
           )}
         </AnimatePresence>
 
-        {/* ── Upcoming occasions banner (sent tab only, mobile/tablet) ── */}
-        <div className="lg:hidden">
-          {activeTab === "sent" && upcomingContactsData.length > 0 && (
-            <UpcomingOccasionsBanner contacts={upcomingContactsData} onGift={handleGiftContact} />
-          )}
-        </div>
-
-        {/* ── Flat stat strip (Sent tab, has gifts) ── */}
-        {activeTab === "sent" && !giftsLoading && totalSent > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05, duration: 0.4 }}
-            className="flex divide-x divide-border/50 border border-border/60 rounded-xl mb-7 bg-card overflow-hidden lg:hidden"
-          >
-            <div className="flex-1 px-4 py-3.5 min-w-0">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Sent</p>
-              <p className="font-serif text-2xl font-medium">{totalSent}</p>
-            </div>
-            <div className="flex-1 px-4 py-3.5 min-w-0">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Total</p>
-              <p className="font-serif text-2xl font-medium">{totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"}</p>
-            </div>
-            <button
-              className={`flex-1 px-4 py-3.5 text-left transition-colors min-w-0 ${activeStatFilter === "opened" ? "bg-primary/5" : "hover:bg-secondary/50"}`}
-              onClick={() => { setActiveStatFilter(f => f === "opened" ? null : "opened"); setActiveTab("sent"); }}
-            >
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Opened</p>
-              <p className={`font-serif text-2xl font-medium ${activeStatFilter === "opened" ? "text-primary" : ""}`}>{openedCount}</p>
-            </button>
-            <button
-              className={`flex-1 px-4 py-3.5 text-left transition-colors min-w-0 ${activeStatFilter === "redeemed" ? "bg-primary/5" : "hover:bg-secondary/50"}`}
-              onClick={() => { setActiveStatFilter(f => f === "redeemed" ? null : "redeemed"); setActiveTab("sent"); }}
-            >
-              <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Redeemed</p>
-              <p className={`font-serif text-2xl font-medium ${activeStatFilter === "redeemed" ? "text-primary" : ""}`}>{redeemed}</p>
-            </button>
-          </motion.div>
-        )}
-
         {/* ── Tabs ── */}
         <div className="flex items-center gap-0 border-b border-border/50 mb-6">
           {(["inbox", "sent", "scheduled", "people"] as Tab[]).map((tab) => (
@@ -2032,7 +1992,48 @@ export default function MyGiftsPage() {
 
         {/* ── Sent tab ── */}
         {activeTab === "sent" && (
-          giftsLoading ? (
+          <>
+          {/* Upcoming occasions banner (mobile/tablet) */}
+          <div className="lg:hidden">
+            {upcomingContactsData.length > 0 && (
+              <UpcomingOccasionsBanner contacts={upcomingContactsData} onGift={handleGiftContact} />
+            )}
+          </div>
+
+          {/* Flat stat strip */}
+          {!giftsLoading && totalSent > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05, duration: 0.4 }}
+              className="flex divide-x divide-border/50 border border-border/60 rounded-xl mb-7 bg-card overflow-hidden lg:hidden"
+            >
+              <div className="flex-1 px-4 py-3.5 min-w-0">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Sent</p>
+                <p className="font-serif text-2xl font-medium">{totalSent}</p>
+              </div>
+              <div className="flex-1 px-4 py-3.5 min-w-0">
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Total</p>
+                <p className="font-serif text-2xl font-medium">{totalValue > 0 ? `$${totalValue.toFixed(0)}` : "—"}</p>
+              </div>
+              <button
+                className={`flex-1 px-4 py-3.5 text-left transition-colors min-w-0 ${activeStatFilter === "opened" ? "bg-primary/5" : "hover:bg-secondary/50"}`}
+                onClick={() => { setActiveStatFilter(f => f === "opened" ? null : "opened"); }}
+              >
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Opened</p>
+                <p className={`font-serif text-2xl font-medium ${activeStatFilter === "opened" ? "text-primary" : ""}`}>{openedCount}</p>
+              </button>
+              <button
+                className={`flex-1 px-4 py-3.5 text-left transition-colors min-w-0 ${activeStatFilter === "redeemed" ? "bg-primary/5" : "hover:bg-secondary/50"}`}
+                onClick={() => { setActiveStatFilter(f => f === "redeemed" ? null : "redeemed"); }}
+              >
+                <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground mb-1">Redeemed</p>
+                <p className={`font-serif text-2xl font-medium ${activeStatFilter === "redeemed" ? "text-primary" : ""}`}>{redeemed}</p>
+              </button>
+            </motion.div>
+          )}
+
+          {giftsLoading ? (
             <div className="space-y-0 border border-border/60 rounded-xl bg-card overflow-hidden">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-20 border-b border-border/40 last:border-0 px-5 py-4">
@@ -2115,7 +2116,8 @@ export default function MyGiftsPage() {
                 );
               })()}
             </div>
-          )
+          }
+          </>
         )}
 
         {/* ── My Gifts (Inbox) tab ── */}
