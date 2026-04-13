@@ -83,7 +83,7 @@ router.get("/admin/stats", async (req, res) => {
       .filter(g => g.cashoutPaidAt == null && g.amount)
       .reduce((sum, g) => sum + parseFloat(g.amount ?? "0"), 0);
 
-    const feeRevenue = volume * 0.05;
+    const feeRevenue = volume * 0.08;
 
     const paidWithAmount = paidGifts.filter(g => g.amount && parseFloat(g.amount) > 0);
     const avgAmount = paidWithAmount.length > 0
@@ -462,7 +462,7 @@ router.get("/admin/trends", async (req, res) => {
         month:      m,
         giftCount,
         volume:     parseFloat(String(g.volume ?? "0")),
-        feeRevenue: parseFloat(String(g.volume ?? "0")) * 0.05,
+        feeRevenue: parseFloat(String(g.volume ?? "0")) * 0.08,
         opens,
         redeems,
         openRate:   giftCount > 0 ? Math.round((opens   / giftCount) * 100) : 0,

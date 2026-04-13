@@ -8,7 +8,7 @@ const FAQS = [
   {
     question: "How does the cash balance work?",
     answer:
-      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they provide their payout details and our team sends the balance directly to them — same day. No gift cards, no restrictions — just real money, their way.",
+      "When you send a gift, you choose an amount and pay for it securely via card (powered by Stripe). gifted. holds those funds on your behalf. When your recipient opens their gift and clicks \"Redeem\", they provide their payout details and our team sends the balance directly to them — typically same day. No gift cards, no restrictions — just real money, their way.",
   },
   {
     question: "Do I need to include a cash balance?",
@@ -18,7 +18,7 @@ const FAQS = [
   {
     question: "How long does the payout take?",
     answer:
-      "Same day. We send the balance directly to the Venmo, Cash App, PayPal, or Zelle account they provide — usually within a few hours of them submitting their details.",
+      "Typically same day, and always within 1 business day. We send the balance directly to the Venmo, Cash App, PayPal, or Zelle account they provide after they submit their details.",
   },
   {
     question: "Is my payment information secure?",
@@ -33,7 +33,7 @@ const FAQS = [
   {
     question: "Do gifts expire?",
     answer:
-      "Gift balances do not expire. Your recipient can redeem whenever they're ready — there's no rush and no deadline. The gift link itself remains active indefinitely.",
+      "Gift links remain active indefinitely. Gift balances are held for 90 days from the send date — if unredeemed after 90 days, the balance is automatically refunded to the sender. The personal message, photos, and video remain accessible forever.",
   },
   {
     question: "What happens if my recipient can't access the link?",
