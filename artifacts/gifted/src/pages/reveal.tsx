@@ -1571,6 +1571,20 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [thankYouAlreadySent, setThankYouAlreadySent] = useState(false);
   const [, navigate] = useLocation();
   const [balanceRevealPhase, setBalanceRevealPhase] = useState<"hidden" | "building" | "revealed">("hidden");
+  const [stickyRedeemDismissed, setStickyRedeemDismissed] = useState(false);
+  // End-card auth / sign-up state
+  const [endCardIsAuthed,      setEndCardIsAuthed]      = useState(false);
+  const [endCardGoogleEnabled, setEndCardGoogleEnabled] = useState(false);
+  const [endCardMode,          setEndCardMode]          = useState<"sign-up" | "sign-in">("sign-up");
+  const [endCardEmail,         setEndCardEmail]         = useState("");
+  const [endCardPassword,      setEndCardPassword]      = useState("");
+  const [endCardFirstName,     setEndCardFirstName]     = useState("");
+  const [endCardLastName,      setEndCardLastName]      = useState("");
+  const [endCardSubmitting,    setEndCardSubmitting]    = useState(false);
+  const [endCardError,         setEndCardError]         = useState<string | null>(null);
+  const [endCardEmailOpen,     setEndCardEmailOpen]     = useState(false);
+  const [endCardDone,          setEndCardDone]          = useState(false);
+  const [endCardDismissed,     setEndCardDismissed]     = useState(false);
   const [trackingData, setTrackingData]   = useState<{
     carrier: string;
     trackingNumber: string;
@@ -1649,6 +1663,19 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
 
     return () => { clearTimeout(tBuild); clearTimeout(tReveal); };
   }, [isOpen, giftAmount, isPreview]);
+
+  // Check auth status for end card sign-up nudge
+  useEffect(() => {
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${base}/api/auth/me`, { credentials: "include" })
+      .then(r => r.ok ? r.json() : null)
+      .then(user => { if (user?.id) { setEndCardIsAuthed(true); setEndCardDone(true); } })
+      .catch(() => {});
+    fetch(`${base}/api/auth/google/enabled`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.enabled) setEndCardGoogleEnabled(true); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -2025,6 +2052,34 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
     setPhotoErrors(p => ({ ...p, [i]: true }));
   }, [base]);
 
+
+  const handleEndCardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEndCardSubmitting(true);
+    setEndCardError(null);
+    const endpoint = endCardMode === "sign-in" ? `${base}/api/auth/login` : `${base}/api/auth/register`;
+    const body: Record<string, string> = { email: endCardEmail, password: endCardPassword };
+    if (endCardMode === "sign-up") { body.firstName = endCardFirstName; body.lastName = endCardLastName; }
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) { setEndCardError(data?.error ?? "Something went wrong. Try again."); setEndCardSubmitting(false); return; }
+      // Link gift to new account if we have one
+      if (giftId) {
+        fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/save-received`, {
+          method: "PATCH", credentials: "include",
+        }).catch(() => {});
+      }
+      setEndCardDone(true);
+      setEndCardIsAuthed(true);
+    } catch { setEndCardError("Network error. Try again."); }
+    setEndCardSubmitting(false);
+  };
 
   // ── Page-level style override for dark themes
   const pageStyle: React.CSSProperties = isDark
@@ -2906,154 +2961,155 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
 
             </div>
 
-            {/* Reaction panel — shown after full reveal, right after content, real gifts only */}
-            {!isPreview && giftId && openPhase >= 4 && !reactionSkipped && (
+            {/* Reaction + Thank you — merged into one card, shown after full reveal, real gifts only */}
+            {!isPreview && giftId && openPhase >= 4 && !(reactionSent || reactionSkipped) || (!isPreview && giftId && openPhase >= 4 && !(thankYouSent || thankYouSkipped)) ? (
               <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-12 mb-2">
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.6, ease: "easeOut", delay: 0.8 }}
-                  className="text-center py-2"
-                >
-                  {reactionSent ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex items-center justify-center gap-2"
-                    >
-                      <span className="text-xl">{reactionEmoji}</span>
-                      <span className={`text-sm ${isDark ? "text-white/55" : "text-muted-foreground/70"}`}>
-                        Sent to {senderName}
-                      </span>
-                    </motion.div>
-                  ) : (
-                    <>
-                      <p className={`text-sm mb-4 ${isDark ? "text-white/55" : "text-muted-foreground/75"}`}>
-                        Send {senderName} a quick reaction
-                      </p>
-                      <div className="flex items-center justify-center gap-5 mb-4 flex-wrap">
-                        {(["❤️", "😭", "🤯", "😊", "🙏"] as const).map((emoji) => (
-                          <button
-                            key={emoji}
-                            type="button"
-                            onClick={async () => {
-                              setReactionEmoji(emoji);
-                              const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-                              try {
-                                await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/reaction`, {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  credentials: "include",
-                                  body: JSON.stringify({ reaction: emoji }),
-                                });
-                              } catch {}
-                              setReactionSent(true);
-                            }}
-                            className="text-3xl transition-all duration-150 hover:scale-125 active:scale-110"
-                            style={{ lineHeight: 1 }}
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setReactionSkipped(true)}
-                        className={`text-xs underline underline-offset-2 ${isDark ? "text-white/35 hover:text-white/55" : "text-muted-foreground/55 hover:text-muted-foreground"} transition-colors`}
-                      >
-                        Skip
-                      </button>
-                    </>
-                  )}
-                </motion.div>
-              </div>
-            )}
-
-            {/* Thank you note — shown after full reveal, independently of reaction, real gifts only */}
-            {!isPreview && giftId && openPhase >= 4 && !thankYouSkipped && (
-              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-8 mb-2">
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className={`rounded-2xl border p-6 text-center ${isDark ? "border-white/10 bg-white/5" : "border-border bg-card"}`}
+                  transition={{ duration: 0.5, ease: "easeOut", delay: 0.6 }}
+                  className={`rounded-2xl border p-6 ${isDark ? "border-white/10 bg-white/5" : "border-border bg-card"}`}
                 >
-                  {thankYouSent ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex flex-col items-center gap-2"
-                    >
-                      <span className="text-2xl">🙏</span>
-                      <p className={`text-sm ${isDark ? "text-white/55" : "text-muted-foreground/70"}`}>
-                        {thankYouAlreadySent ? "You already sent a thank you note" : `Thank you note sent to ${senderName}`}
-                      </p>
-                    </motion.div>
-                  ) : (
-                    <>
-                      <p className={`text-sm font-medium mb-1 ${isDark ? "text-white/80" : "text-foreground"}`}>
-                        Want to send {senderName} a thank you?
-                      </p>
-                      <p className={`text-xs mb-4 ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
-                        Completely optional — but they'd love to hear from you.
-                      </p>
-                      <textarea
-                        value={thankYouNote}
-                        onChange={e => setThankYouNote(e.target.value.slice(0, 500))}
-                        placeholder={`Write a quick note to ${senderName}…`}
-                        rows={3}
-                        className={`w-full rounded-xl border px-4 py-3 text-sm resize-none outline-none transition-colors mb-4 ${
-                          isDark
-                            ? "bg-white/5 border-white/15 text-white placeholder:text-white/30 focus:border-white/35"
-                            : "bg-background border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/40"
-                        }`}
-                      />
-                      <div className="flex items-center justify-center gap-3">
-                        <button
-                          type="button"
-                          disabled={thankYouSubmitting || !thankYouNote.trim()}
-                          onClick={async () => {
-                            if (!thankYouNote.trim()) return;
-                            setThankYouSubmitting(true);
-                            const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-                            try {
-                              await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/thank-you`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                credentials: "include",
-                                body: JSON.stringify({ note: thankYouNote.trim() }),
-                              });
-                            } catch {}
-                            setThankYouSent(true);
-                            setThankYouSubmitting(false);
-                          }}
-                          className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                            thankYouNote.trim()
-                              ? isDark
-                                ? "bg-white text-zinc-900 hover:bg-white/90"
-                                : "bg-foreground text-background hover:bg-foreground/85"
-                              : isDark
-                                ? "bg-white/10 text-white/30 cursor-not-allowed"
-                                : "bg-muted text-muted-foreground cursor-not-allowed"
-                          }`}
+                  {/* Reaction row */}
+                  {!isPreview && giftId && openPhase >= 4 && !(reactionSent || reactionSkipped) && (
+                    <div className="text-center">
+                      {reactionSent ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                          className="flex items-center justify-center gap-2"
                         >
-                          {thankYouSubmitting ? "Sending…" : "Send note"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setThankYouSkipped(true)}
-                          className={`text-xs underline underline-offset-2 ${isDark ? "text-white/30 hover:text-white/50" : "text-muted-foreground/50 hover:text-muted-foreground"} transition-colors`}
+                          <span className="text-xl">{reactionEmoji}</span>
+                          <span className={`text-sm ${isDark ? "text-white/55" : "text-muted-foreground/70"}`}>
+                            Sent to {senderName}
+                          </span>
+                        </motion.div>
+                      ) : (
+                        <>
+                          <p className={`text-sm mb-4 ${isDark ? "text-white/55" : "text-muted-foreground/75"}`}>
+                            Send {senderName} a quick reaction
+                          </p>
+                          <div className="flex items-center justify-center gap-5 mb-3 flex-wrap">
+                            {(["❤️", "😭", "🤯", "😊", "🙏"] as const).map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={async () => {
+                                  setReactionEmoji(emoji);
+                                  try {
+                                    await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/reaction`, {
+                                      method: "PATCH",
+                                      headers: { "Content-Type": "application/json" },
+                                      credentials: "include",
+                                      body: JSON.stringify({ reaction: emoji }),
+                                    });
+                                  } catch {}
+                                  setReactionSent(true);
+                                }}
+                                className="text-3xl transition-all duration-150 hover:scale-125 active:scale-110"
+                                style={{ lineHeight: 1 }}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setReactionSkipped(true)}
+                            className={`text-xs underline underline-offset-2 ${isDark ? "text-white/35 hover:text-white/55" : "text-muted-foreground/55 hover:text-muted-foreground"} transition-colors`}
+                          >
+                            Skip
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Divider — only when both rows are visible */}
+                  {!isPreview && giftId && openPhase >= 4 && !(reactionSent || reactionSkipped) && !(thankYouSent || thankYouSkipped) && (
+                    <div className={`my-5 ${isDark ? "border-t border-white/10" : "border-t border-border"}`} />
+                  )}
+
+                  {/* Thank you row */}
+                  {!isPreview && giftId && openPhase >= 4 && !(thankYouSent || thankYouSkipped) && (
+                    <div>
+                      {thankYouSent ? (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                          className="flex flex-col items-center gap-2 text-center"
                         >
-                          Skip
-                        </button>
-                      </div>
-                    </>
+                          <span className="text-2xl">🙏</span>
+                          <p className={`text-sm ${isDark ? "text-white/55" : "text-muted-foreground/70"}`}>
+                            {thankYouAlreadySent ? "You already sent a thank you note" : `Thank you note sent to ${senderName}`}
+                          </p>
+                        </motion.div>
+                      ) : (
+                        <div className="text-center">
+                          <p className={`text-sm font-medium mb-1 ${isDark ? "text-white/80" : "text-foreground"}`}>
+                            Want to send {senderName} a thank you?
+                          </p>
+                          <p className={`text-xs mb-4 ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+                            Completely optional — but they'd love to hear from you.
+                          </p>
+                          <textarea
+                            value={thankYouNote}
+                            onChange={e => setThankYouNote(e.target.value.slice(0, 500))}
+                            placeholder={`Write a quick note to ${senderName}…`}
+                            rows={3}
+                            className={`w-full rounded-xl border px-4 py-3 text-sm resize-none outline-none transition-colors mb-4 ${
+                              isDark
+                                ? "bg-white/5 border-white/15 text-white placeholder:text-white/30 focus:border-white/35"
+                                : "bg-background border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/40"
+                            }`}
+                          />
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              type="button"
+                              disabled={thankYouSubmitting || !thankYouNote.trim()}
+                              onClick={async () => {
+                                if (!thankYouNote.trim()) return;
+                                setThankYouSubmitting(true);
+                                try {
+                                  await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/thank-you`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ note: thankYouNote.trim() }),
+                                  });
+                                } catch {}
+                                setThankYouSent(true);
+                                setThankYouSubmitting(false);
+                              }}
+                              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                                thankYouNote.trim()
+                                  ? isDark
+                                    ? "bg-white text-zinc-900 hover:bg-white/90"
+                                    : "bg-foreground text-background hover:bg-foreground/85"
+                                  : isDark
+                                    ? "bg-white/10 text-white/30 cursor-not-allowed"
+                                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                              }`}
+                            >
+                              {thankYouSubmitting ? "Sending…" : "Send note"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setThankYouSkipped(true)}
+                              className={`text-xs underline underline-offset-2 ${isDark ? "text-white/30 hover:text-white/50" : "text-muted-foreground/50 hover:text-muted-foreground"} transition-colors`}
+                            >
+                              Skip
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </motion.div>
               </div>
-            )}
+            ) : null}
 
             {/* Package tracking timeline — only shown when tracking info exists */}
             {trackingData && (
@@ -3071,50 +3127,219 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
               </div>
             )}
 
-            {/* Viral CTA — shown on real gift links only, not sender preview */}
-            {!isPreview && <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-20 mb-8">
-              <div
-                className="rounded-3xl border p-8 text-center"
-                style={{
-                  background: isDark ? "rgba(255,255,255,0.04)" : "hsl(var(--card))",
-                  borderColor: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))",
-                }}
-              >
-                <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
-                  gifted.
-                </p>
-                <h3 className={`font-serif text-2xl font-medium mb-2 ${isDark ? "text-white" : "text-foreground"}`}>
-                  Want to send a moment like this?
-                </h3>
-                <p className={`text-sm mb-6 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
-                  Build a moment in minutes — a personal note, video, photos, and a cash balance they can actually use.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const keys = [
-                      "gifted_recipient_name", "gifted_sender_name", "gifted_recipient_phone",
-                      "gifted_occasion", "gifted_gift_title", "gifted_personal_note",
-                      "gifted_extra_links", "gifted_playlist_url", "gifted_amount",
-                      "gifted_intent", "gifted_experience", "gifted_video_path",
-                      "gifted_photo_paths", "gifted_gift_id", "gifted_open_gift_id", "gifted_gift_paid",
-                      "gifted_scheduled_for", "gifted_scheduled_time",
-                      "gifted_tracking_carrier", "gifted_tracking_number",
-                    ];
-                    keys.forEach(k => localStorage.removeItem(k));
-                    navigate("/create");
+            {/* End card — sign-up (recipient-framed) + send CTA, real gifts only */}
+            {!isPreview && (
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-16 mb-8">
+                <div
+                  className="rounded-3xl border p-8"
+                  style={{
+                    background: isDark ? "rgba(255,255,255,0.04)" : "hsl(var(--card))",
+                    borderColor: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))",
                   }}
-                  className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all hover:-translate-y-0.5 ${
-                    isDark
-                      ? "bg-white text-black hover:bg-white/90"
-                      : "bg-foreground text-background hover:bg-foreground/90"
-                  }`}
                 >
-                  Build a moment <Sparkles className="w-4 h-4" />
-                </button>
-              </div>
-            </div>}
+                  <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                    gifted.
+                  </p>
 
+                  {/* ── Sign-up nudge (primary) — shown only when not yet authed/done/dismissed ── */}
+                  {!endCardDone && !endCardDismissed && (
+                    <div>
+                      <h3 className={`font-serif text-2xl font-medium mb-2 ${isDark ? "text-white" : "text-foreground"}`}>
+                        gifted. is yours too.
+                      </h3>
+                      <p className={`text-sm mb-5 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
+                        Create a free account to access everything — no strings attached.
+                      </p>
+
+                      {/* Feature bullets */}
+                      <div className="space-y-2.5 mb-6 text-left">
+                        {[
+                          { icon: <Gift className="w-4 h-4 shrink-0" />, text: "See every moment you've received, all in one place." },
+                          { icon: <Star className="w-4 h-4 shrink-0" />, text: "Save contacts with birthdays and get reminded to send." },
+                          { icon: <Sparkles className="w-4 h-4 shrink-0" />, text: "Send your own moments in minutes — note, video, cash." },
+                        ].map(({ icon, text }, i) => (
+                          <div key={i} className={`flex items-center gap-3 text-sm ${isDark ? "text-white/70" : "text-foreground/80"}`}>
+                            <span className={`${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>{icon}</span>
+                            {text}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Google button */}
+                      {endCardGoogleEnabled && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (giftId) localStorage.setItem("gifted_gift_id", giftId);
+                            const returnTo = window.location.pathname + window.location.search;
+                            window.location.href = `${base}/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`;
+                          }}
+                          className={`w-full h-11 flex items-center justify-center gap-2.5 rounded-xl border transition-colors text-sm font-medium mb-2 ${isDark ? "border-white/15 bg-white/5 hover:bg-white/10 text-white" : "border-border bg-background hover:bg-secondary text-foreground"}`}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2528 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/><path d="M9 18c2.43 0 4.4673-.8059 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.8586-3.0477.8586-2.3446 0-4.3282-1.5836-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/><path d="M3.964 10.71c-.18-.54-.2827-1.1168-.2827-1.71s.1027-1.17.2827-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.964 10.71z" fill="#FBBC05"/><path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.964 7.29C4.6718 5.1632 6.6554 3.5795 9 3.5795z" fill="#EA4335"/></svg>
+                          Continue with Google
+                        </button>
+                      )}
+
+                      {/* Email toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setEndCardEmailOpen(v => !v)}
+                        className={`w-full text-center text-xs transition-colors underline underline-offset-2 mb-1 ${isDark ? "text-white/35 hover:text-white/55" : "text-muted-foreground/55 hover:text-muted-foreground"}`}
+                      >
+                        {endCardEmailOpen ? "Collapse" : (endCardGoogleEnabled ? "Or continue with email" : "Continue with email")}
+                      </button>
+
+                      {/* Collapsible email form */}
+                      <AnimatePresence>
+                        {endCardEmailOpen && (
+                          <motion.form
+                            key="end-card-form"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.22 }}
+                            onSubmit={handleEndCardSubmit}
+                            className="overflow-hidden space-y-2 mt-3"
+                          >
+                            {endCardMode === "sign-up" && (
+                              <div className="grid grid-cols-2 gap-2">
+                                <input type="text" value={endCardFirstName} onChange={e => setEndCardFirstName(e.target.value)} placeholder="First name"
+                                  className={`h-10 px-3 rounded-xl border text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition ${isDark ? "bg-white/5 border-white/15 text-white placeholder:text-white/30" : "bg-background border-border text-foreground"}`} />
+                                <input type="text" value={endCardLastName} onChange={e => setEndCardLastName(e.target.value)} placeholder="Last name"
+                                  className={`h-10 px-3 rounded-xl border text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition ${isDark ? "bg-white/5 border-white/15 text-white placeholder:text-white/30" : "bg-background border-border text-foreground"}`} />
+                              </div>
+                            )}
+                            <input type="email" value={endCardEmail} onChange={e => { setEndCardEmail(e.target.value); setEndCardError(null); }} placeholder="Email address" required autoComplete="email"
+                              className={`w-full h-10 px-3 rounded-xl border text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition ${isDark ? "bg-white/5 border-white/15 text-white placeholder:text-white/30" : "bg-background border-border text-foreground"}`} />
+                            <input type="password" value={endCardPassword} onChange={e => setEndCardPassword(e.target.value)} placeholder={endCardMode === "sign-up" ? "Create a password (min. 8 chars)" : "Password"} required autoComplete={endCardMode === "sign-in" ? "current-password" : "new-password"}
+                              className={`w-full h-10 px-3 rounded-xl border text-[16px] focus:outline-none focus:ring-2 focus:ring-primary/40 transition ${isDark ? "bg-white/5 border-white/15 text-white placeholder:text-white/30" : "bg-background border-border text-foreground"}`} />
+                            {endCardError && <p className="text-[11px] text-destructive">{endCardError}</p>}
+                            <Button type="submit" size="sm" disabled={endCardSubmitting} className="w-full h-10 rounded-xl text-xs">
+                              {endCardSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : endCardMode === "sign-in" ? "Sign in" : "Create account"}
+                            </Button>
+                            <p className="text-[11px] text-center text-muted-foreground/60">
+                              {endCardMode === "sign-in" ? "New to gifted.? " : "Already have an account? "}
+                              <button type="button" onClick={() => { setEndCardMode(m => m === "sign-in" ? "sign-up" : "sign-in"); setEndCardError(null); }}
+                                className="underline underline-offset-2 hover:text-foreground transition-colors">
+                                {endCardMode === "sign-in" ? "Sign up free" : "Sign in"}
+                              </button>
+                            </p>
+                          </motion.form>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Divider + send CTA */}
+                      <div className={`mt-6 pt-5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 ${isDark ? "border-white/10" : "border-border"}`}>
+                        <p className={`text-sm ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+                          Or, ready to send a moment?
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const keys = [
+                              "gifted_recipient_name", "gifted_sender_name", "gifted_recipient_phone",
+                              "gifted_occasion", "gifted_gift_title", "gifted_personal_note",
+                              "gifted_extra_links", "gifted_playlist_url", "gifted_amount",
+                              "gifted_intent", "gifted_experience", "gifted_video_path",
+                              "gifted_photo_paths", "gifted_gift_id", "gifted_open_gift_id", "gifted_gift_paid",
+                              "gifted_scheduled_for", "gifted_scheduled_time",
+                              "gifted_tracking_carrier", "gifted_tracking_number",
+                            ];
+                            keys.forEach(k => localStorage.removeItem(k));
+                            navigate("/create");
+                          }}
+                          className={`inline-flex items-center gap-1.5 text-sm font-semibold transition-all hover:-translate-y-0.5 ${isDark ? "text-white/70 hover:text-white" : "text-foreground/70 hover:text-foreground"}`}
+                        >
+                          Build a moment <Sparkles className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Skip */}
+                      <button
+                        type="button"
+                        onClick={() => setEndCardDismissed(true)}
+                        className={`mt-3 w-full text-center text-[11px] transition-colors ${isDark ? "text-white/25 hover:text-white/40" : "text-muted-foreground/40 hover:text-muted-foreground/60"}`}
+                      >
+                        Skip — I don't need an account
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ── Simplified send CTA — shown when authed, done, or dismissed ── */}
+                  {(endCardDone || endCardDismissed) && (
+                    <div className="text-center">
+                      <h3 className={`font-serif text-2xl font-medium mb-2 ${isDark ? "text-white" : "text-foreground"}`}>
+                        {endCardIsAuthed ? "Send someone a moment." : "Want to send a moment like this?"}
+                      </h3>
+                      <p className={`text-sm mb-6 ${isDark ? "text-white/50" : "text-muted-foreground"}`}>
+                        Build a moment in minutes — a personal note, video, photos, and a cash balance they can actually use.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const keys = [
+                            "gifted_recipient_name", "gifted_sender_name", "gifted_recipient_phone",
+                            "gifted_occasion", "gifted_gift_title", "gifted_personal_note",
+                            "gifted_extra_links", "gifted_playlist_url", "gifted_amount",
+                            "gifted_intent", "gifted_experience", "gifted_video_path",
+                            "gifted_photo_paths", "gifted_gift_id", "gifted_open_gift_id", "gifted_gift_paid",
+                            "gifted_scheduled_for", "gifted_scheduled_time",
+                            "gifted_tracking_carrier", "gifted_tracking_number",
+                          ];
+                          keys.forEach(k => localStorage.removeItem(k));
+                          navigate("/create");
+                        }}
+                        className={`inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all hover:-translate-y-0.5 ${
+                          isDark
+                            ? "bg-white text-black hover:bg-white/90"
+                            : "bg-foreground text-background hover:bg-foreground/90"
+                        }`}
+                      >
+                        Build a moment <Sparkles className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sticky redeem button — appears once balance is revealed, stays until dismissed */}
+      <AnimatePresence>
+        {!isPreview && giftId && giftAmount && parseFloat(giftAmount) > 0 && giftPaid && balanceRevealPhase === "revealed" && openPhase >= 4 && !stickyRedeemDismissed && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
+            className="fixed bottom-0 left-0 right-0 z-[55] flex justify-center pb-6 px-4 pointer-events-none"
+          >
+            <div
+              className="pointer-events-auto flex items-center gap-2 rounded-full shadow-2xl pl-5 pr-2 py-2"
+              style={{
+                background: isDark ? "rgba(20,18,40,0.92)" : "rgba(255,255,255,0.92)",
+                backdropFilter: "blur(20px) saturate(1.4)",
+                border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(0,0,0,0.08)",
+              }}
+            >
+              <Link href={`/redeem?giftId=${encodeURIComponent(giftId)}`}>
+                <Button className="rounded-full h-10 px-6 text-sm font-semibold shadow-none">
+                  Collect ${formatAmt(giftAmount)}
+                </Button>
+              </Link>
+              <button
+                type="button"
+                onClick={() => setStickyRedeemDismissed(true)}
+                aria-label="Dismiss"
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors shrink-0 ${isDark ? "text-white/40 hover:bg-white/10 hover:text-white/70" : "text-muted-foreground hover:bg-secondary"}`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
