@@ -698,6 +698,8 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
 
+  const QR_SIZE = 136; // CSS display size in px
+
   useEffect(() => {
     if (!canvasRef.current) return;
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -719,8 +721,10 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
     try {
       const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
       const continueUrl = `https://gifted.page${base}/create?draft=${encoded}`;
+      // Render at 2× for crispness on HiDPI; CSS width/height pins the display size
+      const renderSize = QR_SIZE * 2;
       QRCodeLib.toCanvas(canvasRef.current, continueUrl, {
-        width: 140,
+        width: renderSize,
         margin: 1,
         color: { dark: "#000000", light: "#ffffff" },
         errorCorrectionLevel: 'H',
@@ -759,25 +763,41 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
   }, [props.recipientName, props.senderName, props.recipientPhone, props.occasion, props.selectedExperience, props.giftTitle, props.personalNote, props.extraLinks, props.amount, props.intent, props.scheduledFor, props.scheduledTime]);
 
   return (
-    <div className="hidden md:flex items-center gap-5 rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-5">
-      <div className="shrink-0">
-        <div
-          className="rounded-xl border border-border bg-white p-2"
-          style={{ opacity: ready ? 1 : 0, transition: "opacity 0.3s ease" }}
-        >
-          <canvas ref={canvasRef} style={{ display: "block" }} />
-        </div>
+    <div className="hidden md:flex items-center gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-5 overflow-hidden">
+      {/* QR code — fixed size, never expands */}
+      <div className="shrink-0" style={{ width: QR_SIZE, height: QR_SIZE }}>
         {!ready && (
-          <div className="w-[140px] h-[140px] rounded-xl bg-muted animate-pulse" />
+          <div
+            className="rounded-xl bg-muted animate-pulse"
+            style={{ width: QR_SIZE, height: QR_SIZE }}
+          />
         )}
+        <div
+          className="rounded-xl border border-border bg-white p-1.5"
+          style={{
+            width: QR_SIZE,
+            height: QR_SIZE,
+            opacity: ready ? 1 : 0,
+            position: ready ? "static" : "absolute",
+            pointerEvents: ready ? "auto" : "none",
+            transition: "opacity 0.3s ease",
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            style={{ display: "block", width: QR_SIZE - 12, height: QR_SIZE - 12 }}
+          />
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
+
+      {/* Text — takes remaining space, truncates safely */}
+      <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2 mb-1">
           <Smartphone className="w-4 h-4 text-primary shrink-0" />
-          <p className="text-sm font-semibold text-foreground">Your camera roll is on your phone</p>
+          <p className="text-sm font-semibold text-foreground leading-tight">Your camera roll is on your phone</p>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Scan this QR code to open gifted. on your phone — everything you've filled in so far will be waiting for you, right at the video & photo step.
+          Scan this QR code to open gifted. on your phone — everything you've filled in so far will be waiting for you, right at the video &amp; photo step.
         </p>
         <p className="text-xs text-muted-foreground/60 mt-2">
           Or keep going here and upload files from this computer ↓
