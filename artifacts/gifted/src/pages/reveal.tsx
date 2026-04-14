@@ -2970,8 +2970,8 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
               </div>
             )}
 
-            {/* Thank you note — shown after reaction (sent or skipped), real gifts only */}
-            {!isPreview && giftId && openPhase >= 4 && (reactionSent || reactionSkipped) && !thankYouSkipped && (
+            {/* Thank you note — shown after full reveal, independently of reaction, real gifts only */}
+            {!isPreview && giftId && openPhase >= 4 && !thankYouSkipped && (
               <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-8 mb-2">
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}

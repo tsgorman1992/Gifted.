@@ -2175,7 +2175,12 @@ export default function MyGiftsPage() {
                             <p className="text-xs text-muted-foreground">From {gift.senderName}</p>
                           </div>
                           <button
-                            onClick={() => setLocation(`/open/${gift.id}`)}
+                            onClick={() => {
+                              localStorage.setItem("gifted_gift_id", gift.id);
+                              if (gift.amount) localStorage.setItem("gifted_amount", gift.amount);
+                              if (gift.senderName) localStorage.setItem("gifted_sender_name", gift.senderName);
+                              setLocation(`/redeem?giftId=${encodeURIComponent(gift.id)}`);
+                            }}
                             className="flex items-center gap-1.5 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 active:bg-green-800 transition-colors shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-full shadow-sm"
                           >
                             Collect ${parseFloat(gift.amount!).toFixed(0)}
