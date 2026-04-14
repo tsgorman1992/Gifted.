@@ -25,6 +25,7 @@ export const usersTable = pgTable("users", {
   payoutHandle: varchar("payout_handle"),
   birthday: varchar("birthday"),
   phone: varchar("phone", { length: 30 }),
+  plan: varchar("plan", { length: 20 }).notNull().default("free"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
