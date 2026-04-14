@@ -2350,53 +2350,58 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: cfg.heroDelay, duration: cfg.heroDuration, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  {/* Title — style varies per experience */}
-                  <h1
-                    className={`font-serif text-4xl sm:text-5xl md:text-7xl font-medium mb-4 ${isDark ? "text-white" : "text-foreground"}`}
-                  >
-                    {cfg.titleStyle === "word-burst" && (
-                      <WordBurstTitle text={giftTitle} delayS={cfg.heroDelay} />
-                    )}
-                    {cfg.titleStyle === "typewriter" && (
-                      <TypewriterText text={giftTitle} delayS={cfg.heroDelay + 0.2} speed={65} />
-                    )}
-                    {cfg.titleStyle === "blur-in" && (
-                      <motion.span
-                        initial={{ filter: "blur(22px)", opacity: 0 }}
-                        animate={{ filter: "blur(0px)", opacity: 1 }}
-                        transition={{ delay: cfg.heroDelay + 0.1, duration: cfg.heroDuration + 0.1 }}
-                        style={{ display: "inline-block" }}
+                  {/* Title — style varies per experience. Falls back to recipient's first name if no headline set. */}
+                  {(() => {
+                    const heroText = giftTitle.trim() || recipientName.trim().split(" ")[0] || recipientName.trim();
+                    return (
+                      <h1
+                        className={`font-serif text-4xl sm:text-5xl md:text-7xl font-medium mb-4 ${isDark ? "text-white" : "text-foreground"}`}
                       >
-                        {giftTitle}
-                      </motion.span>
-                    )}
-                    {(cfg.titleStyle === "bloom" || cfg.titleStyle === "elegant-fade" || cfg.titleStyle === "crisp-fall" || cfg.titleStyle === "rise") && (
-                      <motion.span
-                        initial={
-                          cfg.titleStyle === "bloom" ? { scale: 0.84, opacity: 0 } :
-                          cfg.titleStyle === "crisp-fall" ? { y: -24, opacity: 0 } :
-                          cfg.titleStyle === "rise" ? { y: 50, opacity: 0 } :
-                          { y: 18, opacity: 0 }
-                        }
-                        animate={
-                          cfg.titleStyle === "bloom" ? { scale: 1, opacity: 1 } :
-                          cfg.titleStyle === "crisp-fall" ? { y: 0, opacity: 1 } :
-                          cfg.titleStyle === "rise" ? { y: 0, opacity: 1 } :
-                          { y: 0, opacity: 1 }
-                        }
-                        transition={
-                          cfg.titleStyle === "bloom"
-                            ? { delay: cfg.heroDelay + 0.05, type: "spring", stiffness: 200, damping: 22 }
-                            : cfg.titleStyle === "crisp-fall"
-                              ? { delay: cfg.heroDelay, type: "spring", stiffness: 360, damping: 32 }
-                              : { delay: cfg.heroDelay + 0.05, duration: cfg.heroDuration, ease: [0.16, 1, 0.3, 1] }
-                        }
-                        style={{ display: "inline-block" }}
-                      >
-                        {giftTitle}
-                      </motion.span>
-                    )}
-                  </h1>
+                        {cfg.titleStyle === "word-burst" && (
+                          <WordBurstTitle text={heroText} delayS={cfg.heroDelay} />
+                        )}
+                        {cfg.titleStyle === "typewriter" && (
+                          <TypewriterText text={heroText} delayS={cfg.heroDelay + 0.2} speed={65} />
+                        )}
+                        {cfg.titleStyle === "blur-in" && (
+                          <motion.span
+                            initial={{ filter: "blur(22px)", opacity: 0 }}
+                            animate={{ filter: "blur(0px)", opacity: 1 }}
+                            transition={{ delay: cfg.heroDelay + 0.1, duration: cfg.heroDuration + 0.1 }}
+                            style={{ display: "inline-block" }}
+                          >
+                            {heroText}
+                          </motion.span>
+                        )}
+                        {(cfg.titleStyle === "bloom" || cfg.titleStyle === "elegant-fade" || cfg.titleStyle === "crisp-fall" || cfg.titleStyle === "rise") && (
+                          <motion.span
+                            initial={
+                              cfg.titleStyle === "bloom" ? { scale: 0.84, opacity: 0 } :
+                              cfg.titleStyle === "crisp-fall" ? { y: -24, opacity: 0 } :
+                              cfg.titleStyle === "rise" ? { y: 50, opacity: 0 } :
+                              { y: 18, opacity: 0 }
+                            }
+                            animate={
+                              cfg.titleStyle === "bloom" ? { scale: 1, opacity: 1 } :
+                              cfg.titleStyle === "crisp-fall" ? { y: 0, opacity: 1 } :
+                              cfg.titleStyle === "rise" ? { y: 0, opacity: 1 } :
+                              { y: 0, opacity: 1 }
+                            }
+                            transition={
+                              cfg.titleStyle === "bloom"
+                                ? { delay: cfg.heroDelay + 0.05, type: "spring", stiffness: 200, damping: 22 }
+                                : cfg.titleStyle === "crisp-fall"
+                                  ? { delay: cfg.heroDelay, type: "spring", stiffness: 360, damping: 32 }
+                                  : { delay: cfg.heroDelay + 0.05, duration: cfg.heroDuration, ease: [0.16, 1, 0.3, 1] }
+                            }
+                            style={{ display: "inline-block" }}
+                          >
+                            {heroText}
+                          </motion.span>
+                        )}
+                      </h1>
+                    );
+                  })()}
 
                   <p className={`text-xl sm:text-2xl font-medium ${isDark ? "text-white/75" : "text-foreground/75"}`}>
                     {cfg.senderText} {senderName}

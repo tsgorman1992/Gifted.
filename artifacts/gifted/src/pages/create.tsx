@@ -1575,7 +1575,7 @@ export default function CreatePage() {
       if (!senderName.trim()) { setStepError("Please enter your name."); return; }
     }
     if (step === 2) {
-      if (!giftTitle.trim()) { setStepError("Please add a gift headline."); return; }
+      // headline is optional — no validation required
     }
     const next = step + 1;
     window.history.pushState({ step: next }, "");
@@ -1910,35 +1910,109 @@ export default function CreatePage() {
                   style={{ background: "hsl(var(--card))" }}
                 >
                   <div>
-                    <Label htmlFor="title" className="text-base font-semibold">Gift Headline</Label>
+                    <Label htmlFor="title" className="text-base font-semibold">Gift Headline <span className="text-muted-foreground font-normal text-sm">(optional)</span></Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      This appears as the bold hero text in their reveal — make it land.
+                      The big hero text in their reveal — write your own or pick a suggestion below.
                     </p>
                   </div>
                   <Input
                     id="title"
                     placeholder={(() => {
-                      const name = recipientName || "Sarah";
-                      const placeholders: Record<string, string> = {
-                        Birthday: `e.g. Happy Birthday, ${name}!`,
-                        Anniversary: `e.g. Here's to you, ${name}.`,
-                        Love: `e.g. You mean the world to me, ${name}.`,
-                        Graduation: `e.g. So proud of you, ${name}.`,
-                        "New Baby": `e.g. Welcome to the world, little one.`,
-                        Holiday: `e.g. Happy holidays, ${name}!`,
-                        "Just Because": `e.g. Thinking of you, ${name}.`,
-                        Wedding: `e.g. Wishing you both the very best.`,
-                        "Thank You": `e.g. Thank you so much, ${name}.`,
-                        Other: `e.g. This one's for you, ${name}.`,
-                      };
-                      return occasion
-                        ? (placeholders[occasion] ?? `e.g. For ${name}.`)
-                        : `e.g. A little something for ${name}.`;
+                      const name = recipientName?.trim().split(" ")[0] || "them";
+                      return `e.g. Happy Birthday, ${name}! — or pick a suggestion below`;
                     })()}
                     value={giftTitle}
                     onChange={(e) => setGiftTitle(e.target.value)}
                     className="h-12 rounded-xl text-base font-medium"
                   />
+                  {/* Suggestion chips — occasion-aware, tap to populate */}
+                  {(() => {
+                    const name = recipientName?.trim().split(" ")[0] || "";
+                    const n = name || "you";
+                    const suggestions: Record<string, string[]> = {
+                      Birthday: [
+                        `Happy Birthday, ${n}!`,
+                        `This one's for you, ${n}.`,
+                        `Here's to you, ${n}.`,
+                        `Wishing you the best, ${n}.`,
+                      ],
+                      Anniversary: [
+                        "Here's to us.",
+                        "Another year of loving you.",
+                        "For the one I choose, every day.",
+                        `Still my favorite person, ${n}.`,
+                      ],
+                      Love: [
+                        `You mean everything to me, ${n}.`,
+                        "Just because I love you.",
+                        "For you, always.",
+                        `Lucky to have you, ${n}.`,
+                      ],
+                      Graduation: [
+                        `So proud of you, ${n}.`,
+                        "Look how far you've come.",
+                        `The world is yours, ${n}.`,
+                        "This is just the beginning.",
+                      ],
+                      "New Baby": [
+                        "Welcome to the world.",
+                        "The newest little one.",
+                        "A gift for the growing family.",
+                        "So much love for you.",
+                      ],
+                      Holiday: [
+                        `Happy holidays, ${n}!`,
+                        "Wishing you the best this season.",
+                        "A little holiday cheer.",
+                        `Thinking of you this season, ${n}.`,
+                      ],
+                      "Just Because": [
+                        `Thinking of you, ${n}.`,
+                        "No reason needed.",
+                        "Just because.",
+                        `You deserve this, ${n}.`,
+                      ],
+                      Wedding: [
+                        "Wishing you both the very best.",
+                        "To the happy couple.",
+                        "Here's to your new chapter.",
+                        "So much love to you both.",
+                      ],
+                      "Thank You": [
+                        `Thank you so much, ${n}.`,
+                        "This is long overdue.",
+                        "You didn't have to — but I'm glad you did.",
+                        `Grateful for you, ${n}.`,
+                      ],
+                      Other: [
+                        `This one's for you, ${n}.`,
+                        "A little something special.",
+                        `For you, ${n}.`,
+                        "You deserve it.",
+                      ],
+                    };
+                    const chips = occasion && suggestions[occasion]
+                      ? suggestions[occasion]
+                      : [`A little something for ${n}.`, `This one's for you, ${n}.`, `For you, ${n}.`, "You deserve this."];
+                    return (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {chips.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setGiftTitle(s)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              giftTitle === s
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-muted/60 text-foreground border-border hover:bg-primary/10 hover:border-primary/40"
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Personal note */}
