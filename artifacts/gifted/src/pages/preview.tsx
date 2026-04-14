@@ -114,6 +114,7 @@ export default function PreviewPage() {
   const [giftIntent,     setGiftIntent]     = useState<string | null>(null);
   const [personalNote,   setPersonalNote]   = useState<string | null>(null);
   const [openedAt,         setOpenedAt]         = useState<string | null>(null);
+  const [thankYouNote,     setThankYouNote]     = useState<string | null>(null);
   const [scheduledFor,     setScheduledFor]     = useState<string | null>(null);
   const [scheduledTime,    setScheduledTime]    = useState<string>("09:00");
   const [scheduleDelivered, setScheduleDelivered] = useState(false);
@@ -406,6 +407,8 @@ export default function PreviewPage() {
           setScheduleDelivered(gift.scheduleDelivered);
         }
         if (gift.openedAt) setOpenedAt(gift.openedAt);
+        if (gift.thankYouNote) setThankYouNote(gift.thankYouNote);
+        if (gift.occasion) localStorage.setItem("gifted_occasion", gift.occasion);
         localStorage.setItem("gifted_gift_id", gift.id);
       })
       .catch(() => {});
@@ -675,6 +678,30 @@ export default function PreviewPage() {
     } catch { /* ignore */ }
   };
 
+  const buildShareText = (name: string): string => {
+    const occasion = (localStorage.getItem("gifted_occasion") || "").toLowerCase().trim();
+    const n = name || "you";
+    switch (occasion) {
+      case "birthday":        return `Happy birthday, ${n}! 🎂 A little something is waiting for you`;
+      case "anniversary":     return `Happy anniversary, ${n}! 🥂 Got you something special`;
+      case "valentine's day":
+      case "valentines day":  return `Happy Valentine's Day! 💕 Something's waiting for you`;
+      case "christmas":       return `Merry Christmas, ${n}! 🎄 Something's waiting for you`;
+      case "mother's day":
+      case "mothers day":     return `Happy Mother's Day! 💐 A little something for you`;
+      case "father's day":
+      case "fathers day":     return `Happy Father's Day! 🎁 A little something for you`;
+      case "graduation":      return `Congrats, ${n}! 🎓 You earned this`;
+      case "wedding":         return `Congrats to you both! 🥂 A little something to celebrate`;
+      case "new baby":        return `Congrats on the new baby! 👶 A little gift for you`;
+      case "housewarming":    return `Congrats on the new place, ${n}! 🏡`;
+      case "thank you":       return `A little something for you, ${n} — my small way of saying thanks 🙏`;
+      case "get well":        return `Thinking of you, ${n} 💛 Something to brighten your day`;
+      case "just because":    return `Hey ${n} — just thinking of you 🎁`;
+      default:                return `Hey ${n} — I got you a little something 🎁`;
+    }
+  };
+
   const handleShare = async () => {
     if (!navigator.share) return;
     const saved = await saveGift();
@@ -682,7 +709,7 @@ export default function PreviewPage() {
     try {
       await navigator.share({
         title: `A gift for ${recipientName} 🎁`,
-        text: `Hey ${recipientName} — I got you a little something 🎁`,
+        text: buildShareText(recipientName),
         url: saved.url,
       });
       setLinkShared(true);
@@ -693,7 +720,7 @@ export default function PreviewPage() {
   const handleSMS = async () => {
     const saved = await saveGift();
     if (!saved) return;
-    const body = `Hey ${recipientName} — I got you a little something 🎁\n${saved.url}`;
+    const body = `${buildShareText(recipientName)}\n${saved.url}`;
     // Use location.href (not window.open) so Android Chrome doesn't block the sms: scheme
     window.location.href = `sms:?body=${encodeURIComponent(body)}`;
     setLinkShared(true);
@@ -1372,6 +1399,28 @@ export default function PreviewPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* ── Thank you note from recipient ── */}
+            {thankYouNote && openedAt && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/20 p-5"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl leading-none mt-0.5">🙏</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                      {recipientName} sent you a thank you
+                    </p>
+                    <p className="text-sm text-amber-800/80 dark:text-amber-400/80 italic leading-relaxed">
+                      "{thankYouNote}"
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Scheduled delivery badge */}
             {scheduledFor && (

@@ -1564,6 +1564,11 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [reactionEmoji, setReactionEmoji] = useState<string | null>(null);
   const [reactionSent, setReactionSent]   = useState(false);
   const [reactionSkipped, setReactionSkipped] = useState(false);
+  const [thankYouNote,       setThankYouNote]       = useState("");
+  const [thankYouSent,       setThankYouSent]       = useState(false);
+  const [thankYouSkipped,    setThankYouSkipped]    = useState(false);
+  const [thankYouSubmitting, setThankYouSubmitting] = useState(false);
+  const [thankYouAlreadySent, setThankYouAlreadySent] = useState(false);
   const [, navigate] = useLocation();
   const [balanceRevealPhase, setBalanceRevealPhase] = useState<"hidden" | "building" | "revealed">("hidden");
   const [trackingData, setTrackingData]   = useState<{
@@ -1747,6 +1752,11 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                   .catch(() => `${base}/api/storage${p}`)
               )
             ).then(urls => setPhotoUrls(urls));
+          }
+
+          if (gift.thankYouNote) {
+            setThankYouAlreadySent(true);
+            setThankYouSent(true);
           }
         })
         .catch(() => { /* ignore fetch error — gift fields remain at defaults */ });
@@ -2954,6 +2964,91 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                       >
                         Skip
                       </button>
+                    </>
+                  )}
+                </motion.div>
+              </div>
+            )}
+
+            {/* Thank you note — shown after reaction (sent or skipped), real gifts only */}
+            {!isPreview && giftId && openPhase >= 4 && (reactionSent || reactionSkipped) && !thankYouSkipped && (
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-8 mb-2">
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className={`rounded-2xl border p-6 text-center ${isDark ? "border-white/10 bg-white/5" : "border-border bg-card"}`}
+                >
+                  {thankYouSent ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex flex-col items-center gap-2"
+                    >
+                      <span className="text-2xl">🙏</span>
+                      <p className={`text-sm ${isDark ? "text-white/55" : "text-muted-foreground/70"}`}>
+                        {thankYouAlreadySent ? "You already sent a thank you note" : `Thank you note sent to ${senderName}`}
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <>
+                      <p className={`text-sm font-medium mb-1 ${isDark ? "text-white/80" : "text-foreground"}`}>
+                        Want to send {senderName} a thank you?
+                      </p>
+                      <p className={`text-xs mb-4 ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+                        Completely optional — but they'd love to hear from you.
+                      </p>
+                      <textarea
+                        value={thankYouNote}
+                        onChange={e => setThankYouNote(e.target.value.slice(0, 500))}
+                        placeholder={`Write a quick note to ${senderName}…`}
+                        rows={3}
+                        className={`w-full rounded-xl border px-4 py-3 text-sm resize-none outline-none transition-colors mb-4 ${
+                          isDark
+                            ? "bg-white/5 border-white/15 text-white placeholder:text-white/30 focus:border-white/35"
+                            : "bg-background border-border text-foreground placeholder:text-muted-foreground/50 focus:border-primary/40"
+                        }`}
+                      />
+                      <div className="flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          disabled={thankYouSubmitting || !thankYouNote.trim()}
+                          onClick={async () => {
+                            if (!thankYouNote.trim()) return;
+                            setThankYouSubmitting(true);
+                            const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+                            try {
+                              await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/thank-you`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({ note: thankYouNote.trim() }),
+                              });
+                            } catch {}
+                            setThankYouSent(true);
+                            setThankYouSubmitting(false);
+                          }}
+                          className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                            thankYouNote.trim()
+                              ? isDark
+                                ? "bg-white text-zinc-900 hover:bg-white/90"
+                                : "bg-foreground text-background hover:bg-foreground/85"
+                              : isDark
+                                ? "bg-white/10 text-white/30 cursor-not-allowed"
+                                : "bg-muted text-muted-foreground cursor-not-allowed"
+                          }`}
+                        >
+                          {thankYouSubmitting ? "Sending…" : "Send note"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setThankYouSkipped(true)}
+                          className={`text-xs underline underline-offset-2 ${isDark ? "text-white/30 hover:text-white/50" : "text-muted-foreground/50 hover:text-muted-foreground"} transition-colors`}
+                        >
+                          Skip
+                        </button>
+                      </div>
                     </>
                   )}
                 </motion.div>

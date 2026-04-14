@@ -12,7 +12,7 @@ function getStripe(): Stripe {
   return new Stripe(key);
 }
 import twilio from "twilio";
-import { sendGiftOpenedNotice, sendPackageDeliveredEmail, sendGiftLinkEmail } from "../../lib/email";
+import { sendGiftOpenedNotice, sendPackageDeliveredEmail, sendGiftLinkEmail, sendSenderThankYouNotice } from "../../lib/email";
 import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
 
 function normPhone(raw: string): string {
@@ -573,6 +573,8 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       createdAt: gift.createdAt,
       hasRecipientPhone: !!gift.recipientPhone,
       redemptionVerified: gift.redemptionVerified ?? false,
+      thankYouNote: gift.thankYouNote ?? null,
+      thankYouSentAt: gift.thankYouSentAt ?? null,
     });
   } catch (err) {
     console.error("Error fetching gift:", err);
@@ -752,6 +754,63 @@ router.patch("/gifted/gifts/:id/reaction", async (req, res) => {
   }
 });
 
+// POST /gifted/gifts/:id/thank-you — recipient sends a thank you note to the sender
+router.post("/gifted/gifts/:id/thank-you", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note } = req.body as { note?: string };
+
+    const trimmed = (note ?? "").trim();
+    if (!trimmed || trimmed.length > 500) {
+      res.status(400).json({ error: "note is required and must be under 500 characters" });
+      return;
+    }
+
+    const [gift] = await db
+      .select({
+        id: gifts.id,
+        senderName: gifts.senderName,
+        recipientName: gifts.recipientName,
+        senderEmail: gifts.senderEmail,
+        senderPhone: gifts.senderPhone,
+        senderUserId: gifts.senderUserId,
+        thankYouNote: gifts.thankYouNote,
+        openedAt: gifts.openedAt,
+      })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) { res.status(404).json({ error: "Gift not found" }); return; }
+    if (!gift.openedAt) { res.status(400).json({ error: "Gift has not been opened yet" }); return; }
+    if (gift.thankYouNote) { res.json({ ok: true, alreadySent: true }); return; }
+
+    await db.update(gifts).set({ thankYouNote: trimmed, thankYouSentAt: new Date() }).where(eq(gifts.id, id));
+
+    // Notify the sender
+    let senderEmail = gift.senderEmail;
+    if (!senderEmail && gift.senderUserId) {
+      const [user] = await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, gift.senderUserId)).limit(1);
+      senderEmail = user?.email ?? null;
+    }
+    if (senderEmail) {
+      sendSenderThankYouNotice({
+        to: senderEmail,
+        senderName: gift.senderName,
+        recipientName: gift.recipientName,
+        note: trimmed,
+        giftId: gift.id,
+      }).catch(() => {});
+    }
+
+    console.log(`[thank-you] Gift ${id}: ${gift.recipientName} sent thank you to ${gift.senderName}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error saving thank-you:", err);
+    res.status(500).json({ error: "Failed to save thank you" });
+  }
+});
+
 router.get("/gifted/my-gifts", async (req, res) => {
   const userId = (req as any).user?.id;
   if (!userId) {
@@ -829,6 +888,8 @@ router.get("/gifted/my-gifts", async (req, res) => {
         scheduleDelivered: g.scheduleDelivered,
         createdAt: g.createdAt,
         senderUserId: g.senderUserId,
+        thankYouNote: g.thankYouNote ?? null,
+        thankYouSentAt: g.thankYouSentAt ?? null,
       }))
     );
   } catch (err) {

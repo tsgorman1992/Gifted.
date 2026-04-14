@@ -59,6 +59,8 @@ export const gifts = pgTable("gifts", {
   cashoutPaidAt: timestamp("cashout_paid_at", { withTimezone: true }),
   autoRefundedAt: timestamp("auto_refunded_at", { withTimezone: true }),
   idempotencyKey: text("idempotency_key").unique(),
+  thankYouNote: text("thank_you_note"),
+  thankYouSentAt: timestamp("thank_you_sent_at", { withTimezone: true }),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({

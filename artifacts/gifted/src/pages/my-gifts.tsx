@@ -42,6 +42,8 @@ interface GiftSummary {
   scheduleDelivered: boolean;
   createdAt: string;
   senderUserId: string | null;
+  thankYouNote: string | null;
+  thankYouSentAt: string | null;
 }
 
 interface ReceivedGiftSummary {
@@ -404,6 +406,16 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
         <p className="text-xs text-muted-foreground mb-2.5">
           {gift.reaction} {gift.recipientName} reacted{gift.reactionAt ? ` ${formatDistanceToNow(new Date(gift.reactionAt), { addSuffix: true })}` : ""}
         </p>
+      )}
+
+      {/* Thank you note from recipient */}
+      {gift.thankYouNote && (
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 px-3 py-2.5 mb-2.5 flex items-start gap-2">
+          <span className="text-base leading-none mt-0.5">🙏</span>
+          <p className="text-xs text-amber-800 dark:text-amber-300 italic leading-relaxed flex-1 min-w-0">
+            "{gift.thankYouNote}"
+          </p>
+        </div>
       )}
 
       {/* Share button — full-width while gift hasn't been opened yet; small pill once opened */}

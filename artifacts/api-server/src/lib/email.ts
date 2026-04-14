@@ -624,6 +624,57 @@ export async function sendHappyBirthdayEmail(params: HappyBirthdayParams): Promi
   }
 }
 
+// ─── Thank you note notice (sender) ──────────────────────────────────────────
+
+export async function sendSenderThankYouNotice({
+  to,
+  senderName,
+  recipientName,
+  note,
+  giftId,
+}: {
+  to: string;
+  senderName: string | null;
+  recipientName: string | null;
+  note: string;
+  giftId: string;
+}): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const greeting = senderName ? `Hi ${senderName},` : "Hi there,";
+  const fromName = recipientName || "Your recipient";
+  const dashboardUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:24px;font-weight:500;color:#1a1108;font-family:Georgia,serif;">
+      ${fromName} sent you a thank you 🙏
+    </h2>
+    <p style="margin:0 0 20px;font-size:15px;color:#6b5744;line-height:1.6;">
+      ${greeting} ${fromName} left you a note after opening your gift.
+    </p>
+    <div style="background:#fdf8f4;border:1px solid #e8ddd5;border-radius:12px;padding:20px 24px;margin:0 0 28px;">
+      <p style="margin:0;font-size:16px;color:#3d2b1f;line-height:1.7;font-style:italic;">"${note}"</p>
+      <p style="margin:12px 0 0;font-size:13px;color:#9e9087;">— ${fromName}</p>
+    </div>
+    ${btn("View your gift dashboard", dashboardUrl)}
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `${fromName} said thank you 🙏`,
+      html: layout(`Thank you note — gifted.`, body),
+    });
+    if (error) console.error("[email] sendSenderThankYouNotice error:", error);
+    else console.log(`[email] Thank you notice sent to ${to} for gift ${giftId}`);
+  } catch (err) {
+    console.error("[email] sendSenderThankYouNotice exception:", err);
+  }
+}
+
 // ─── Occasion reminder ────────────────────────────────────────────────────────
 
 export async function sendOccasionReminderEmail({
