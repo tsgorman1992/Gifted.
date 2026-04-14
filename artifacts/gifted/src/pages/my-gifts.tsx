@@ -2116,7 +2116,7 @@ export default function MyGiftsPage() {
                 );
               })()}
             </div>
-          }
+          )}
           </>
         )}
 
