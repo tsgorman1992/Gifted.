@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { trackEvent } from "@/lib/analytics";
+import { useAuth } from "@/lib/auth-context";
 
 // ─── Experience configs ──────────────────────────────────────────────────────
 
@@ -1575,6 +1576,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   // End-card auth / sign-up state
   const [endCardIsAuthed,      setEndCardIsAuthed]      = useState(false);
   const [endCardGoogleEnabled, setEndCardGoogleEnabled] = useState(false);
+  const { refetch: refetchAuth } = useAuth();
   const [endCardMode,          setEndCardMode]          = useState<"sign-up" | "sign-in">("sign-up");
   const [endCardEmail,         setEndCardEmail]         = useState("");
   const [endCardPassword,      setEndCardPassword]      = useState("");
@@ -2069,12 +2071,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
       });
       const data = await res.json();
       if (!res.ok) { setEndCardError(data?.error ?? "Something went wrong. Try again."); setEndCardSubmitting(false); return; }
-      // Link gift to new account if we have one
-      if (giftId) {
-        fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/save-received`, {
-          method: "PATCH", credentials: "include",
-        }).catch(() => {});
-      }
+      // Refresh the shared auth context so open.tsx's "Are you [name]?" prompt
+      // fires on this same page — no re-opening required.
+      await refetchAuth();
       setEndCardDone(true);
       setEndCardIsAuthed(true);
     } catch { setEndCardError("Network error. Try again."); }
