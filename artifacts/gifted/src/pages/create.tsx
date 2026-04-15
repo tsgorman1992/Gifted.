@@ -1946,7 +1946,21 @@ export default function CreatePage() {
                     id="title"
                     placeholder={(() => {
                       const name = recipientName?.trim().split(" ")[0] || "them";
-                      return `e.g. Happy Birthday, ${name}! — or pick a suggestion below`;
+                      const placeholders: Record<string, string> = {
+                        Birthday: `e.g. Happy Birthday, ${name}!`,
+                        Anniversary: "e.g. Here's to us.",
+                        Love: `e.g. You mean everything to me, ${name}.`,
+                        Graduation: `e.g. So proud of you, ${name}.`,
+                        "New Baby": "e.g. Welcome to the world.",
+                        Holiday: `e.g. Happy holidays, ${name}!`,
+                        "Just Because": `e.g. Thinking of you, ${name}.`,
+                        Wedding: "e.g. Wishing you both the very best.",
+                        "Thank You": `e.g. Thank you so much, ${name}.`,
+                        "Mother's Day": `e.g. Happy Mother's Day, ${name}!`,
+                        "Father's Day": `e.g. Happy Father's Day, ${name}!`,
+                        Other: `e.g. This one's for you, ${name}.`,
+                      };
+                      return `${placeholders[occasion] ?? `e.g. This one's for you, ${name}.`} — or pick a suggestion below`;
                     })()}
                     value={giftTitle}
                     onChange={(e) => setGiftTitle(e.target.value)}
@@ -2010,6 +2024,18 @@ export default function CreatePage() {
                         "This is long overdue.",
                         "You didn't have to — but I'm glad you did.",
                         `Grateful for you, ${n}.`,
+                      ],
+                      "Mother's Day": [
+                        `Happy Mother's Day, ${n}!`,
+                        "For the woman who does it all.",
+                        `Everything I am, because of you, ${n}.`,
+                        "Thank you for everything.",
+                      ],
+                      "Father's Day": [
+                        `Happy Father's Day, ${n}!`,
+                        "For the best dad around.",
+                        `Grateful for you every day, ${n}.`,
+                        "This one's long overdue.",
                       ],
                       Other: [
                         `This one's for you, ${n}.`,
