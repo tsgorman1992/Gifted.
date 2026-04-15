@@ -817,6 +817,7 @@ export default function CreatePage() {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [showEmptyMomentWarning, setShowEmptyMomentWarning] = useState(false);
 
   // Cycling link label word
   const [linkLabelIdx, setLinkLabelIdx] = useState(0);
@@ -1595,8 +1596,13 @@ export default function CreatePage() {
       if (!senderName.trim()) { setStepError("Please enter your name."); return; }
     }
     if (step === 2) {
-      // headline is optional — no validation required
+      const hasContent = giftTitle.trim() || personalNote.trim() || videoPreviewUrl || photos.length > 0;
+      if (!hasContent && !showEmptyMomentWarning) {
+        setShowEmptyMomentWarning(true);
+        return;
+      }
     }
+    setShowEmptyMomentWarning(false);
     const next = step + 1;
     window.history.pushState({ step: next }, "");
     setDirection(1);
@@ -1606,6 +1612,7 @@ export default function CreatePage() {
 
   const goBack = () => {
     setStepError(null);
+    setShowEmptyMomentWarning(false);
     window.history.back();
   };
 
@@ -2146,6 +2153,51 @@ export default function CreatePage() {
                   >
                     {stepError}
                   </motion.p>
+                )}
+              </AnimatePresence>
+
+              {/* Soft warning — shown when Next is hit with no content at all */}
+              <AnimatePresence>
+                {showEmptyMomentWarning && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/30 p-4"
+                  >
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 leading-tight">Your moment is a bit bare</p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                          You haven't added a headline, note, video, or photos. The reveal will just show the recipient's name — add something personal to make it land.
+                        </p>
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            type="button"
+                            onClick={() => setShowEmptyMomentWarning(false)}
+                            className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                          >
+                            Add something
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowEmptyMomentWarning(false);
+                              const next = step + 1;
+                              window.history.pushState({ step: next }, "");
+                              setDirection(1);
+                              setStep(next);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className="px-3.5 py-1.5 rounded-full text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                          >
+                            Continue anyway
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
               </AnimatePresence>
 
