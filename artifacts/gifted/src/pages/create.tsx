@@ -773,10 +773,11 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
           />
         )}
         <div
-          className="rounded-xl border border-border bg-white p-1.5"
+          className="rounded-xl border border-border bg-white p-1.5 overflow-hidden"
           style={{
             width: QR_SIZE,
             height: QR_SIZE,
+            minWidth: QR_SIZE,
             opacity: ready ? 1 : 0,
             position: ready ? "static" : "absolute",
             pointerEvents: ready ? "auto" : "none",
@@ -785,7 +786,7 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
         >
           <canvas
             ref={canvasRef}
-            style={{ display: "block", width: QR_SIZE - 12, height: QR_SIZE - 12 }}
+            style={{ display: "block", width: "100%", height: "100%", maxWidth: QR_SIZE - 12, maxHeight: QR_SIZE - 12 }}
           />
         </div>
       </div>
@@ -841,6 +842,7 @@ export default function CreatePage() {
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [quickContacts, setQuickContacts] = useState<Array<{ id: string; name: string; phone: string | null }>>([]);
+  const [showAllContacts, setShowAllContacts] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [phoneValidating, setPhoneValidating] = useState(false);
@@ -1801,33 +1803,61 @@ export default function CreatePage() {
                         onChange={(e) => { setRecipientName(e.target.value); setSelectedContactId(null); }}
                         className="h-11 rounded-xl text-base"
                       />
-                      {quickContacts.length > 0 && (
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
-                          <Users className="w-3 h-3 text-muted-foreground shrink-0" />
-                          {quickContacts.map(c => {
-                            const firstName = c.name.trim().split(" ")[0];
-                            const isActive = selectedContactId === c.id;
-                            return (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  setRecipientName(firstName);
-                                  setSelectedContactId(c.id);
-                                  if (c.phone && !recipientPhone) setRecipientPhone(c.phone);
-                                }}
-                                className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                                  isActive
-                                    ? "bg-primary text-white border-primary"
-                                    : "bg-muted/60 text-foreground border-border hover:bg-primary/10 hover:border-primary/40"
-                                }`}
-                              >
-                                {c.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                      {quickContacts.length > 0 && (() => {
+                        const LIMIT = 10;
+                        const visible = showAllContacts ? quickContacts : quickContacts.slice(0, LIMIT);
+                        const overflow = quickContacts.length - LIMIT;
+                        return (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Users className="w-3 h-3 shrink-0" />
+                              <span>Quick pick</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {visible.map(c => {
+                                const firstName = c.name.trim().split(" ")[0];
+                                const isActive = selectedContactId === c.id;
+                                return (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setRecipientName(firstName);
+                                      setSelectedContactId(c.id);
+                                      if (c.phone && !recipientPhone) setRecipientPhone(c.phone);
+                                    }}
+                                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                                      isActive
+                                        ? "bg-primary text-white border-primary"
+                                        : "bg-muted/60 text-foreground border-border hover:bg-primary/10 hover:border-primary/40"
+                                    }`}
+                                  >
+                                    {c.name}
+                                  </button>
+                                );
+                              })}
+                              {!showAllContacts && overflow > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAllContacts(true)}
+                                  className="px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+                                >
+                                  +{overflow} more
+                                </button>
+                              )}
+                              {showAllContacts && quickContacts.length > LIMIT && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAllContacts(false)}
+                                  className="px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+                                >
+                                  Show less
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="sender">Who is it from?</Label>
