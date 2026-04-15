@@ -1,0 +1,49 @@
+uploads = []
+
+[[generated]]
+id = "C7iR1wx53L5yCXMDYRUYR"
+uri = "file://attached_assets/generated_images/gifted_logo_serif_wordmark.png"
+type = "image"
+title = "gifted serif wordmark logo"
+
+[[generated]]
+id = "TAAm1d-6sKsZx03nQmKBK"
+uri = "file://attached_assets/generated_images/gifted_logo_mark_and_wordmark.png"
+type = "image"
+title = "gifted mark and wordmark logo"
+
+[[generated]]
+id = "6H6hn7XOrW3GTjtMJSlvP"
+uri = "file://attached_assets/generated_images/gifted_logo_dark_premium.png"
+type = "image"
+title = "gifted dark premium logo"
+
+[[generated]]
+id = "sNnZ7nRUeATAQut0qoBNI"
+uri = "file://attached_assets/generated_images/gifted_logo_app_icon.png"
+type = "image"
+title = "gifted app icon badge logo"
+
+[[outputs]]
+id = "ZwMvQ2mkw3aqs3xBLrINd"
+uri = "file://attached_assets/generated_images/gifted_logo_serif_wordmark.png"
+type = "image"
+title = "Option 1 — Serif Wordmark"
+
+[[outputs]]
+id = "JeYywZgwLuPpK_CMZoPuN"
+uri = "file://attached_assets/generated_images/gifted_logo_mark_and_wordmark.png"
+type = "image"
+title = "Option 2 — Mark + Wordmark"
+
+[[outputs]]
+id = "t9JC8rvKbwbvi4GDKOyN7"
+uri = "file://attached_assets/generated_images/gifted_logo_dark_premium.png"
+type = "image"
+title = "Option 3 — Dark Premium"
+
+[[outputs]]
+id = "wgYgvgtnXlCtK2Wplah27"
+uri = "file://attached_assets/generated_images/gifted_logo_app_icon.png"
+type = "image"
+title = "Option 4 — App Icon / Badge"
