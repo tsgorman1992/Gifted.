@@ -698,36 +698,39 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
 
-  const QR_SIZE = 136; // CSS display size in px
+  const QR_SIZE = 160; // CSS display size in px
 
   useEffect(() => {
     if (!canvasRef.current) return;
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-    const payload = {
+    // Keep payload lean — phone just needs to reach step 3 for camera roll uploads.
+    // Long text (note/title) stays on desktop; links omitted to keep QR scannable.
+    const payload: Record<string, unknown> = {
       r: props.recipientName,
       s: props.senderName,
-      p: props.recipientPhone,
       occ: props.occasion,
       exp: props.selectedExperience,
-      title: props.giftTitle,
-      note: props.personalNote,
-      links: props.extraLinks.filter(l => l.url.trim()),
       amt: props.amount,
       int: props.intent,
-      sf: props.scheduledFor,
-      st: props.scheduledTime,
       step: 3,
     };
+    if (props.recipientPhone) payload.p = props.recipientPhone;
+    if (props.scheduledFor)   payload.sf = props.scheduledFor;
+    if (props.scheduledTime)  payload.st = props.scheduledTime;
+    // Include title/note only if short enough to keep the QR scannable
+    if (props.giftTitle && props.giftTitle.length <= 80)   payload.title = props.giftTitle;
+    if (props.personalNote && props.personalNote.length <= 200) payload.note = props.personalNote;
     try {
       const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
       const continueUrl = `https://gifted.page${base}/create?draft=${encoded}`;
-      // Render at 2× for crispness on HiDPI; CSS width/height pins the display size
+      // 'M' error correction (15%) keeps modules large enough to scan at 160px display size.
+      // Render 2× internally for HiDPI crispness; CSS pins the display size.
       const renderSize = QR_SIZE * 2;
       QRCodeLib.toCanvas(canvasRef.current, continueUrl, {
         width: renderSize,
-        margin: 1,
+        margin: 2,
         color: { dark: "#000000", light: "#ffffff" },
-        errorCorrectionLevel: 'H',
+        errorCorrectionLevel: 'M',
       }).then(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
