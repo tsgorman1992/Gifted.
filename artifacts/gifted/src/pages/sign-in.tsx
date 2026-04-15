@@ -86,7 +86,7 @@ export default function SignInPage() {
       >
         <div className="text-center mb-3">
           <a href="/" className="font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-70 transition-opacity">
-            gifted.
+            gifted<span className="text-primary">.</span>
           </a>
         </div>
 

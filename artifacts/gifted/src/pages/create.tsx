@@ -755,11 +755,18 @@ function ContinueOnPhone(props: ContinueOnPhoneProps) {
         ctx.quadraticCurveTo(rectX, rectY, rectX + radius, rectY);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#000000';
-        ctx.font = `bold ${Math.round(size * 0.075)}px Georgia, serif`;
-        ctx.textAlign = 'center';
+        const fontSize = Math.round(size * 0.075);
+        ctx.font = `bold ${fontSize}px Georgia, serif`;
+        ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText('gifted.', size / 2, size / 2);
+        const totalW = ctx.measureText('gifted.').width;
+        const startX = size / 2 - totalW / 2;
+        const midY = size / 2;
+        ctx.fillStyle = '#000000';
+        ctx.fillText('gifted', startX, midY);
+        const giftedW = ctx.measureText('gifted').width;
+        ctx.fillStyle = 'hsl(28,62%,36%)';
+        ctx.fillText('.', startX + giftedW, midY);
         setReady(true);
       }).catch(() => {});
     } catch { /* ignore */ }

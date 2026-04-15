@@ -63,7 +63,7 @@ function QRCodeDisplay({ url, label }: { url: string; label?: string }) {
       >
         <canvas ref={canvasRef} style={{ display: "block", borderRadius: 8 }} />
         {ready && (
-          <p className="text-center text-[10px] font-semibold tracking-wide text-muted-foreground/60 mt-1.5" style={{ fontFamily: "Georgia, serif" }}>gifted.</p>
+          <p className="text-center text-[10px] font-semibold tracking-wide text-muted-foreground/60 mt-1.5" style={{ fontFamily: "Georgia, serif" }}>gifted<span className="text-primary">.</span></p>
         )}
       </div>
       {!ready && (
@@ -1900,7 +1900,7 @@ export default function PreviewPage() {
                 <div className="p-4 flex items-start gap-3">
                   <div className="w-12 h-12 rounded-xl flex-shrink-0" style={gStyle} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">gifted.</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">gifted<span className="text-primary">.</span></p>
                     <p className="text-sm font-semibold text-foreground leading-snug">A gift for {recipientName} 🎁</p>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">from {senderName} — tap to open</p>
                   </div>

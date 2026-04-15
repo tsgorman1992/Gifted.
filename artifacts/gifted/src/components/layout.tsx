@@ -126,7 +126,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-50 w-full glass-panel border-b-0 shadow-sm transition-all duration-300">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <a href="/" onClick={handleLogoClick} className="font-serif text-3xl font-bold text-foreground tracking-tight hover:opacity-80 transition-opacity cursor-pointer">
-            gifted.
+            gifted<span className="text-primary">.</span>
           </a>
 
           <nav className="flex items-center gap-3">
@@ -314,7 +314,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <footer className="w-full bg-secondary/50 py-12 mt-auto">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col items-center md:items-start gap-2">
-            <span className="font-serif text-2xl font-bold">gifted.</span>
+            <span className="font-serif text-2xl font-bold">gifted<span className="text-primary">.</span></span>
             <span className="text-sm text-muted-foreground">Personal in the moment. Flexible in the end.</span>
           </div>
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">

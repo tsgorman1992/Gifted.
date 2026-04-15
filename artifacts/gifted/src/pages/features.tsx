@@ -101,7 +101,7 @@ function HeroSection({ onStart }: { onStart: () => void }) {
               <div className="p-4 space-y-3 pb-6">
                 {/* mini header */}
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-serif text-base font-bold">gifted.</span>
+                  <span className="font-serif text-base font-bold">gifted<span className="text-primary">.</span></span>
                   <div className="relative">
                     <Bell className="w-4 h-4 text-muted-foreground" />
                     <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center">3</span>
@@ -869,7 +869,7 @@ function MobileFeaturesScroll() {
         <motion.div {...fadeUp(0.1)}>
           <div className="bg-card border border-border rounded-2xl p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <span className="font-serif text-sm font-bold">gifted.</span>
+              <span className="font-serif text-sm font-bold">gifted<span className="text-primary">.</span></span>
               <div className="relative">
                 <Bell className="w-4 h-4 text-muted-foreground" />
                 <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center">3</span>

@@ -3142,7 +3142,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                   }}
                 >
                   <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
-                    gifted.
+                    gifted<span className="text-primary">.</span>
                   </p>
 
                   {/* ── Sign-up nudge (primary) — shown only when not yet authed/done/dismissed ── */}

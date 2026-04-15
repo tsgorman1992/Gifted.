@@ -9,7 +9,7 @@ export default function SmsConsentPage() {
 
         {/* Header */}
         <div className="text-center space-y-3">
-          <Link href="/" className="text-2xl font-serif font-medium tracking-tight">gifted.</Link>
+          <Link href="/" className="text-2xl font-serif font-medium tracking-tight">gifted<span className="text-primary">.</span></Link>
           <h1 className="text-3xl font-serif font-medium mt-4">SMS Messaging Policy</h1>
           <p className="text-muted-foreground">
             gifted. (gifted.page) sends two types of SMS messages — one to gift senders so they can share their
