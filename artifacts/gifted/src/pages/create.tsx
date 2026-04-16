@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ArrowRight, ArrowLeft, Video, Music, Image as ImageIcon,
   DollarSign, Sparkles, RefreshCw, Loader2, X, CheckCircle2,
-  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone, Play, Users, Lock,
+  Plus, Gift, Star, Heart, Snowflake, Sun, Flower2, Calendar, Clock, AlertCircle, Link2, RotateCcw, Smartphone, Play, Users, Lock, Flame, Zap, Trophy,
 } from "lucide-react";
 import QRCodeLib from "qrcode";
 import { useUpload } from "@workspace/object-storage-web";
@@ -51,6 +51,9 @@ const EXPERIENCE_ICONS: Record<ExperienceId, React.ComponentType<{ className?: s
   "sunrise":        Sun,
   "mothers-day":    Flower2,
   "fathers-day":    Star,
+  "smoke-amber":    Flame,
+  "carbon-steel":   Zap,
+  "electric-night": Trophy,
 };
 
 const INTENT_MAP: Record<string, string[]> = {
@@ -257,7 +260,7 @@ function ProgressBar({ step, onStepClick }: { step: number; onStepClick: (s: num
 
 // ─── Ambient particle helpers (lightweight version for preview card) ──────────
 
-type AmbientParticleEffect = "petals" | "rose-petals" | "snow" | "confetti" | "stars" | "bokeh" | "florals";
+type AmbientParticleEffect = "petals" | "rose-petals" | "snow" | "confetti" | "stars" | "bokeh" | "florals" | "embers" | "sparks";
 
 function getAmbientEffect(experienceId: string): AmbientParticleEffect | null {
   switch (experienceId) {
@@ -270,6 +273,9 @@ function getAmbientEffect(experienceId: string): AmbientParticleEffect | null {
     case "sunrise":        return "bokeh";
     case "mothers-day":    return "florals";
     case "fathers-day":    return "bokeh";
+    case "smoke-amber":    return "embers";
+    case "carbon-steel":   return "stars";
+    case "electric-night": return "sparks";
     default:               return null;
   }
 }
@@ -292,6 +298,12 @@ function getPreIconMotion(experienceId: string) {
       return { animate: { scale: [1, 1.18, 1, 1.1, 1] }, transition: { repeat: Infinity, duration: 1.4, ease: "easeInOut" } };
     case "fathers-day":
       return { animate: { scale: [1, 1.08, 1], opacity: [0.85, 1, 0.85] }, transition: { repeat: Infinity, duration: 2.6, ease: "easeInOut" } };
+    case "smoke-amber":
+      return { animate: { scale: [1, 1.1, 1], opacity: [0.75, 1, 0.75] }, transition: { repeat: Infinity, duration: 2.2, ease: "easeInOut" } };
+    case "carbon-steel":
+      return { animate: { opacity: [0.4, 1, 0.4], scale: [0.9, 1.08, 0.9] }, transition: { repeat: Infinity, duration: 1.6, ease: "easeInOut" } };
+    case "electric-night":
+      return { animate: { y: [0, -10, 0] }, transition: { repeat: Infinity, duration: 0.8, ease: "easeInOut" } };
     case "confetti-burst":
     default:
       return { animate: { y: [0, -12, 0] }, transition: { repeat: Infinity, duration: 0.9, ease: "easeInOut" } };
@@ -515,6 +527,71 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
         }
         requestAnimationFrame(frame);
         return;
+      } else if (effect === "embers") {
+        const emberColors = ["#FF8C00","#E06000","#FFA53A","#FFD060","#FF5500","#FFB347"];
+        const color = emberColors[Math.floor(Math.random() * emberColors.length)];
+        const size = 2 + Math.random() * 4;
+        const dur = 3000 + Math.random() * 3000;
+        const drift = (Math.random() - 0.5) * 35;
+        const startY = containerH + 6;
+        el.style.cssText = `
+          position:absolute; pointer-events:none; z-index:10;
+          left:${Math.random() * 100}%;
+          top:${startY}px;
+          width:${size}px; height:${size}px;
+          background:radial-gradient(circle, ${color} 0%, ${color}88 50%, transparent 100%);
+          border-radius:50%;
+          box-shadow:0 0 ${size * 2}px ${color}AA;
+        `;
+        container.appendChild(el);
+        const startTime = Date.now();
+        function frame() {
+          if (!active) return;
+          const t = (Date.now() - startTime) / dur;
+          if (t >= 1 || parseFloat(el.style.top) < -10) { el.remove(); return; }
+          const progress = startY - t * (containerH * 1.15);
+          const x = drift * Math.sin(t * Math.PI * 2.5);
+          const alpha = t < 0.1 ? t * 10 : t > 0.65 ? (1 - t) / 0.35 : 1;
+          el.style.top = `${progress}px`;
+          el.style.transform = `translateX(${x}px)`;
+          el.style.opacity = String(alpha * 0.9);
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+        return;
+      } else if (effect === "sparks") {
+        const sparkColors = ["#00D4FF","#FF6B00","#FF0080","#00FF88","#FFD700","#BF5AF2","#FFFFFF"];
+        const color = sparkColors[Math.floor(Math.random() * sparkColors.length)];
+        const size = 2 + Math.random() * 3.5;
+        const dur = 800 + Math.random() * 1200;
+        const vx = (Math.random() - 0.5) * containerH * 0.4;
+        const vy = -(containerH * (0.2 + Math.random() * 0.5));
+        const startX = Math.random() * 100;
+        const startY = 80 + Math.random() * 20;
+        el.style.cssText = `
+          position:absolute; pointer-events:none; z-index:10;
+          left:${startX}%; top:${startY}%;
+          width:${size}px; height:${size}px;
+          background:${color};
+          border-radius:50%;
+          box-shadow:0 0 ${size * 3}px ${color};
+        `;
+        container.appendChild(el);
+        const startTime = Date.now();
+        function frame() {
+          if (!active) return;
+          const t = (Date.now() - startTime) / dur;
+          if (t >= 1) { el.remove(); return; }
+          const easedT = 1 - Math.pow(1 - t, 2);
+          const x = vx * easedT;
+          const y = vy * easedT + 0.5 * 980 * t * t * (containerH / 400);
+          const alpha = t < 0.1 ? t * 10 : 1 - t;
+          el.style.transform = `translate(${x}px, ${y}px)`;
+          el.style.opacity = String(Math.max(0, alpha));
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+        return;
       }
     }
 
@@ -523,11 +600,15 @@ function AmbientParticles({ experienceId }: { experienceId: string }) {
     const interval = effect === "stars" || effect === "bokeh" ? 600 :
                      effect === "florals" ? 500 :
                      effect === "snow" ? 200 :
-                     effect === "confetti" ? 250 : 400;
+                     effect === "confetti" ? 250 :
+                     effect === "embers" ? 350 :
+                     effect === "sparks" ? 280 : 400;
 
     const batchSize = effect === "snow" ? 3 :
                       effect === "stars" || effect === "bokeh" ? 1 :
-                      effect === "florals" ? 1 : 2;
+                      effect === "florals" ? 1 :
+                      effect === "embers" ? 2 :
+                      effect === "sparks" ? 2 : 2;
 
     function spawnBatch() {
       for (let i = 0; i < batchSize; i++) {

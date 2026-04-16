@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import confetti from "canvas-confetti";
 import { Button } from "@/components/ui/button";
-import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check, ChevronLeft, ChevronRight, Download, Loader2 } from "lucide-react";
+import { Play, Sparkles, Gift, Star, Heart, Snowflake, Sun, Flower2, Music, ExternalLink, X, ZoomIn, ImageOff, Copy, Check, ChevronLeft, ChevronRight, Download, Loader2, Flame, Zap, Trophy } from "lucide-react";
 import { gradientStyle, DEFAULT_EXPERIENCE } from "@/lib/experiences";
 import { trackEvent } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth-context";
@@ -233,6 +233,70 @@ const CONFIGS: Record<string, RevealCfg> = {
       shadow: "0 0 50px rgba(201,168,76,0.18), 0 20px 40px rgba(0,0,0,0.45)",
       border: "rgba(201,168,76,0.25)",
       bg: "rgba(255,255,255,0.05)",
+    },
+  },
+  "smoke-amber": {
+    titleStyle: "blur-in",
+    sectionStyle: "fade-drift",
+    amountStyle: "glow-reveal",
+    sectionStagger: 0.32,
+    sectionInitialDelay: 1.1,
+    heroDelay: 0.6,
+    heroDuration: 1.3,
+    senderText: "From",
+    isDark: true,
+    envelopeExit: { opacity: 0, scale: 0.9, filter: "blur(6px)" },
+    envelopeTransition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+    preIconAnim: "pulse-slow",
+    preIconColorClass: "text-amber-500",
+    ambientIntensity: "low",
+    cardStyle: {
+      shadow: "0 0 60px rgba(180,100,20,0.22), 0 24px 48px rgba(0,0,0,0.6)",
+      border: "rgba(200,130,40,0.2)",
+      bg: "rgba(255,255,255,0.04)",
+    },
+  },
+  "carbon-steel": {
+    titleStyle: "typewriter",
+    sectionStyle: "materialize",
+    amountStyle: "stellar-reveal",
+    sectionStagger: 0.26,
+    sectionInitialDelay: 1.0,
+    heroDelay: 0.5,
+    heroDuration: 1.0,
+    senderText: "Sent by",
+    isDark: true,
+    envelopeExit: { opacity: 0, scale: 0.85 },
+    envelopeTransition: { duration: 0.42, ease: [0.16, 1, 0.3, 1] },
+    ambientEffect: "stars",
+    ambientIntensity: "medium",
+    preIconAnim: "twinkle",
+    preIconColorClass: "text-sky-400",
+    cardStyle: {
+      shadow: "0 0 70px rgba(56,189,248,0.12), 0 28px 56px rgba(0,0,0,0.7)",
+      border: "rgba(148,163,184,0.12)",
+      bg: "rgba(255,255,255,0.03)",
+    },
+  },
+  "electric-night": {
+    titleStyle: "word-burst",
+    sectionStyle: "spring-pop",
+    amountStyle: "count-up",
+    sectionStagger: 0.12,
+    sectionInitialDelay: 0.5,
+    heroDelay: 0.25,
+    heroDuration: 0.5,
+    senderText: "Sent by",
+    isDark: true,
+    envelopeExit: { opacity: 0, y: -60, scale: 0.9 },
+    envelopeTransition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] },
+    preIconAnim: "bounce",
+    preIconColorClass: "text-violet-400",
+    ambientIntensity: "medium",
+    cardStyle: {
+      shadow: "0 0 80px rgba(139,92,246,0.2), 0 24px 50px rgba(0,0,0,0.65)",
+      border: "rgba(139,92,246,0.2)",
+      bg: "rgba(255,255,255,0.04)",
     },
   },
 };
@@ -492,6 +556,221 @@ function GardenBloomWatermark() {
   );
 }
 
+// ─── Smoke & Amber ember background ─────────────────────────────────────────
+
+function SmokeEmberBg() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let animId: number;
+    let active = true;
+
+    function resize() {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    interface Ember {
+      x: number; y: number;
+      vx: number; vy: number;
+      r: number; life: number;
+      maxLife: number; color: string;
+    }
+
+    const palette = ["#FF8C00","#E07000","#FFA53A","#FFD060","#FF5500","#FFB347"];
+    const embers: Ember[] = [];
+
+    function spawn() {
+      if (!canvas) return;
+      const W = canvas.width, H = canvas.height;
+      embers.push({
+        x: W * (0.1 + Math.random() * 0.8),
+        y: H + 6,
+        vx: (Math.random() - 0.5) * 1.2,
+        vy: -(0.8 + Math.random() * 2.2),
+        r: 1.5 + Math.random() * 3.5,
+        life: 0,
+        maxLife: 3200 + Math.random() * 3000,
+        color: palette[Math.floor(Math.random() * palette.length)],
+      });
+    }
+
+    let lastSpawn = 0;
+
+    function frame(ts: number) {
+      if (!active || !canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const W = canvas.width, H = canvas.height;
+
+      ctx.clearRect(0, 0, W, H);
+
+      if (ts - lastSpawn > 120) {
+        spawn();
+        if (Math.random() > 0.55) spawn();
+        lastSpawn = ts;
+      }
+
+      for (let i = embers.length - 1; i >= 0; i--) {
+        const e = embers[i];
+        e.life += 16;
+        e.x += e.vx + Math.sin(e.life * 0.002) * 0.6;
+        e.y += e.vy;
+        const t = e.life / e.maxLife;
+        if (t >= 1 || e.y < -20) { embers.splice(i, 1); continue; }
+        const alpha = t < 0.1 ? t * 10 : t > 0.7 ? (1 - t) / 0.3 : 1;
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.85;
+        const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 2.8);
+        grad.addColorStop(0, e.color);
+        grad.addColorStop(0.4, e.color + "99");
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.r * 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      animId = requestAnimationFrame(frame);
+    }
+
+    animId = requestAnimationFrame(frame);
+    return () => {
+      active = false;
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
+    />
+  );
+}
+
+// ─── Carbon/Steel lightning bg ───────────────────────────────────────────────
+
+function CarbonLightningBg() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let animId: number;
+    let active = true;
+    let nextStrike = Date.now() + 800 + Math.random() * 1200;
+
+    function resize() {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    function genBolt(x1: number, y1: number, x2: number, y2: number, depth: number): [number, number][] {
+      if (depth === 0) return [[x1, y1], [x2, y2]];
+      const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * 90;
+      const my = (y1 + y2) / 2 + (Math.random() - 0.5) * 18;
+      return [...genBolt(x1, y1, mx, my, depth - 1), ...genBolt(mx, my, x2, y2, depth - 1)];
+    }
+
+    interface Strike { points: [number, number][]; alpha: number; born: number; hold: number; fade: number; color: string; width: number; }
+    const strikes: Strike[] = [];
+
+    function spawnStrike(W: number, H: number) {
+      const sx = W * (0.12 + Math.random() * 0.76);
+      const ex = W * (0.08 + Math.random() * 0.84);
+      strikes.push({
+        points: genBolt(sx, -10, ex, H + 10, 5),
+        alpha: 1.0,
+        born: Date.now(),
+        hold: 60 + Math.random() * 40,
+        fade: 200 + Math.random() * 120,
+        color: Math.random() > 0.5 ? "#60A5FA" : "#BAE6FD",
+        width: 1.2 + Math.random() * 1.2,
+      });
+      if (Math.random() > 0.45) {
+        strikes.push({
+          points: genBolt(W * (0.1 + Math.random() * 0.8), -10, W * (0.1 + Math.random() * 0.8), H + 10, 4),
+          alpha: 0.55,
+          born: Date.now(),
+          hold: 40,
+          fade: 160,
+          color: "#93C5FD",
+          width: 0.7,
+        });
+      }
+    }
+
+    function frame() {
+      if (!active || !canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const W = canvas.width, H = canvas.height;
+
+      ctx.clearRect(0, 0, W, H);
+
+      const now = Date.now();
+      if (now >= nextStrike) {
+        spawnStrike(W, H);
+        nextStrike = now + 1800 + Math.random() * 2400;
+      }
+
+      for (let i = strikes.length - 1; i >= 0; i--) {
+        const s = strikes[i];
+        const age = now - s.born;
+        let a: number;
+        if (age < s.hold) {
+          a = s.alpha;
+        } else {
+          a = s.alpha * Math.max(0, 1 - (age - s.hold) / s.fade);
+        }
+        if (a <= 0) { strikes.splice(i, 1); continue; }
+
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = s.width;
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = s.color;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(s.points[0][0], s.points[0][1]);
+        for (let j = 1; j < s.points.length; j++) ctx.lineTo(s.points[j][0], s.points[j][1]);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      animId = requestAnimationFrame(frame);
+    }
+
+    animId = requestAnimationFrame(frame);
+    return () => {
+      active = false;
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
+    />
+  );
+}
+
 // ─── Pre-reveal icon animation ────────────────────────────────────────────────
 
 function preIconMotionProps(anim: PreIconAnim) {
@@ -544,6 +823,9 @@ const PRE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   "sunrise":        Sun,
   "mothers-day":    Flower2,
   "fathers-day":    Star,
+  "smoke-amber":    Flame,
+  "carbon-steel":   Zap,
+  "electric-night": Trophy,
 };
 
 // ─── Particle system ─────────────────────────────────────────────────────────
@@ -732,6 +1014,158 @@ function fireEntryBurst(experience: string) {
         if (Date.now() < end) requestAnimationFrame(frame);
       };
       frame();
+      break;
+    }
+
+    case "smoke-amber": {
+      const canvas = document.createElement("canvas");
+      canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999;";
+      document.body.appendChild(canvas);
+      const ctx2d = canvas.getContext("2d")!;
+      const W = window.innerWidth, H = window.innerHeight;
+      canvas.width = W; canvas.height = H;
+
+      interface Ember2 { x: number; y: number; vx: number; vy: number; r: number; life: number; maxLife: number; color: string; }
+      const palette = ["#FF8C00","#E06000","#FFA53A","#FFD060","#FF5500","#FFB347","#FFD700"];
+      const embers2: Ember2[] = [];
+
+      const burstEnd = Date.now() + 5500;
+      let lastSpawn2 = 0;
+
+      function spawnEmber2() {
+        embers2.push({
+          x: W * (0.05 + Math.random() * 0.9),
+          y: H + 8,
+          vx: (Math.random() - 0.5) * 2,
+          vy: -(1.2 + Math.random() * 3.5),
+          r: 2 + Math.random() * 5,
+          life: 0,
+          maxLife: 2800 + Math.random() * 2500,
+          color: palette[Math.floor(Math.random() * palette.length)],
+        });
+      }
+
+      function runEmbers(ts: number) {
+        const elapsed = Date.now() - (burstEnd - 5500);
+        if (elapsed > 5500) { canvas.remove(); return; }
+        ctx2d.clearRect(0, 0, W, H);
+        if (ts - lastSpawn2 > 70) {
+          spawnEmber2();
+          spawnEmber2();
+          if (Math.random() > 0.4) spawnEmber2();
+          lastSpawn2 = ts;
+        }
+        for (let i = embers2.length - 1; i >= 0; i--) {
+          const e = embers2[i];
+          e.life += 16;
+          e.x += e.vx + Math.sin(e.life * 0.003) * 0.8;
+          e.y += e.vy;
+          const t = e.life / e.maxLife;
+          if (t >= 1 || e.y < -30) { embers2.splice(i, 1); continue; }
+          const alpha = t < 0.08 ? t * 12.5 : t > 0.65 ? (1 - t) / 0.35 : 1;
+          ctx2d.save();
+          ctx2d.globalAlpha = alpha * 0.9;
+          const g = ctx2d.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 3);
+          g.addColorStop(0, e.color);
+          g.addColorStop(0.35, e.color + "BB");
+          g.addColorStop(1, "transparent");
+          ctx2d.fillStyle = g;
+          ctx2d.beginPath();
+          ctx2d.arc(e.x, e.y, e.r * 3, 0, Math.PI * 2);
+          ctx2d.fill();
+          ctx2d.restore();
+        }
+        requestAnimationFrame(runEmbers);
+      }
+      requestAnimationFrame(runEmbers);
+      break;
+    }
+
+    case "carbon-steel": {
+      const canvas = document.createElement("canvas");
+      canvas.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999;";
+      document.body.appendChild(canvas);
+      const ctx2d = canvas.getContext("2d")!;
+      const W = window.innerWidth, H = window.innerHeight;
+      canvas.width = W; canvas.height = H;
+
+      function genBolt(x1: number, y1: number, x2: number, y2: number, depth: number): [number, number][] {
+        if (depth === 0) return [[x1, y1], [x2, y2]];
+        const mx = (x1 + x2) / 2 + (Math.random() - 0.5) * 100;
+        const my = (y1 + y2) / 2 + (Math.random() - 0.5) * 22;
+        return [...genBolt(x1, y1, mx, my, depth - 1), ...genBolt(mx, my, x2, y2, depth - 1)];
+      }
+
+      interface LStrike { pts: [number, number][]; alpha: number; born: number; hold: number; fade: number; color: string; w: number; }
+      const lstrikes: LStrike[] = [];
+      let strikeCount = 0;
+      const maxStrikes = 6;
+
+      function doLightningStrike() {
+        if (strikeCount >= maxStrikes) { setTimeout(() => canvas.remove(), 600); return; }
+        strikeCount++;
+        const sx = W * (0.12 + Math.random() * 0.76);
+        const ex = W * (0.08 + Math.random() * 0.84);
+        lstrikes.push({ pts: genBolt(sx, -10, ex, H + 10, 5), alpha: 1, born: Date.now(), hold: 55 + Math.random() * 35, fade: 200 + Math.random() * 100, color: "#FFFFFF", w: 2.0 });
+        lstrikes.push({ pts: genBolt(sx, -10, ex, H + 10, 5), alpha: 0.7, born: Date.now(), hold: 55, fade: 180, color: "#60A5FA", w: 3.5 });
+        if (Math.random() > 0.4) {
+          const sx2 = W * (0.1 + Math.random() * 0.8);
+          const ex2 = W * (0.1 + Math.random() * 0.8);
+          lstrikes.push({ pts: genBolt(sx2, -10, ex2, H + 10, 4), alpha: 0.45, born: Date.now(), hold: 35, fade: 140, color: "#BAE6FD", w: 1.0 });
+        }
+        setTimeout(doLightningStrike, 450 + Math.random() * 750);
+      }
+
+      function runLightning() {
+        ctx2d.clearRect(0, 0, W, H);
+        const now = Date.now();
+        for (let i = lstrikes.length - 1; i >= 0; i--) {
+          const s = lstrikes[i];
+          const age = now - s.born;
+          const a = age < s.hold ? s.alpha : s.alpha * Math.max(0, 1 - (age - s.hold) / s.fade);
+          if (a <= 0) { lstrikes.splice(i, 1); continue; }
+          ctx2d.save();
+          ctx2d.globalAlpha = a;
+          ctx2d.strokeStyle = s.color;
+          ctx2d.lineWidth = s.w;
+          ctx2d.shadowBlur = 22;
+          ctx2d.shadowColor = "#60A5FA";
+          ctx2d.lineJoin = "round";
+          ctx2d.beginPath();
+          ctx2d.moveTo(s.pts[0][0], s.pts[0][1]);
+          for (let j = 1; j < s.pts.length; j++) ctx2d.lineTo(s.pts[j][0], s.pts[j][1]);
+          ctx2d.stroke();
+          ctx2d.restore();
+        }
+        requestAnimationFrame(runLightning);
+      }
+
+      setTimeout(doLightningStrike, 120);
+      requestAnimationFrame(runLightning);
+      break;
+    }
+
+    case "electric-night": {
+      const colors = ["#00D4FF","#FF6B00","#FF0080","#00FF88","#FFD700","#BF5AF2","#FFFFFF","#FF3CAC"];
+      const positions: Array<{ x: number; y: number }> = [
+        { x: 0.25, y: 0.28 }, { x: 0.75, y: 0.20 }, { x: 0.50, y: 0.13 },
+        { x: 0.15, y: 0.24 }, { x: 0.85, y: 0.30 }, { x: 0.40, y: 0.09 },
+        { x: 0.62, y: 0.21 }, { x: 0.30, y: 0.16 }, { x: 0.70, y: 0.32 },
+      ];
+      positions.forEach((pos, i) => {
+        setTimeout(() => {
+          const c1 = colors[Math.floor(Math.random() * colors.length)];
+          const c2 = colors[Math.floor(Math.random() * colors.length)];
+          confetti({
+            particleCount: 65 + Math.floor(Math.random() * 35),
+            angle: 90, spread: 360,
+            origin: pos,
+            colors: [c1, c2, "#FFFFFF"],
+            gravity: 0.72, scalar: 1.25,
+            startVelocity: 30, ticks: 95, decay: 0.91,
+          });
+        }, i * 380 + Math.random() * 180);
+      });
       break;
     }
   }
@@ -1067,6 +1501,9 @@ const BOX_THEMES: Record<string, { box: string; lid: string; ribbon: string; bow
   "sunrise":        { box: "#fed7aa", lid: "#fb923c", ribbon: "#fca5a5", bow: "#f97316" },
   "mothers-day":    { box: "#C8A8E9", lid: "#a78bca", ribbon: "#FFB7C5", bow: "#FFD700" },
   "fathers-day":    { box: "#1A2E4A", lid: "#152540", ribbon: "#C9A84C", bow: "#FFD700" },
+  "smoke-amber":    { box: "#2d1f0a", lid: "#1a1008", ribbon: "#C9873A", bow: "#E8A855" },
+  "carbon-steel":   { box: "#1a1f2e", lid: "#0d0d0d", ribbon: "#38bdf8", bow: "#60c8f8" },
+  "electric-night": { box: "#1a0030", lid: "#0a0015", ribbon: "#8b5cf6", bow: "#a78bfa" },
 };
 
 // phase: 0=idle 1=rising 2=shaking 3=lid-pops 4=flash
@@ -1244,6 +1681,24 @@ function playExperienceSound(exp: string) {
         { f: hz.E4, t: 0.22, d: 1.8, g: 0.16 },
         { f: hz.G4, t: 0.44, d: 1.8, g: 0.16 },
         { f: hz.B4, t: 0.66, d: 2.0, g: 0.20 },
+      ],
+      "smoke-amber":     [
+        { f: hz.G4, t: 0,    d: 2.8, g: 0.14 },
+        { f: hz.B4, t: 0.35, d: 2.8, g: 0.12 },
+        { f: hz.D5, t: 0.7,  d: 2.5, g: 0.14 },
+      ],
+      "carbon-steel":    [
+        { f: hz.E6, t: 0,    d: 0.08, g: 0.30 },
+        { f: hz.G6, t: 0.12, d: 0.08, g: 0.22 },
+        { f: hz.E6, t: 0.28, d: 0.08, g: 0.18 },
+        { f: hz.C6, t: 0.50, d: 1.2,  g: 0.14 },
+      ],
+      "electric-night":  [
+        { f: hz.C5, t: 0,    d: 0.10, g: 0.40 },
+        { f: hz.E5, t: 0.06, d: 0.10, g: 0.38 },
+        { f: hz.G5, t: 0.12, d: 0.10, g: 0.36 },
+        { f: hz.C6, t: 0.18, d: 0.10, g: 0.44 },
+        { f: hz.E6, t: 0.24, d: 0.55, g: 0.50 },
       ],
     };
 
@@ -2107,14 +2562,20 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
         </div>
       )}
 
-      {/* Midnight Stars starfield */}
-      {isOpen && isDark && <StarfieldBg />}
+      {/* Starfield — midnight-stars + carbon-steel */}
+      {isOpen && (experience === "midnight-stars" || experience === "carbon-steel") && <StarfieldBg />}
 
       {/* Golden Hour bokeh */}
       {isOpen && experience === "golden-hour" && <GoldenHourBokeh />}
 
       {/* Sunrise light rays */}
       {isOpen && experience === "sunrise" && <SunriseLightRay />}
+
+      {/* Smoke & Amber rising embers */}
+      {isOpen && experience === "smoke-amber" && <SmokeEmberBg />}
+
+      {/* Carbon/Steel ambient lightning */}
+      {isOpen && experience === "carbon-steel" && <CarbonLightningBg />}
 
       {/* ── Pre-reveal overlay ── */}
       <AnimatePresence>

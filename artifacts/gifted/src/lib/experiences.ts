@@ -7,7 +7,10 @@ export type ExperienceId =
   | "snow-flurry"
   | "sunrise"
   | "mothers-day"
-  | "fathers-day";
+  | "fathers-day"
+  | "smoke-amber"
+  | "carbon-steel"
+  | "electric-night";
 
 export const DEFAULT_EXPERIENCE: ExperienceId = "confetti-burst";
 
@@ -106,6 +109,33 @@ export const EXPERIENCE_LIST: ExperienceMeta[] = [
     tagline: "Steady & celebrated",
     suggestedFor: ["Father's Day"],
     palette: { from: "#1A2E4A", via: "#3A6B9E", to: "#C9A84C" },
+    isDark: true,
+    premium: false,
+  },
+  {
+    id: "smoke-amber",
+    name: "Smoke & Amber",
+    tagline: "Dark & premium",
+    suggestedFor: ["Birthday", "Congratulations", "Just Because"],
+    palette: { from: "#1a1008", via: "#2d1f0a", to: "#4a2e0c" },
+    isDark: true,
+    premium: false,
+  },
+  {
+    id: "carbon-steel",
+    name: "Carbon & Steel",
+    tagline: "Sharp & powerful",
+    suggestedFor: ["Graduation", "Congratulations", "Just Because"],
+    palette: { from: "#0d0d0d", via: "#1a1f2e", to: "#0f1929" },
+    isDark: true,
+    premium: false,
+  },
+  {
+    id: "electric-night",
+    name: "Electric Night",
+    tagline: "Bold & electric",
+    suggestedFor: ["Birthday", "Congratulations", "Just Because"],
+    palette: { from: "#0a0015", via: "#110022", to: "#0d001a" },
     isDark: true,
     premium: false,
   },
