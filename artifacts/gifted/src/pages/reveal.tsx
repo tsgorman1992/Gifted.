@@ -3141,9 +3141,12 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                     borderColor: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))",
                   }}
                 >
-                  <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                  <a
+                    href="/features"
+                    className={`text-xs font-semibold tracking-widest uppercase mb-3 block hover:opacity-70 transition-opacity ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}
+                  >
                     gifted<span className="text-primary">.</span>
-                  </p>
+                  </a>
 
                   {/* ── Sign-up nudge (primary) — shown only when not yet authed/done/dismissed ── */}
                   {!endCardDone && !endCardDismissed && (

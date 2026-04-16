@@ -793,6 +793,24 @@ export default function RedeemPage() {
                   </div>
                 </motion.div>
 
+                {/* ── Send a moment CTA ── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.55, duration: 0.4 }}
+                  className="w-full text-center"
+                >
+                  <p className="text-sm text-muted-foreground">
+                    Loved the experience?{" "}
+                    <a
+                      href="/features"
+                      className="font-medium text-foreground underline underline-offset-2 hover:text-primary transition-colors"
+                    >
+                      Send a moment like this.
+                    </a>
+                  </p>
+                </motion.div>
+
                 {/* ── Account nudge ── */}
                 {!nudgeDismissed && (
                   <motion.div
