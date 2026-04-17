@@ -89,12 +89,14 @@ router.get("/admin/stats", async (req, res) => {
       ? paidWithAmount.reduce((sum, g) => sum + parseFloat(g.amount!), 0) / paidWithAmount.length
       : 0;
 
-    // Open rate = opened paid gifts / all paid gifts
+    // Open rate = opened paid gifts / all paid gifts (includes free gifts)
     const paidOpened = paidGifts.filter(g => g.openedAt != null).length;
     const openRate = paid > 0 ? Math.round((paidOpened / paid) * 100) : 0;
 
-    // Redeem rate = redeemed / opened paid
-    const redeemRate = paidOpened > 0 ? Math.round((redeemed / paidOpened) * 100) : 0;
+    // Redeem rate = redeemed cash gifts / opened cash gifts only
+    // Free gifts (no amount) are excluded — they can never be redeemed
+    const paidOpenedWithAmount = paidGifts.filter(g => g.openedAt != null && g.amount && parseFloat(g.amount) > 0).length;
+    const redeemRate = paidOpenedWithAmount > 0 ? Math.round((redeemed / paidOpenedWithAmount) * 100) : 0;
 
     // Repeat senders — senderUserIds with > 1 paid gift
     const senderCounts: Record<string, number> = {};
@@ -398,10 +400,11 @@ router.get("/admin/trends", async (req, res) => {
     const giftMonthlyRaw = await db.execute(sql`
       SELECT
         to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month,
-        COUNT(*) FILTER (WHERE paid = true)                                          AS gift_count,
-        COALESCE(SUM(amount::numeric) FILTER (WHERE paid = true), 0)                AS volume,
-        COUNT(*) FILTER (WHERE paid = true AND opened_at IS NOT NULL)               AS opens,
-        COUNT(*) FILTER (WHERE paid = true AND redeemed_at IS NOT NULL)             AS redeems
+        COUNT(*) FILTER (WHERE paid = true)                                                                          AS gift_count,
+        COALESCE(SUM(amount::numeric) FILTER (WHERE paid = true), 0)                                                AS volume,
+        COUNT(*) FILTER (WHERE paid = true AND opened_at IS NOT NULL)                                               AS opens,
+        COUNT(*) FILTER (WHERE paid = true AND opened_at IS NOT NULL AND amount IS NOT NULL AND amount::numeric > 0) AS opens_with_amount,
+        COUNT(*) FILTER (WHERE paid = true AND redeemed_at IS NOT NULL AND amount IS NOT NULL AND amount::numeric > 0) AS redeems
       FROM gifts
       WHERE created_at >= NOW() - INTERVAL '12 months'
       GROUP BY month
@@ -454,9 +457,10 @@ router.get("/admin/trends", async (req, res) => {
     const monthly = months.map(m => {
       const g = giftMap[m] ?? {};
       const u = userMap[m] ?? {};
-      const giftCount = Number(g.gift_count ?? 0);
-      const opens     = Number(g.opens     ?? 0);
-      const redeems   = Number(g.redeems   ?? 0);
+      const giftCount       = Number(g.gift_count        ?? 0);
+      const opens           = Number(g.opens             ?? 0);
+      const opensWithAmount = Number(g.opens_with_amount ?? 0);
+      const redeems         = Number(g.redeems           ?? 0);
       return {
         month:      m,
         giftCount,
@@ -464,8 +468,8 @@ router.get("/admin/trends", async (req, res) => {
         feeRevenue: parseFloat(String(g.volume ?? "0")) * 0.08,
         opens,
         redeems,
-        openRate:   giftCount > 0 ? Math.round((opens   / giftCount) * 100) : 0,
-        redeemRate: opens     > 0 ? Math.round((redeems / opens)     * 100) : 0,
+        openRate:   giftCount       > 0 ? Math.round((opens   / giftCount)       * 100) : 0,
+        redeemRate: opensWithAmount > 0 ? Math.round((redeems / opensWithAmount) * 100) : 0,
         newUsers:   Number(u.new_users ?? 0),
       };
     });
