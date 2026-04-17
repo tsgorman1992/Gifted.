@@ -110,11 +110,17 @@ const METHOD_COLORS: Record<string, string> = {
 };
 const EXP_LABELS: Record<string, string> = {
   "confetti-burst": "Confetti Burst",
-  "midnight-stars": "Midnight Stars",
   "golden-hour":    "Golden Hour",
-  "ocean-breeze":   "Ocean Breeze",
-  "rose-garden":    "Rose Garden",
-  "aurora-dreams":  "Aurora Dreams",
+  "garden-bloom":   "Garden Bloom",
+  "midnight-stars": "Midnight Stars",
+  "rose-petal":     "Rose Petal",
+  "snow-flurry":    "Snow Flurry",
+  "sunrise":        "Sunrise",
+  "mothers-day":    "For Mom",
+  "fathers-day":    "For Dad",
+  "smoke-amber":    "Smoke & Amber",
+  "carbon-steel":   "Carbon & Steel",
+  "electric-night": "Electric Night",
 };
 
 function fmt(iso: string | null) {
@@ -592,8 +598,10 @@ export default function AdminPage() {
     }
   }, [key, trendsLoaded]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [s, c, g, u] = await Promise.all([
         fetch(`${API}/api/admin/stats`,    { headers }).then(r => r.json()),
@@ -605,8 +613,9 @@ export default function AdminPage() {
       setCashouts(Array.isArray(c) ? c : []);
       setGiftRows(Array.isArray(g) ? g : []);
       setUserRows(Array.isArray(u) ? u : []);
+      setLastUpdated(new Date());
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [key]);
 
@@ -624,7 +633,12 @@ export default function AdminPage() {
     finally { setChecking(false); }
   }
 
-  useEffect(() => { if (authed) load(); }, [authed, load]);
+  useEffect(() => {
+    if (!authed) return;
+    load();
+    const interval = setInterval(() => load(true), 30_000);
+    return () => clearInterval(interval);
+  }, [authed, load]);
 
   function copyHandle(text: string) {
     navigator.clipboard.writeText(text).then(() => {
@@ -822,8 +836,13 @@ export default function AdminPage() {
             <span className="text-muted-foreground text-xs font-medium px-2 py-0.5 bg-muted rounded-full whitespace-nowrap">operator</span>
           </div>
           <div className="flex items-center gap-1.5">
+            {lastUpdated && (
+              <span className="text-[10px] text-muted-foreground/60 hidden sm:block whitespace-nowrap">
+                {lastUpdated.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+              </span>
+            )}
             <button
-              onClick={load}
+              onClick={() => load()}
               disabled={loading}
               title="Refresh"
               className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40"

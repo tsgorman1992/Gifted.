@@ -64,9 +64,8 @@ router.get("/admin/stats", async (req, res) => {
       db.select({ count: count() }).from(usersTable).where(gte(usersTable.createdAt, oneWeekAgo)),
     ]);
 
-    const paidGifts    = all.filter(g => g.paid);
-    const openedGifts  = all.filter(g => g.openedAt != null);
-    const redeemedGifts = all.filter(g => g.redeemedAt != null);
+    const paidGifts     = all.filter(g => g.paid);
+    const redeemedGifts = paidGifts.filter(g => g.redeemedAt != null);
 
     const total          = all.length;
     const paid           = paidGifts.length;
