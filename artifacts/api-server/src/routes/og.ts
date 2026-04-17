@@ -22,6 +22,11 @@ const EXPERIENCES: Record<string, ExperiencePalette> = {
   "rose-petal":      { from: "#FFB7C5", via: "#FF8FAB", to: "#E8A7B1", isDark: false, name: "Rose Petal",      tagline: "Elegant & timeless" },
   "snow-flurry":     { from: "#BDE0FE", via: "#A2D2FF", to: "#CDB4DB", isDark: false, name: "Snow Flurry",     tagline: "Crisp & festive" },
   "sunrise":         { from: "#FFCBA4", via: "#FF9A8B", to: "#FF6A88", isDark: false, name: "Sunrise",         tagline: "Warm & heartfelt" },
+  "mothers-day":     { from: "#C8A8E9", via: "#FFB7C5", to: "#FFCBA4", isDark: false, name: "For Mom",         tagline: "Tender & blooming" },
+  "fathers-day":     { from: "#1A2E4A", via: "#3A6B9E", to: "#C9A84C", isDark: true,  name: "For Dad",         tagline: "Steady & celebrated" },
+  "smoke-amber":     { from: "#1a1008", via: "#2d1f0a", to: "#4a2e0c", isDark: true,  name: "Smoke & Amber",   tagline: "Dark & premium" },
+  "carbon-steel":    { from: "#0d0d0d", via: "#1a1f2e", to: "#0f1929", isDark: true,  name: "Carbon & Steel",  tagline: "Sharp & powerful" },
+  "electric-night":  { from: "#0a0015", via: "#110022", to: "#0d001a", isDark: true,  name: "Electric Night",  tagline: "Bold & electric" },
 };
 
 const FALLBACK = EXPERIENCES["golden-hour"];
