@@ -580,8 +580,8 @@ export default function AdminPage() {
 
   const headers = { "x-admin-key": key };
 
-  const loadTrends = useCallback(async () => {
-    if (trendsLoaded) return;
+  const loadTrends = useCallback(async (force = false) => {
+    if (trendsLoaded && !force) return;
     setTrendsLoading(true);
     setTrendsError(null);
     try {
@@ -842,7 +842,7 @@ export default function AdminPage() {
               </span>
             )}
             <button
-              onClick={() => load()}
+              onClick={() => { load(); loadTrends(true); }}
               disabled={loading}
               title="Refresh"
               className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40"
