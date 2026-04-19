@@ -503,11 +503,13 @@ async function sendOccasionReminders() {
     if (et.hour < 8 || et.hour >= 9) return;
 
     for (const daysAway of REMINDER_DAYS) {
-      // Compute target date in ET by advancing the ET wall-clock day
-      const etMidnight = new Date(`${et.year}-${String(et.month).padStart(2, "0")}-${String(et.day).padStart(2, "0")}T00:00:00`);
-      const targetEt = getEasternDateParts(new Date(etMidnight.getTime() + daysAway * 86_400_000));
-      const targetMonth = targetEt.month;
-      const targetDay = targetEt.day;
+      // Compute target date by doing pure UTC calendar arithmetic on ET date components.
+      // Avoids timezone confusion — constructing a Date from "YYYY-MMT00:00:00" without
+      // a timezone suffix parses as server local time (UTC on Replit), which would shift
+      // the date back by the ET offset when converted back to ET.
+      const targetDate  = new Date(Date.UTC(et.year, et.month - 1, et.day + daysAway));
+      const targetMonth = targetDate.getUTCMonth() + 1;
+      const targetDay   = targetDate.getUTCDate();
 
       // Fixed-date occasions matching today/7d
       const fixedUpcoming = await db
