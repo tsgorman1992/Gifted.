@@ -83,7 +83,7 @@ async function sendScheduledGifts() {
 
     for (const gift of pending) {
       try {
-        const giftUrl    = `${appOrigin}/open/${gift.id}`;
+        const giftUrl    = `${appOrigin}/share/${gift.id}`;
         const senderUrl  = `${appOrigin}/preview?gift_id=${gift.id}`;
 
         // SMS body — sender taps the link to go straight to their share screen
