@@ -803,8 +803,8 @@ export default function PreviewPage() {
   const [contactPhone,    setContactPhone]    = useState("");
   const [contactEmail,    setContactEmail]    = useState("");
   const [contactOccasion, setContactOccasion] = useState("Birthday");
-  const [contactMonth,    setContactMonth]    = useState(1);
-  const [contactDay,      setContactDay]      = useState(1);
+  const [contactMonth,    setContactMonth]    = useState(() => new Date().getMonth() + 1);
+  const [contactDay,      setContactDay]      = useState(() => new Date().getDate());
   const [extraOccasions,  setExtraOccasions]  = useState<{ label: string; month: number; day: number }[]>([]);
   const [contactSaving,   setContactSaving]   = useState(false);
   const [contactSaved,    setContactSaved]    = useState(false);
