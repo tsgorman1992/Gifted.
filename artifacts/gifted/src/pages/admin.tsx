@@ -705,9 +705,8 @@ export default function AdminPage() {
       if (r.ok) {
         const d = await r.json();
         setGhostMsg(`Deleted ${d.deleted} orphaned draft${d.deleted !== 1 ? "s" : ""}.`);
-        setGhostCount(0);
         setGhostConfirm(false);
-        setGiftRows(prev => prev.filter(g => g.senderUserId !== null || g.paid));
+        await Promise.all([load(true), loadGhostCount()]);
         setTimeout(() => setGhostMsg(null), 4000);
       } else {
         setGhostMsg("Cleanup failed. Try again.");
