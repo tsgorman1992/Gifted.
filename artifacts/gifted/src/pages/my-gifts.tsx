@@ -358,6 +358,22 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
     }
   }, [gift.id, queryClient]);
 
+  const handleDeleteDraft = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/gifts/${gift.id}/delete-draft`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      await queryClient.invalidateQueries({ queryKey: ["my-gifts"] });
+    } catch {
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
+  }, [gift.id, queryClient]);
+
   // Simple text timeline
   const isScheduled = !!gift.scheduledFor;
   const giftHasBalance = hasBalance(gift);
@@ -477,6 +493,26 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                 >
                   Close
                 </button>
+              </>
+            ) : status === "draft" ? (
+              <>
+                <span className="text-xs text-muted-foreground">Permanently delete this draft? This can't be undone.</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                    className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteDraft}
+                    disabled={isDeleting}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? "Deleting…" : "Delete draft"}
+                  </button>
+                </div>
               </>
             ) : (
               <>

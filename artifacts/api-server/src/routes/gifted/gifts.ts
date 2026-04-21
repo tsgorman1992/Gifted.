@@ -1785,4 +1785,55 @@ router.post("/admin/gifts/deduplicate", async (req, res) => {
   }
 });
 
+// DELETE /api/gifted/gifts/:id/delete-draft
+// Permanently deletes a draft gift owned by the authenticated user.
+// Safety guards (all enforced server-side):
+//   - Gift must belong to the requesting user
+//   - paid must be false  (paid gifts are never deleteable this way)
+//   - scheduledFor must be null (scheduled gifts are never touched)
+router.delete("/gifted/gifts/:id/delete-draft", async (req, res) => {
+  const user = (req as any).user;
+  if (!user) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  try {
+    const { id } = req.params;
+    const [gift] = await db
+      .select({
+        id:           gifts.id,
+        senderUserId: gifts.senderUserId,
+        paid:         gifts.paid,
+        scheduledFor: gifts.scheduledFor,
+      })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+    if (gift.senderUserId !== user.id) {
+      res.status(403).json({ error: "Not your gift" });
+      return;
+    }
+    if (gift.paid) {
+      res.status(409).json({ error: "Paid gifts cannot be deleted" });
+      return;
+    }
+    if (gift.scheduledFor) {
+      res.status(409).json({ error: "Scheduled gifts cannot be deleted" });
+      return;
+    }
+
+    await db.delete(gifts).where(eq(gifts.id, id));
+    console.log(`[gifts] Draft ${id} deleted by user ${user.id}`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[gifts] delete-draft error:", err);
+    res.status(500).json({ error: "Failed to delete draft" });
+  }
+});
+
 export default router;

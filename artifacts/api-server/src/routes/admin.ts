@@ -583,4 +583,45 @@ router.post("/admin/gifts/:id/heal-payment", async (req, res) => {
   }
 });
 
+// GET /api/admin/ghost-drafts — count orphaned draft records (dry-run)
+router.get("/admin/ghost-drafts", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const result = await db.execute(sql`
+      SELECT COUNT(*) AS cnt FROM gifts
+      WHERE sender_user_id IS NULL
+        AND paid = false
+        AND scheduled_for IS NULL
+        AND created_at < NOW() - INTERVAL '14 days'
+    `);
+    res.json({ count: Number((result.rows[0] as Record<string, unknown>)?.cnt ?? 0) });
+  } catch (err) {
+    console.error("[admin] ghost-drafts count error:", err);
+    res.status(500).json({ error: "Failed to count ghost drafts" });
+  }
+});
+
+// DELETE /api/admin/ghost-drafts — permanently delete orphaned draft records
+// Safety rules (enforced in SQL): senderUserId IS NULL, paid = false,
+// scheduledFor IS NULL, older than 14 days. Paid gifts are never touched.
+router.delete("/admin/ghost-drafts", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const result = await db.execute(sql`
+      DELETE FROM gifts
+      WHERE sender_user_id IS NULL
+        AND paid = false
+        AND scheduled_for IS NULL
+        AND created_at < NOW() - INTERVAL '14 days'
+      RETURNING id
+    `);
+    const deleted = result.rows.length;
+    console.log(`[admin] ghost drafts cleaned: ${deleted} records deleted`);
+    res.json({ ok: true, deleted });
+  } catch (err) {
+    console.error("[admin] ghost-drafts delete error:", err);
+    res.status(500).json({ error: "Failed to delete ghost drafts" });
+  }
+});
+
 export default router;

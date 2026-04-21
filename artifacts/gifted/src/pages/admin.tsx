@@ -567,6 +567,12 @@ export default function AdminPage() {
   const [wiping, setWiping]       = useState(false);
   const [wipeMsg, setWipeMsg]     = useState<string | null>(null);
 
+  // Ghost draft cleanup
+  const [ghostCount, setGhostCount]       = useState<number | null>(null);
+  const [ghostConfirm, setGhostConfirm]   = useState(false);
+  const [ghostCleaning, setGhostCleaning] = useState(false);
+  const [ghostMsg, setGhostMsg]           = useState<string | null>(null);
+
   // Transfer recipient modal
   const [transferGiftId, setTransferGiftId]             = useState<string | null>(null);
   const [transferGiftName, setTransferGiftName]         = useState("");
@@ -600,6 +606,13 @@ export default function AdminPage() {
 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+  const loadGhostCount = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/api/admin/ghost-drafts`, { headers });
+      if (r.ok) { const d = await r.json(); setGhostCount(Number(d.count ?? 0)); }
+    } catch { /* silent */ }
+  }, [key]);
+
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -614,10 +627,11 @@ export default function AdminPage() {
       setGiftRows(Array.isArray(g) ? g : []);
       setUserRows(Array.isArray(u) ? u : []);
       setLastUpdated(new Date());
+      loadGhostCount();
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [key]);
+  }, [key, loadGhostCount]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -681,6 +695,28 @@ export default function AdminPage() {
         setCashouts(prev => prev.filter(c => c.id !== id));
       }
     } finally { setDeletingGift(null); }
+  }
+
+  async function handleGhostCleanup() {
+    setGhostCleaning(true);
+    setGhostMsg(null);
+    try {
+      const r = await fetch(`${API}/api/admin/ghost-drafts`, { method: "DELETE", headers });
+      if (r.ok) {
+        const d = await r.json();
+        setGhostMsg(`Deleted ${d.deleted} orphaned draft${d.deleted !== 1 ? "s" : ""}.`);
+        setGhostCount(0);
+        setGhostConfirm(false);
+        setGiftRows(prev => prev.filter(g => g.senderUserId !== null || g.paid));
+        setTimeout(() => setGhostMsg(null), 4000);
+      } else {
+        setGhostMsg("Cleanup failed. Try again.");
+      }
+    } catch {
+      setGhostMsg("Could not connect. Try again.");
+    } finally {
+      setGhostCleaning(false);
+    }
   }
 
   async function handleWipe() {
@@ -917,6 +953,48 @@ export default function AdminPage() {
               View cashouts →
             </span>
           </button>
+        )}
+
+        {/* ── Ghost draft cleanup ──────────────────────────────────── */}
+        {ghostCount !== null && ghostCount > 0 && (
+          <div className="flex items-center justify-between gap-3 bg-muted/50 border border-border rounded-2xl px-4 sm:px-5 py-3.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Trash2 className="w-4 h-4 text-muted-foreground shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{ghostCount}</span> orphaned draft{ghostCount !== 1 ? "s" : ""} older than 14 days
+              </p>
+            </div>
+            {ghostMsg ? (
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{ghostMsg}</span>
+            ) : ghostConfirm ? (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => setGhostConfirm(false)}
+                  className="px-2.5 py-1 rounded-lg text-xs text-muted-foreground hover:bg-secondary transition-colors"
+                  disabled={ghostCleaning}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGhostCleanup}
+                  disabled={ghostCleaning}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+                >
+                  {ghostCleaning ? "Deleting…" : `Delete ${ghostCount}`}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setGhostConfirm(true)}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0 whitespace-nowrap"
+              >
+                Clean up →
+              </button>
+            )}
+          </div>
+        )}
+        {ghostMsg && ghostCount === 0 && (
+          <p className="text-xs text-muted-foreground text-center">{ghostMsg}</p>
         )}
 
         {/* ── Tab bar ─────────────────────────────────────────────────── */}
