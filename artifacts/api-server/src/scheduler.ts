@@ -83,18 +83,12 @@ async function sendScheduledGifts() {
 
     for (const gift of pending) {
       try {
-        const giftUrl    = `${appOrigin}/share/${gift.id}`;
-        const senderUrl  = `${appOrigin}/preview?gift_id=${gift.id}`;
+        const readyUrl = `${appOrigin}/api/ready/${gift.id}`;
 
-        // SMS body — sender taps the link to go straight to their share screen
+        // SMS body — single link so iMessage/Android Messages unfurl the rich gift preview card
         const smsBody = [
-          `gifted. ✨ Your moment for ${gift.recipientName} is ready to send!`,
-          ``,
-          `Tap here to open and share it:`,
-          senderUrl,
-          ``,
-          `Forward this link directly to ${gift.recipientName}:`,
-          giftUrl,
+          `gifted. ✨ Your moment for ${gift.recipientName} is ready — tap to open and share:`,
+          readyUrl,
           ``,
           `Reply STOP to opt out.`,
         ].join("\n");

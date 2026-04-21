@@ -11,6 +11,7 @@ import contactsRouter from "./gifted/contacts";
 import physicalGiftsRouter from "./gifted/physical-gifts";
 import storageRouter from "./storage";
 import shareRouter from "./share";
+import readyRouter from "./ready";
 import ogRouter from "./og";
 import adminRouter from "./admin";
 
@@ -28,6 +29,7 @@ router.use(contactsRouter);
 router.use(physicalGiftsRouter);
 router.use(storageRouter);
 router.use(shareRouter);
+router.use(readyRouter);
 router.use("/og", ogRouter);
 router.use(adminRouter);
 
