@@ -326,6 +326,16 @@ router.post("/gifted/redeem", async (req, res) => {
       })
       .where(eq(gifts.id, giftId));
 
+    // Sync payout preference to recipient's account profile so the
+    // Accounts tab in admin shows it and future gifts pre-fill it.
+    const recipientUserId = callerUserId ?? recipientIdUpdate.recipientUserId ?? null;
+    if (recipientUserId && payoutMethod && payoutHandle) {
+      await db
+        .update(usersTable)
+        .set({ payoutMethod, payoutHandle })
+        .where(eq(usersTable.id, recipientUserId));
+    }
+
     const amount = gift.amount ? `$${parseFloat(gift.amount).toFixed(2)}` : "";
 
     // Notify sender via SMS

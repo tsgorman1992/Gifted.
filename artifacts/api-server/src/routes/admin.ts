@@ -262,6 +262,39 @@ router.patch("/admin/gifts/:id/mark-paid", async (req, res) => {
   }
 });
 
+// POST /api/admin/backfill-user-payouts — one-time: copies payout method+handle
+// from each user's most recent gift redemption onto their user profile row.
+router.post("/admin/backfill-user-payouts", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const result = await db.execute(sql`
+      UPDATE users u
+      SET
+        payout_method = g.payout_method,
+        payout_handle = g.payout_handle
+      FROM (
+        SELECT DISTINCT ON (recipient_user_id)
+          recipient_user_id,
+          payout_method,
+          payout_handle
+        FROM gifts
+        WHERE recipient_user_id IS NOT NULL
+          AND payout_method IS NOT NULL
+          AND payout_handle IS NOT NULL
+        ORDER BY recipient_user_id, redeemed_at DESC NULLS LAST
+      ) g
+      WHERE u.id = g.recipient_user_id
+        AND u.payout_method IS NULL
+      RETURNING u.id, u.first_name, u.payout_method, u.payout_handle
+    `);
+    console.log(`[admin] backfill-user-payouts: updated ${result.rows.length} users`);
+    res.json({ updated: result.rows.length, rows: result.rows });
+  } catch (err) {
+    console.error("[admin] backfill-user-payouts error:", err);
+    res.status(500).json({ error: "Backfill failed" });
+  }
+});
+
 // DELETE /api/admin/gifts/:id — permanently removes a single gift record
 router.delete("/admin/gifts/:id", async (req, res) => {
   if (!checkAuth(req, res)) return;
