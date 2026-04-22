@@ -1738,7 +1738,7 @@ function ScrollHint({ isDark }: { isDark: boolean }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          className="flex flex-col items-center justify-center pt-3 pb-1 pointer-events-none"
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pointer-events-none"
         >
           <motion.div
             animate={{ y: [0, 6, 0] }}
