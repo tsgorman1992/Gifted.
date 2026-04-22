@@ -288,9 +288,36 @@ router.post("/gifted/gifts", async (req, res) => {
       return;
     }
 
-    const id = nanoid(12);
     const senderUserId  = (req as any).user?.id    ?? null;
     const senderEmail   = (req as any).user?.email ?? null;
+
+    // Server-side dedup: if an authenticated sender creates the same gift
+    // (same recipient + same amount) within 30 seconds, return the existing
+    // record instead of inserting a duplicate.
+    if (senderUserId) {
+      const thirtySecsAgo = new Date(Date.now() - 30_000);
+      const normalizedAmount = amount && parseFloat(amount) > 0 ? amount : null;
+      const amountClause = normalizedAmount
+        ? eq(gifts.amount, normalizedAmount)
+        : isNull(gifts.amount);
+      const [recent] = await db
+        .select({ id: gifts.id })
+        .from(gifts)
+        .where(and(
+          eq(gifts.senderUserId, senderUserId),
+          eq(gifts.recipientName, recipientName),
+          amountClause,
+          gte(gifts.createdAt, thirtySecsAgo),
+        ))
+        .limit(1);
+      if (recent) {
+        console.log(`[gifts] dedup: returning existing gift ${recent.id} for sender ${senderUserId}`);
+        res.json({ id: recent.id });
+        return;
+      }
+    }
+
+    const id = nanoid(12);
     const senderPhone   = typeof senderPhoneRaw === "string" && senderPhoneRaw.trim() ? senderPhoneRaw.trim() : null;
 
     const scheduledForRaw = req.body.scheduledFor as string | undefined;

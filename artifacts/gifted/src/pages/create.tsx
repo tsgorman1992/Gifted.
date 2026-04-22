@@ -947,6 +947,7 @@ export default function CreatePage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const submittingRef = useRef(false);
 
   // Edit mode — set when launched with ?edit_gift_id=GIFT_ID from the preview page
   const [editGiftId,     setEditGiftId]     = useState<string | null>(null);
@@ -1471,6 +1472,9 @@ export default function CreatePage() {
   };
 
   const handlePreview = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    try {
     if (isUploading) {
       setStepError("Please wait — your video is still uploading.");
       return;
@@ -1634,6 +1638,9 @@ export default function CreatePage() {
       setStepError(err instanceof Error ? err.message : "Something went wrong — please try again.");
       setIsCreating(false);
       setEditSaving(false);
+    }
+    } finally {
+      submittingRef.current = false;
     }
   };
 
