@@ -296,9 +296,11 @@ router.post("/gifted/gifts", async (req, res) => {
     // record instead of inserting a duplicate.
     if (senderUserId) {
       const thirtySecsAgo = new Date(Date.now() - 30_000);
-      const normalizedAmount = amount && parseFloat(amount) > 0 ? amount : null;
+      const normalizedAmount = amount && parseFloat(amount) > 0
+        ? String(parseFloat(amount))
+        : null;
       const amountClause = normalizedAmount
-        ? eq(gifts.amount, normalizedAmount)
+        ? sql`CAST(${gifts.amount} AS DECIMAL) = ${parseFloat(normalizedAmount)}`
         : isNull(gifts.amount);
       const [recent] = await db
         .select({ id: gifts.id })
