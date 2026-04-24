@@ -171,9 +171,10 @@ router.get("/admin/gifts", async (req, res) => {
         senderEmail:     gifts.senderEmail,
         payoutMethod:    gifts.payoutMethod,
         payoutHandle:    gifts.payoutHandle,
-        reaction:        gifts.reaction,
-        recipientUserId: gifts.recipientUserId,
-        senderUserId:    gifts.senderUserId,
+        reaction:            gifts.reaction,
+        recipientUserId:     gifts.recipientUserId,
+        senderUserId:        gifts.senderUserId,
+        redemptionVerified:  gifts.redemptionVerified,
       })
       .from(gifts)
       .orderBy(desc(gifts.createdAt));

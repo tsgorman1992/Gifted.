@@ -5,7 +5,7 @@ import {
   ExternalLink, Copy, Check, Users, BadgeCheck, X,
   TrendingUp, Percent, Repeat2, Sparkles, Search, Trash2,
   AlertTriangle, ChevronDown, ChevronUp, BarChart2, ArrowLeft,
-  ArrowLeftRight, UserX, UserCheck,
+  ArrowLeftRight, UserX, UserCheck, ShieldOff,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line,
@@ -63,6 +63,7 @@ interface GiftRow {
   reaction: string | null;
   recipientUserId: string | null;
   senderUserId: string | null;
+  redemptionVerified: boolean;
 }
 
 interface TransferUser {
@@ -697,6 +698,18 @@ export default function AdminPage() {
     } finally { setDeletingGift(null); }
   }
 
+  const [bypassingVerification, setBypassingVerification] = useState<string | null>(null);
+  async function bypassVerification(id: string, recipientName: string) {
+    if (!window.confirm(`Bypass phone verification for ${recipientName}? They'll be able to redeem without entering a code.`)) return;
+    setBypassingVerification(id);
+    try {
+      const r = await fetch(`${API}/api/admin/gifts/${id}/bypass-verification`, { method: "POST", headers });
+      if (r.ok) {
+        setGiftRows(prev => prev.map(g => g.id === id ? { ...g, redemptionVerified: true } : g));
+      }
+    } finally { setBypassingVerification(null); }
+  }
+
   async function handleGhostCleanup() {
     setGhostCleaning(true);
     setGhostMsg(null);
@@ -1225,6 +1238,18 @@ export default function AdminPage() {
                                 {markingGiftPaid === g.id
                                   ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                                   : <BadgeCheck className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
+                            {g.openedAt && !g.redeemedAt && !g.redemptionVerified && (
+                              <button
+                                onClick={() => bypassVerification(g.id, g.recipientName)}
+                                disabled={bypassingVerification === g.id}
+                                className="text-sky-500 hover:text-sky-600 transition-colors p-1.5"
+                                title="Bypass phone verification (use when recipient can't receive the SMS code)"
+                              >
+                                {bypassingVerification === g.id
+                                  ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  : <ShieldOff className="w-3.5 h-3.5" />}
                               </button>
                             )}
                             <button
