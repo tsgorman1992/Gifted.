@@ -1621,6 +1621,7 @@ export default function PreviewPage() {
                         value={contactName}
                         onChange={e => setContactName(e.target.value)}
                         placeholder="Name"
+                        autoComplete="off"
                         className="w-full text-[16px] border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                       />
                       <div className="grid grid-cols-2 gap-2">
@@ -1629,6 +1630,7 @@ export default function PreviewPage() {
                           onChange={e => setContactPhone(formatContactPhone(e.target.value))}
                           placeholder="Phone (optional)"
                           type="tel"
+                          autoComplete="off"
                           className="text-[16px] border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                         <input
@@ -1636,6 +1638,7 @@ export default function PreviewPage() {
                           onChange={e => setContactEmail(e.target.value)}
                           placeholder="Email (optional)"
                           type="email"
+                          autoComplete="off"
                           className="text-[16px] border border-border rounded-xl px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />
                       </div>
