@@ -263,6 +263,25 @@ router.patch("/admin/gifts/:id/mark-paid", async (req, res) => {
   }
 });
 
+// POST /api/admin/gifts/:id/unhide-sender
+// Restores a gift to the sender's dashboard (reverses a sender soft-hide).
+router.post("/admin/gifts/:id/unhide-sender", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const updated = await db
+      .update(gifts)
+      .set({ senderHidden: false })
+      .where(eq(gifts.id, req.params.id))
+      .returning({ id: gifts.id, senderHidden: gifts.senderHidden });
+    if (updated.length === 0) { res.status(404).json({ error: "Gift not found" }); return; }
+    console.log(`[admin] sender-hidden cleared for gift: ${req.params.id}`);
+    res.json({ ok: true, ...updated[0] });
+  } catch (err) {
+    console.error("[admin] unhide-sender error:", err);
+    res.status(500).json({ error: "Failed to unhide gift" });
+  }
+});
+
 // POST /api/admin/gifts/:id/bypass-verification
 // Marks phone verification as passed so recipient can redeem without OTP.
 // Use when the sender entered the wrong number or the SMS was never received.
