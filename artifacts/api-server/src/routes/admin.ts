@@ -262,6 +262,52 @@ router.patch("/admin/gifts/:id/mark-paid", async (req, res) => {
   }
 });
 
+// POST /api/admin/gifts/:id/bypass-verification
+// Marks phone verification as passed so recipient can redeem without OTP.
+// Use when the sender entered the wrong number or the SMS was never received.
+router.post("/admin/gifts/:id/bypass-verification", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const updated = await db
+      .update(gifts)
+      .set({ redemptionVerified: true })
+      .where(eq(gifts.id, req.params.id))
+      .returning({ id: gifts.id, redemptionVerified: gifts.redemptionVerified });
+    if (updated.length === 0) { res.status(404).json({ error: "Gift not found" }); return; }
+    console.log(`[admin] phone verification bypassed for gift: ${req.params.id}`);
+    res.json({ ok: true, ...updated[0] });
+  } catch (err) {
+    console.error("[admin] bypass-verification error:", err);
+    res.status(500).json({ error: "Failed to bypass verification" });
+  }
+});
+
+// PATCH /api/admin/gifts/:id/recipient-phone
+// Corrects the recipient phone number and resets verification so a fresh OTP
+// can be sent to the correct number.
+// Body: { phone: "+1xxxxxxxxxx" }
+router.patch("/admin/gifts/:id/recipient-phone", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const { phone } = req.body as { phone?: string };
+    if (!phone || typeof phone !== "string") {
+      res.status(400).json({ error: "phone is required" });
+      return;
+    }
+    const updated = await db
+      .update(gifts)
+      .set({ recipientPhone: phone, redemptionVerified: false })
+      .where(eq(gifts.id, req.params.id))
+      .returning({ id: gifts.id, recipientPhone: gifts.recipientPhone, redemptionVerified: gifts.redemptionVerified });
+    if (updated.length === 0) { res.status(404).json({ error: "Gift not found" }); return; }
+    console.log(`[admin] recipient phone updated for gift: ${req.params.id} → ${phone}`);
+    res.json({ ok: true, ...updated[0] });
+  } catch (err) {
+    console.error("[admin] recipient-phone error:", err);
+    res.status(500).json({ error: "Failed to update recipient phone" });
+  }
+});
+
 // POST /api/admin/backfill-user-payouts — one-time: copies payout method+handle
 // from each user's most recent gift redemption onto their user profile row.
 router.post("/admin/backfill-user-payouts", async (req, res) => {
