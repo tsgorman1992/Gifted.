@@ -162,6 +162,7 @@ export default function RedeemPage() {
               credentials: "include",
             }).catch(() => {});
             setScreen("success");
+            setTimeout(() => setLocation("/my-gifts"), 1800);
           }
         }
       })
@@ -346,6 +347,7 @@ export default function RedeemPage() {
       localStorage.removeItem("gifted_just_redeemed");
       setNudgeDone(true);
       setIsAuthenticated(true);
+      setTimeout(() => setLocation("/my-gifts"), 1800);
     } catch {
       setNudgeError("Unable to connect. Please try again.");
     } finally {
