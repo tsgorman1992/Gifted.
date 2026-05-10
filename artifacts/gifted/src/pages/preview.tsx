@@ -937,11 +937,16 @@ export default function PreviewPage() {
   const handleEdit = () => {
     localStorage.removeItem("gifted_paid_id");
     localStorage.removeItem("gifted_link_shared");
+    const currentGiftId = giftId;
     setGiftId(null);
     setShareUrl(null);
     setLinkShared(false);
     setPaymentStatus("idle");
-    setLocation("/create");
+    if (currentGiftId) {
+      setLocation(`/create?edit_gift_id=${currentGiftId}`);
+    } else {
+      setLocation("/create");
+    }
   };
 
   const handleEditPaid = () => {
