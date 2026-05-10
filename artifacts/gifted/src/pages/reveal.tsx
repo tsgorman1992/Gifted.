@@ -1412,39 +1412,46 @@ function PhotoCarousel({
         })}
       </div>
 
-      {/* Desktop prev/next arrows */}
+      {/* Prev/next arrows — always visible on mobile, hover on desktop */}
       {activeIdx > 0 && (
         <button
           onClick={() => scrollTo(activeIdx - 1)}
-          className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+          className="flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/80 backdrop-blur-sm items-center justify-center shadow-lg transition-opacity duration-200 z-10 opacity-80 md:opacity-0 md:group-hover:opacity-100"
+          aria-label="Previous photo"
         >
-          <ChevronLeft className="w-5 h-5 text-gray-800" />
+          <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-800" />
         </button>
       )}
       {activeIdx < photoUrls.length - 1 && (
         <button
           onClick={() => scrollTo(activeIdx + 1)}
-          className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+          className="flex absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/80 backdrop-blur-sm items-center justify-center shadow-lg transition-opacity duration-200 z-10 opacity-80 md:opacity-0 md:group-hover:opacity-100"
+          aria-label="Next photo"
         >
-          <ChevronRight className="w-5 h-5 text-gray-800" />
+          <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-800" />
         </button>
       )}
 
-      {/* Dot indicators */}
-      <div className="flex justify-center gap-2 mt-3">
-        {photoUrls.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => scrollTo(i)}
-            className="h-1.5 rounded-full transition-all duration-300"
-            style={{
-              width: i === activeIdx ? "1.5rem" : "0.375rem",
-              background: isDark
-                ? i === activeIdx ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"
-                : i === activeIdx ? "hsl(var(--primary))" : "hsl(var(--primary)/0.25)",
-            }}
-          />
-        ))}
+      {/* Counter + dots */}
+      <div className="flex flex-col items-center gap-1.5 mt-3">
+        <p className="text-xs font-medium tabular-nums" style={{ color: isDark ? "rgba(255,255,255,0.5)" : "hsl(var(--muted-foreground))" }}>
+          {activeIdx + 1} of {photoUrls.length}
+        </p>
+        <div className="flex justify-center gap-2">
+          {photoUrls.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => scrollTo(i)}
+              className="h-1.5 rounded-full transition-all duration-300"
+              style={{
+                width: i === activeIdx ? "1.5rem" : "0.375rem",
+                background: isDark
+                  ? i === activeIdx ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.3)"
+                  : i === activeIdx ? "hsl(var(--primary))" : "hsl(var(--primary)/0.25)",
+              }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

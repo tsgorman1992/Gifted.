@@ -567,10 +567,10 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
                   </span>
                   {status === "draft" && !gift.paid && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); setLocation(`/preview?gift_id=${gift.id}`); }}
+                      onClick={(e) => { e.stopPropagation(); setLocation(`/create?edit_gift_id=${gift.id}`); }}
                       className="text-xs font-medium text-primary hover:underline"
                     >
-                      Resume →
+                      Edit draft →
                     </button>
                   )}
                 </>
