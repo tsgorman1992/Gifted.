@@ -144,6 +144,10 @@ function isValidUrl(url: string): boolean {
 // ─── Phone formatting ─────────────────────────────────────────────────────────
 
 function formatPhoneNumber(value: string): string {
+  // International number — preserve as typed, just strip invalid chars
+  if (value.trimStart().startsWith("+")) {
+    return value.replace(/[^\d\s\-()+]/g, "");
+  }
   // Strip everything non-digit
   let digits = value.replace(/\D/g, "");
   // If they pasted a +1 US number (11 digits starting with 1), strip the country code
@@ -1578,12 +1582,13 @@ export default function CreatePage() {
         setStepError("A phone number is required to protect the cash balance — add it above.");
         return;
       }
-      if (recipientPhone.replace(/\D/g, "").length < 10) {
-        setStepError("Please enter a complete 10-digit phone number.");
+      const isIntlRecipient = recipientPhone.trimStart().startsWith("+");
+      if (!isIntlRecipient && recipientPhone.replace(/\D/g, "").length < 10) {
+        setStepError("Please enter a complete phone number. For international numbers, start with +.");
         return;
       }
     }
-    if (recipientPhone.replace(/\D/g, "").length >= 10) {
+    if (recipientPhone.replace(/\D/g, "").length >= 7) {
       const valid = await validatePhone(recipientPhone);
       if (!valid) {
         setStepError("The phone number doesn't appear to be valid. Please check it above.");
@@ -1646,10 +1651,13 @@ export default function CreatePage() {
       }
 
       // Normalize sender notify phone — prefer state (which seeds from account > localStorage)
+      const isIntlSender = senderNotifyPhone.trimStart().startsWith("+");
       const senderPhoneClean = senderNotifyPhone.replace(/\D/g, "");
-      const senderPhone = senderPhoneClean.length >= 10
-        ? (senderPhoneClean.length === 10 ? `+1${senderPhoneClean}` : `+${senderPhoneClean}`)
-        : undefined;
+      const senderPhone = isIntlSender
+        ? (senderPhoneClean.length >= 7 ? `+${senderPhoneClean}` : undefined)
+        : senderPhoneClean.length >= 10
+          ? (senderPhoneClean.length === 10 ? `+1${senderPhoneClean}` : `+${senderPhoneClean}`)
+          : undefined;
 
       // Persist to localStorage for non-users; also save to account if logged in + phone changed
       if (senderPhone) {
@@ -2878,8 +2886,8 @@ export default function CreatePage() {
                       <Input
                         id="recipientPhone"
                         type="tel"
-                        inputMode="numeric"
-                        placeholder="(555) 000-0000"
+                        inputMode="tel"
+                        placeholder="(555) 000-0000 or +27..."
                         value={recipientPhone}
                         onChange={(e) => {
                           setPhoneError(null);
@@ -3091,8 +3099,8 @@ export default function CreatePage() {
                         </label>
                         <Input
                           type="tel"
-                          inputMode="numeric"
-                          placeholder="(555) 000-0000"
+                          inputMode="tel"
+                          placeholder="(555) 000-0000 or +27..."
                           value={senderNotifyPhone}
                           onChange={(e) => setSenderNotifyPhone(formatPhoneNumber(e.target.value))}
                           className="h-11 rounded-xl text-base"
