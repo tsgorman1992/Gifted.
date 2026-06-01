@@ -1,8 +1,33 @@
 import { Resend } from "resend";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const FROM = "gifted. <hello@gifted.page>";
 const REPLY_TO = "help@gifted.page";
 const BASE_URL = "https://gifted.page";
+
+// ─── Unsubscribe token helpers ────────────────────────────────────────────────
+
+function getUnsubscribeSecret(): string {
+  return (process.env.SESSION_SECRET ?? "gifted-dev-secret") + "-unsub";
+}
+
+export function generateUnsubscribeToken(userId: string): string {
+  return createHmac("sha256", getUnsubscribeSecret()).update(userId).digest("hex");
+}
+
+export function verifyUnsubscribeToken(userId: string, token: string): boolean {
+  try {
+    const expected = generateUnsubscribeToken(userId);
+    if (expected.length !== token.length) return false;
+    return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(token, "hex"));
+  } catch {
+    return false;
+  }
+}
+
+function unsubscribeUrl(userId: string): string {
+  return `${BASE_URL}/api/auth/unsubscribe?uid=${encodeURIComponent(userId)}&token=${generateUnsubscribeToken(userId)}`;
+}
 
 function getClient(): Resend | null {
   const key = process.env.RESEND_API_KEY;
@@ -15,7 +40,23 @@ function getClient(): Resend | null {
 
 // ─── Shared layout ────────────────────────────────────────────────────────────
 
-function layout(title: string, body: string): string {
+function layout(title: string, body: string, unsubLink?: string): string {
+  const footer = unsubLink
+    ? `<p style="margin:0;font-size:12px;color:#9e9087;line-height:1.6;">
+          gifted. &middot; Premium digital gifting<br/>
+          <a href="${BASE_URL}/privacy" style="color:#9e9087;text-decoration:underline;">Privacy</a>
+          &nbsp;&middot;&nbsp;
+          <a href="mailto:${REPLY_TO}" style="color:#9e9087;text-decoration:underline;">Help</a>
+          &nbsp;&middot;&nbsp;
+          <a href="${unsubLink}" style="color:#9e9087;text-decoration:underline;">Unsubscribe</a>
+        </p>`
+    : `<p style="margin:0;font-size:12px;color:#9e9087;line-height:1.6;">
+          gifted. &middot; Premium digital gifting<br/>
+          <a href="${BASE_URL}/privacy" style="color:#9e9087;text-decoration:underline;">Privacy</a>
+          &nbsp;&middot;&nbsp;
+          <a href="mailto:${REPLY_TO}" style="color:#9e9087;text-decoration:underline;">Help</a>
+        </p>`;
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,12 +83,7 @@ function layout(title: string, body: string): string {
 
       <!-- Footer -->
       <tr><td style="padding:24px 0;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#9e9087;line-height:1.6;">
-          gifted. &middot; Premium digital gifting<br/>
-          <a href="${BASE_URL}/privacy" style="color:#9e9087;text-decoration:underline;">Privacy</a>
-          &nbsp;&middot;&nbsp;
-          <a href="mailto:${REPLY_TO}" style="color:#9e9087;text-decoration:underline;">Help</a>
-        </p>
+        ${footer}
       </td></tr>
 
     </table>
@@ -672,6 +708,189 @@ export async function sendSenderThankYouNotice({
     else console.log(`[email] Thank you notice sent to ${to} for gift ${giftId}`);
   } catch (err) {
     console.error("[email] sendSenderThankYouNotice exception:", err);
+  }
+}
+
+// ─── 13. Drip email 1 — "Ready to send a moment?" (day 3) ────────────────────
+
+export async function sendDripEmail1({
+  to,
+  firstName,
+  userId,
+}: {
+  to: string;
+  firstName: string | null;
+  userId: string;
+}): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const name = firstName ? firstName.split(" ")[0] : null;
+  const greeting = name ? `Hi ${name},` : "Hi there,";
+  const createUrl = `${BASE_URL}/create`;
+  const unsub = unsubscribeUrl(userId);
+
+  const body = `
+    ${h1("Make someone's day — build a moment")}
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#2c2520;">
+      ${greeting} You received a gift on gifted. — and now you know what it feels like to open one.
+    </p>
+    ${p(`gifted. isn't just for receiving. It's the best way to send a thoughtful, cinematic gift to someone you care about — a birthday, a thank-you, a "just because." No gift cards. No awkward Amazon links. Just a beautiful moment they'll actually remember.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Build a moment", createUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Takes about 2 minutes. They'll never forget it.</p>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: "You know what it feels like — now send one ✨",
+      html: layout("Build a moment — gifted.", body, unsub),
+    });
+    if (error) console.error("[email] sendDripEmail1 error:", error);
+    else console.log(`[email] Drip email 1 sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendDripEmail1 exception:", err);
+  }
+}
+
+// ─── 14. Drip email 2 — "Don't miss a birthday" (day 10) ─────────────────────
+
+export async function sendDripEmail2({
+  to,
+  firstName,
+  userId,
+}: {
+  to: string;
+  firstName: string | null;
+  userId: string;
+}): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const name = firstName ? firstName.split(" ")[0] : null;
+  const greeting = name ? `Hi ${name},` : "Hi there,";
+  const createUrl = `${BASE_URL}/create`;
+  const unsub = unsubscribeUrl(userId);
+
+  const body = `
+    ${h1("Someone in your life deserves a moment")}
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#2c2520;">
+      ${greeting} A birthday, an anniversary, a promotion — or just a Tuesday that deserves to feel special.
+    </p>
+    ${p(`gifted. makes it easy to send something real. A personal note, photos, a playlist, and an optional cash gift — all wrapped in a beautiful experience that opens like a present.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Send a moment", createUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Who deserves to feel celebrated today?</p>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: "Someone's waiting for a moment from you 🎁",
+      html: layout("Send a moment — gifted.", body, unsub),
+    });
+    if (error) console.error("[email] sendDripEmail2 error:", error);
+    else console.log(`[email] Drip email 2 sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendDripEmail2 exception:", err);
+  }
+}
+
+// ─── 15. Monthly occasions digest ─────────────────────────────────────────────
+
+interface UpcomingOccasion {
+  contactName: string;
+  label: string;
+  daysAway: number;
+}
+
+export async function sendMonthlyDigest({
+  to,
+  firstName,
+  userId,
+  upcomingOccasions,
+}: {
+  to: string;
+  firstName: string | null;
+  userId: string;
+  upcomingOccasions: UpcomingOccasion[];
+}): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  const name = firstName ? firstName.split(" ")[0] : null;
+  const greeting = name ? `Hi ${name},` : "Hi there,";
+  const createUrl = `${BASE_URL}/create`;
+  const addOccasionUrl = `${BASE_URL}/my-gifts?tab=people`;
+  const unsub = unsubscribeUrl(userId);
+
+  const hasOccasions = upcomingOccasions.length > 0;
+
+  const occasionRows = upcomingOccasions
+    .slice(0, 5)
+    .map(o => {
+      const when = o.daysAway === 0
+        ? "Today"
+        : o.daysAway === 1
+        ? "Tomorrow"
+        : `In ${o.daysAway} days`;
+      return `<tr>
+        <td style="padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:14px;color:#1a1310;font-weight:600;">${o.contactName}'s ${o.label}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:14px;color:#6b6059;text-align:right;">${when}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const body = hasOccasions
+    ? `
+      ${h1("Occasions coming up this month 🎁")}
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#2c2520;">
+        ${greeting} Here's a look at what's coming up in the next 60 days — so you can plan something special ahead of time.
+      </p>
+      <table cellpadding="0" cellspacing="0" width="100%">
+        ${occasionRows}
+      </table>
+      ${divider()}
+      <div style="text-align:center;padding:8px 0 4px;">
+        ${btn("Build a moment", createUrl)}
+        <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">A thoughtful moment takes 2 minutes to build and lasts a lifetime.</p>
+      </div>
+    `
+    : `
+      ${h1("Never miss a birthday again 🎂")}
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#2c2520;">
+        ${greeting} Add a birthday or anniversary to gifted. and we'll remind you a week before — so you're never scrambling at the last minute.
+      </p>
+      ${divider()}
+      <div style="text-align:center;padding:8px 0 4px;">
+        ${btn("Add a birthday reminder", addOccasionUrl)}
+        <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Free, takes 30 seconds, and you'll thank yourself later.</p>
+      </div>
+    `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: hasOccasions
+        ? `${upcomingOccasions[0].contactName}'s ${upcomingOccasions[0].label} is coming up 🎁`
+        : "Never miss a birthday — add a reminder ✨",
+      html: layout("gifted. — monthly update", body, unsub),
+    });
+    if (error) console.error("[email] sendMonthlyDigest error:", error);
+    else console.log(`[email] Monthly digest sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendMonthlyDigest exception:", err);
   }
 }
 

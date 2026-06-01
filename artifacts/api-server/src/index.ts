@@ -7,6 +7,10 @@ async function runStartupMigrations() {
   try {
     await db.execute(sql`ALTER TABLE gifts ADD COLUMN IF NOT EXISTS idempotency_key TEXT`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS gifts_idempotency_key_unique ON gifts(idempotency_key) WHERE idempotency_key IS NOT NULL`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS drip_step INTEGER NOT NULL DEFAULT 0`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS drip_last_sent_at TIMESTAMPTZ`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS unsubscribed_marketing BOOLEAN NOT NULL DEFAULT false`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS digest_last_sent_at TIMESTAMPTZ`);
   } catch (err) {
     console.warn("[migrations] Non-fatal migration warning:", err);
   }

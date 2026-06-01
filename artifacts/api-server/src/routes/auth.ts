@@ -2,6 +2,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { passport, hashPassword, googleEnabled } from "../lib/auth";
+import { verifyUnsubscribeToken } from "../lib/email";
 
 const router = Router();
 
@@ -142,6 +143,41 @@ router.patch("/auth/profile", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Error updating profile:", err);
     res.status(500).json({ error: "Failed to update profile" });
+  }
+});
+
+router.get("/auth/unsubscribe", async (req: Request, res: Response) => {
+  const uid   = req.query.uid   as string | undefined;
+  const token = req.query.token as string | undefined;
+
+  const fail = (msg: string) => {
+    res.status(400).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>gifted.</title></head>
+<body style="font-family:-apple-system,sans-serif;text-align:center;padding:80px 24px;background:#faf8f5;color:#1a1310;">
+<p style="font-size:28px;font-weight:500;color:#7c4a1e;font-family:Georgia,serif;margin:0 0 24px;">gifted.</p>
+<h1 style="font-size:20px;margin:0 0 12px;">${msg}</h1>
+<p style="color:#6b6059;">If you need help, email us at <a href="mailto:help@gifted.page" style="color:#7c4a1e;">help@gifted.page</a>.</p>
+</body></html>`);
+  };
+
+  if (!uid || !token) { fail("Invalid unsubscribe link."); return; }
+
+  if (!verifyUnsubscribeToken(uid, token)) { fail("This unsubscribe link is invalid or has expired."); return; }
+
+  try {
+    await db.update(usersTable)
+      .set({ unsubscribedMarketing: true })
+      .where(eq(usersTable.id, uid));
+
+    res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Unsubscribed — gifted.</title></head>
+<body style="font-family:-apple-system,sans-serif;text-align:center;padding:80px 24px;background:#faf8f5;color:#1a1310;">
+<p style="font-size:28px;font-weight:500;color:#7c4a1e;font-family:Georgia,serif;margin:0 0 24px;">gifted.</p>
+<h1 style="font-size:22px;margin:0 0 12px;">You've been unsubscribed.</h1>
+<p style="color:#6b6059;max-width:400px;margin:0 auto 24px;">You won't receive any more marketing emails from gifted. Transactional messages (like gift receipts and redemption confirmations) are not affected.</p>
+<a href="https://gifted.page" style="display:inline-block;background:#7c4a1e;color:#fff;text-decoration:none;padding:12px 28px;border-radius:100px;font-size:14px;font-weight:600;">Back to gifted.</a>
+</body></html>`);
+  } catch (err) {
+    console.error("[unsubscribe] Failed to update user:", err);
+    fail("Something went wrong. Please try again or contact us.");
   }
 });
 
