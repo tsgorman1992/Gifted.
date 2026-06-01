@@ -1775,7 +1775,7 @@ export default function MyGiftsPage() {
   const [showAllReceived, setShowAllReceived] = useState(false);
   const [copiedGiftId, setCopiedGiftId] = useState<string | null>(null);
   const [occasionBannerDismissed, setOccasionBannerDismissed] = useState(
-    () => localStorage.getItem("gifted_occasion_banner_dismissed") === "1"
+    () => sessionStorage.getItem("gifted_occasion_banner_dismissed") === "1"
   );
 
   // Inline reschedule state for the scheduled tab
@@ -2032,7 +2032,7 @@ export default function MyGiftsPage() {
               </p>
               <button
                 onClick={() => {
-                  localStorage.setItem("gifted_occasion_banner_dismissed", "1");
+                  sessionStorage.setItem("gifted_occasion_banner_dismissed", "1");
                   setOccasionBannerDismissed(true);
                 }}
                 className="text-muted-foreground hover:text-foreground transition-colors shrink-0"

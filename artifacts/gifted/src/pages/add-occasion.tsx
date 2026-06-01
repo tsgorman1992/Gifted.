@@ -67,6 +67,11 @@ export default function AddOccasionPage() {
         body: JSON.stringify({ label: "Birthday", month: parseInt(month), day: parseInt(day) }),
       });
       if (!occasionRes.ok) {
+        // Compensate: remove the orphan contact so the user can retry cleanly
+        await fetch(`${BASE}/api/gifted/contacts/${contact.id}`, {
+          method: "DELETE",
+          credentials: "include",
+        }).catch(() => {});
         const d = await occasionRes.json().catch(() => ({}));
         throw new Error((d as any).error || "Failed to save birthday");
       }

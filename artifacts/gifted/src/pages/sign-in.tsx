@@ -60,7 +60,7 @@ export default function SignInPage() {
         return;
       }
       await refetch();
-      setLocation(returnTo);
+      setLocation(mode === "sign-up" ? "/add-occasion?from=signup" : returnTo);
     } catch {
       setError("Unable to connect. Please check your connection and try again.");
     } finally {
