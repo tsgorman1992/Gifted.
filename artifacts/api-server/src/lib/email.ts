@@ -721,9 +721,9 @@ export async function sendDripEmail1({
   to: string;
   firstName: string | null;
   userId: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const client = getClient();
-  if (!client) return;
+  if (!client) return false;
 
   const name = firstName ? firstName.split(" ")[0] : null;
   const greeting = name ? `Hi ${name},` : "Hi there,";
@@ -751,10 +751,12 @@ export async function sendDripEmail1({
       subject: "You know what it feels like — now send one ✨",
       html: layout("Build a moment — gifted.", body, unsub),
     });
-    if (error) console.error("[email] sendDripEmail1 error:", error);
-    else console.log(`[email] Drip email 1 sent to ${to}`);
+    if (error) { console.error("[email] sendDripEmail1 error:", error); return false; }
+    console.log(`[email] Drip email 1 sent to ${to}`);
+    return true;
   } catch (err) {
     console.error("[email] sendDripEmail1 exception:", err);
+    return false;
   }
 }
 
@@ -768,9 +770,9 @@ export async function sendDripEmail2({
   to: string;
   firstName: string | null;
   userId: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const client = getClient();
-  if (!client) return;
+  if (!client) return false;
 
   const name = firstName ? firstName.split(" ")[0] : null;
   const greeting = name ? `Hi ${name},` : "Hi there,";
@@ -798,10 +800,12 @@ export async function sendDripEmail2({
       subject: "Someone's waiting for a moment from you 🎁",
       html: layout("Send a moment — gifted.", body, unsub),
     });
-    if (error) console.error("[email] sendDripEmail2 error:", error);
-    else console.log(`[email] Drip email 2 sent to ${to}`);
+    if (error) { console.error("[email] sendDripEmail2 error:", error); return false; }
+    console.log(`[email] Drip email 2 sent to ${to}`);
+    return true;
   } catch (err) {
     console.error("[email] sendDripEmail2 exception:", err);
+    return false;
   }
 }
 
@@ -823,9 +827,9 @@ export async function sendMonthlyDigest({
   firstName: string | null;
   userId: string;
   upcomingOccasions: UpcomingOccasion[];
-}): Promise<void> {
+}): Promise<boolean> {
   const client = getClient();
-  if (!client) return;
+  if (!client) return false;
 
   const name = firstName ? firstName.split(" ")[0] : null;
   const greeting = name ? `Hi ${name},` : "Hi there,";
@@ -887,10 +891,12 @@ export async function sendMonthlyDigest({
         : "Never miss a birthday — add a reminder ✨",
       html: layout("gifted. — monthly update", body, unsub),
     });
-    if (error) console.error("[email] sendMonthlyDigest error:", error);
-    else console.log(`[email] Monthly digest sent to ${to}`);
+    if (error) { console.error("[email] sendMonthlyDigest error:", error); return false; }
+    console.log(`[email] Monthly digest sent to ${to}`);
+    return true;
   } catch (err) {
     console.error("[email] sendMonthlyDigest exception:", err);
+    return false;
   }
 }
 

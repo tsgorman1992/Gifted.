@@ -780,11 +780,13 @@ async function sendDripEmails() {
 
       for (const user of eligible) {
         try {
-          await sendDripEmail1({ to: user.email!, firstName: user.firstName, userId: user.id });
-          await db.update(usersTable)
-            .set({ dripStep: 1, dripLastSentAt: new Date() })
-            .where(eq(usersTable.id, user.id));
-          console.log(`[drip] Email 1 sent to ${user.email}`);
+          const sent = await sendDripEmail1({ to: user.email!, firstName: user.firstName, userId: user.id });
+          if (sent) {
+            await db.update(usersTable)
+              .set({ dripStep: 1, dripLastSentAt: new Date() })
+              .where(eq(usersTable.id, user.id));
+            console.log(`[drip] Email 1 sent to ${user.email}`);
+          }
         } catch (err) {
           console.error(`[drip] Email 1 failed for ${user.id}:`, err);
         }
@@ -814,11 +816,13 @@ async function sendDripEmails() {
 
       for (const user of eligible) {
         try {
-          await sendDripEmail2({ to: user.email!, firstName: user.firstName, userId: user.id });
-          await db.update(usersTable)
-            .set({ dripStep: 2 })
-            .where(eq(usersTable.id, user.id));
-          console.log(`[drip] Email 2 sent to ${user.email}`);
+          const sent = await sendDripEmail2({ to: user.email!, firstName: user.firstName, userId: user.id });
+          if (sent) {
+            await db.update(usersTable)
+              .set({ dripStep: 2 })
+              .where(eq(usersTable.id, user.id));
+            console.log(`[drip] Email 2 sent to ${user.email}`);
+          }
         } catch (err) {
           console.error(`[drip] Email 2 failed for ${user.id}:`, err);
         }
@@ -836,8 +840,9 @@ async function sendMonthlyDigestEmails() {
     const now = new Date();
     const et = getEasternDateParts(now);
 
-    // Only send on the 1st of the month, 8:00–8:59 AM ET
-    if (et.day !== 1) return;
+    // Only send during the 8:00–8:59 AM ET window; per-user digestLastSentAt
+    // month check ensures each user receives at most one digest per month,
+    // and catch-up works on any day after the 1st if deploy was mid-month.
     if (et.hour < 8 || et.hour >= 9) return;
 
     // Get all users with email who haven't unsubscribed
@@ -902,16 +907,18 @@ async function sendMonthlyDigestEmails() {
     for (const user of eligible) {
       try {
         const upcomingOccasions = occasionMap.get(user.id) ?? [];
-        await sendMonthlyDigest({
+        const sent = await sendMonthlyDigest({
           to: user.email!,
           firstName: user.firstName,
           userId: user.id,
           upcomingOccasions,
         });
-        await db.update(usersTable)
-          .set({ digestLastSentAt: new Date() })
-          .where(eq(usersTable.id, user.id));
-        console.log(`[digest] Monthly digest sent to ${user.email}`);
+        if (sent) {
+          await db.update(usersTable)
+            .set({ digestLastSentAt: new Date() })
+            .where(eq(usersTable.id, user.id));
+          console.log(`[digest] Monthly digest sent to ${user.email}`);
+        }
       } catch (err) {
         console.error(`[digest] Failed for ${user.id}:`, err);
       }
