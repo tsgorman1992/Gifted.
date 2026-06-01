@@ -1774,6 +1774,9 @@ export default function MyGiftsPage() {
   const [showAddPhysical, setShowAddPhysical] = useState(false);
   const [showAllReceived, setShowAllReceived] = useState(false);
   const [copiedGiftId, setCopiedGiftId] = useState<string | null>(null);
+  const [occasionBannerDismissed, setOccasionBannerDismissed] = useState(
+    () => localStorage.getItem("gifted_occasion_banner_dismissed") === "1"
+  );
 
   // Inline reschedule state for the scheduled tab
   const [rescheduleGiftId, setRescheduleGiftId] = useState<string | null>(null);
@@ -2002,6 +2005,41 @@ export default function MyGiftsPage() {
               <Send className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
               <p className="text-sm text-amber-800 flex-1">You can't save your own gift as received. It's already in your Sent tab.</p>
               <button onClick={() => setSenderBlockedNotice(false)} className="text-amber-500 hover:text-amber-700 transition-colors shrink-0"><X className="w-4 h-4" /></button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── "Add a birthday" banner for users with no contacts ── */}
+        <AnimatePresence>
+          {!contactsLoading && (contactsData?.length ?? 0) === 0 && !occasionBannerDismissed && (
+            <motion.div
+              key="occasion-banner"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              className="mb-5 flex items-center gap-3 bg-primary/6 border border-primary/20 rounded-2xl px-4 py-3"
+            >
+              <Cake className="w-4 h-4 text-primary shrink-0" />
+              <p className="text-sm text-foreground flex-1">
+                <span className="font-medium">Never miss a moment —</span>{" "}
+                <button
+                  onClick={() => setLocation("/add-occasion")}
+                  className="text-primary font-medium hover:underline"
+                >
+                  add a birthday reminder →
+                </button>
+              </p>
+              <button
+                onClick={() => {
+                  localStorage.setItem("gifted_occasion_banner_dismissed", "1");
+                  setOccasionBannerDismissed(true);
+                }}
+                className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                aria-label="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
