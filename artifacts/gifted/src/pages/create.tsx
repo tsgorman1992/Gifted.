@@ -1044,12 +1044,23 @@ export default function CreatePage() {
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-    // Capture utm_content for conversion tracking — written once on landing,
-    // cleared by preview.tsx when the first gift is successfully paid.
+    // Capture utm_content for conversion tracking.
+    // localStorage is the fast path (same device/browser).
+    // Server-side pendingAcquisitionSource is the cross-device fallback —
+    // written on every click so the most-recent email signal always wins.
     const utmParams = new URLSearchParams(window.location.search);
     const utmContent = utmParams.get("utm_content");
     if (utmContent && !localStorage.getItem("gifted_acquisition_source")) {
       localStorage.setItem("gifted_acquisition_source", utmContent);
+    }
+    const validSources = ["drip1", "drip2", "drip3", "abandoned_nudge", "digest"];
+    if (utmContent && validSources.includes(utmContent)) {
+      fetch(`${base}/api/gifted/acquisition-source`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ utmContent }),
+      }).catch(() => {});
     }
 
     // ── Edit mode: ?edit_gift_id=GIFT_ID ────────────────────────────────────

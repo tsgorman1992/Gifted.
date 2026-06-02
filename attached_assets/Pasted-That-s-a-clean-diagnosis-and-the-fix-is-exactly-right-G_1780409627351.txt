@@ -1,0 +1,46 @@
+That's a clean diagnosis and the fix is exactly right. Give Replit this prompt:
+
+gifted. — Server-Side Acquisition Source Fix
+The problem
+Current implementation writes gifted_acquisition_source to localStorage on click. If user clicks email on phone then builds gift on desktop, localStorage doesn't exist on the second device and the conversion is attributed to organic. Email-driven conversions are being undercounted.
+The fix
+Move acquisition source storage server-side at the moment the authenticated user hits /create with a utm_content param. localStorage becomes a fast-path fallback only.
+Schema change needed
+sqlALTER TABLE users 
+ADD COLUMN pendingAcquisitionSource TEXT;
+Only written if firstSentAt IS NULL — we only care about source attribution for first send conversion.
+New server-side logic
+When an authenticated user hits /create with utm_content in the query params:
+IF user.firstSentAt IS NULL
+AND utm_content is a valid known value (drip1, drip2, drip3, abandoned_nudge, digest)
+THEN write utm_content to users.pendingAcquisitionSource
+Overwrite on each click — if they click drip1 then click drip2 before sending, drip2 is the more recent signal and should win.
+Updated payment confirmation logic
+At first gift payment, source resolution order:
+
+If acquisitionSource comes in request body from localStorage — use that
+Else if user.pendingAcquisitionSource is set — use that
+Else — write 'organic'
+
+Then write to firstSentSource, write firstSentAt, clear pendingAcquisitionSource.
+What this fixes
+Cross-device path now works cleanly:
+
+User clicks drip1 on phone → server writes pendingAcquisitionSource = 'drip1' to their user record
+User switches to desktop, builds gift, pays → no localStorage value → server falls back to pendingAcquisitionSource → firstSentSource = 'drip1'
+Attribution is correct regardless of device
+
+What doesn't change
+
+localStorage logic on the frontend stays as is — it's a valid fast path and costs nothing to keep
+UTM params on all CTAs unchanged
+email_logs unchanged
+Metrics endpoint unchanged — it already reads from firstSentSource which will now be more accurate automatically
+
+Definition of done
+
+pendingAcquisitionSource column exists on users table
+Hitting /create?utm_content=drip1 while authenticated writes to pendingAcquisitionSource if firstSentAt is null
+Payment confirmation resolves source in correct priority order
+Cross-device test passes: click email in one browser, complete gift in different browser, firstSentSource reflects email not organic
+pendingAcquisitionSource is cleared after first send

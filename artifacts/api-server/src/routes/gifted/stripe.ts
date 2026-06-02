@@ -215,14 +215,27 @@ router.post("/gifted/confirm-payment", async (req, res) => {
     }
 
     // Record the user's very first send — only written once, never overwritten.
-    // acquisitionSource comes from utm_content captured when they landed on /create.
+    // Source resolution: request body (localStorage fast-path) > server-side
+    // pendingAcquisitionSource (cross-device safe) > "organic".
     if (!alreadyPaid && existing?.senderUserId) {
       const validSources = ["drip1", "drip2", "drip3", "abandoned_nudge", "digest"];
-      const source = acquisitionSource && validSources.includes(acquisitionSource)
-        ? acquisitionSource
-        : "organic";
+      let source: string;
+      if (acquisitionSource && validSources.includes(acquisitionSource)) {
+        source = acquisitionSource;
+      } else {
+        const [sender] = await db
+          .select({ pendingAcquisitionSource: usersTable.pendingAcquisitionSource })
+          .from(usersTable)
+          .where(eq(usersTable.id, existing.senderUserId))
+          .limit(1);
+        source =
+          sender?.pendingAcquisitionSource &&
+          validSources.includes(sender.pendingAcquisitionSource)
+            ? sender.pendingAcquisitionSource
+            : "organic";
+      }
       db.update(usersTable)
-        .set({ firstSentAt: new Date(), firstSentSource: source })
+        .set({ firstSentAt: new Date(), firstSentSource: source, pendingAcquisitionSource: null })
         .where(and(eq(usersTable.id, existing.senderUserId), isNull(usersTable.firstSentAt)))
         .catch(err => console.warn("[confirm-payment] firstSentAt write failed:", err));
     }
@@ -522,6 +535,37 @@ router.post("/stripe/webhook", async (req, res) => {
   }
 
   res.json({ received: true });
+});
+
+/**
+ * POST /gifted/acquisition-source
+ * Writes utm_content to pendingAcquisitionSource on the authenticated user's record,
+ * enabling cross-device attribution if they switch devices before completing their first send.
+ * Only written when firstSentAt IS NULL (conversion not yet recorded).
+ * Overwrites on every call — most-recent email click wins.
+ */
+router.post("/gifted/acquisition-source", async (req, res) => {
+  if (!req.isAuthenticated() || !(req as any).user?.id) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  const { utmContent } = req.body as { utmContent?: string };
+  const validSources = ["drip1", "drip2", "drip3", "abandoned_nudge", "digest"];
+  if (!utmContent || !validSources.includes(utmContent)) {
+    res.status(400).json({ error: "Invalid utm_content" });
+    return;
+  }
+  const userId = (req as any).user.id as string;
+  try {
+    await db
+      .update(usersTable)
+      .set({ pendingAcquisitionSource: utmContent })
+      .where(and(eq(usersTable.id, userId), isNull(usersTable.firstSentAt)));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[acquisition-source] write failed:", err);
+    res.status(500).json({ error: "Failed to write acquisition source" });
+  }
 });
 
 export default router;
