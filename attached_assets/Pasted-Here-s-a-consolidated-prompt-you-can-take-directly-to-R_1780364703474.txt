@@ -1,0 +1,39 @@
+Here's a consolidated prompt you can take directly to Replit:
+
+gifted. Email Drip — Rewrite & Build Brief
+We need to rewrite and implement a recipient-to-sender drip email sequence for gifted. (gifted.page) — a premium digital gifting platform where senders build cinematic gift experiences delivered via SMS link.
+Context on the audience
+These emails go to people who received a gift on gifted. and created an account but haven't sent one yet. They've already experienced the product as a recipient — they know what it feels like. We don't need to explain the product. We need to reactivate the feeling they had and connect it to someone in their life.
+The tone
+Warm, human, minimal. No feature lists. No pushy CTAs. No emoji overload. Reads like a message from a thoughtful person, not a marketing team. Short paragraphs. Lots of white space. One clear action per email.
+The sequence
+Email 1 — Day 3 post-signup
+Subject: You know what it feels like.
+Goal: Reactivate the emotional memory of receiving their gift. Make them think of one specific person they could do this for. No feature listing. Stay in the feeling the entire email. End with one button — "Build a moment."
+Rough direction for body copy:
+Open by referencing the feeling of receiving something someone built specifically for them. Someone took time to find the photos, write the words, record the video. Somebody in their life deserves that same feeling. They already know how to give it. One button. No explanation needed.
+Email 2 — Day 10 post-signup
+Subject: Someone used gifted. this week — here's what happened.
+Goal: Tell a real, specific story of a gift that landed. Make it human and concrete — not a testimonial, a narrative. Something like: a guy sent his best friend a birthday gift with photos from their last trip together, a personal video, and $10 toward hibachi. His friend called him the second he opened it. End with one quiet line pointing back to gifted. and one button.
+Email 3 — Day 30 post-signup
+Subject: A few dates worth knowing about.
+Goal: Pure utility. Show them upcoming occasions for contacts they've saved. If they have saved contacts with occasions, show up to 5 in a clean table format — name, occasion, days until. One tap per row to start building. If they have no saved contacts, prompt them to add one with a birthday — frame it as "set it once, never scramble again." No emotional heavy lifting here, just useful.
+Monthly digest — 1st of each month
+Two versions:
+Version A — has saved occasions:
+Subject: [First contact name]'s [occasion] is coming up.
+Show upcoming occasions in next 60 days in clean table. Up to 5. One button per row to build a moment. Simple, functional, no selling.
+Version B — no saved occasions:
+Subject: Never miss a birthday again.
+Short, warm, one ask — add one person and their birthday. Frame the value as peace of mind, not product features.
+New email to build — abandoned gift trigger
+Triggered when: user started building a gift (got past mood/name selection) but never completed checkout.
+Timing: 24 hours after abandonment.
+Subject: You started something for [recipient name].
+Goal: Remind them they were in a moment of intention and didn't finish. Keep it short and warm — not guilt, just a gentle nudge back. Pre-fill their progress so they pick up exactly where they left off. One button — "Finish the moment."
+Technical implementation questions for Replit
+One — what data do we currently have available to personalize Email 1 beyond first name? Specifically — do we store the occasion type of the gift they received, the sender's name, and whether the gift included a balance? Any of those could make Email 1 significantly more personal.
+Two — for the monthly digest, what's the current data structure for saved contacts and occasions? We need to query upcoming occasions within 60 days sorted by proximity, capped at 5, with a fallback to the no-occasions version if the array is empty.
+Three — for the abandoned gift trigger, at what point in the build flow do we currently write to the database? We need a reliable timestamp for "started but not completed" — ideally after mood and recipient name are entered but before payment is processed. What does that record look like right now?
+Four — what email service are we using and does it support behavioral triggers and dynamic content blocks, or are we working with a simpler send setup?
+Five — for the story-based Email 2, do we want to pull a real anonymized gift from the database as the narrative, or write a static composite example? If real, we need to think about consent and how we surface that data.

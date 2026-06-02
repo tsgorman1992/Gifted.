@@ -3,7 +3,7 @@ import { gifts, contactOccasions, contacts, usersTable } from "@workspace/db/sch
 import { and, isNotNull, isNull, lte, eq, sql, or, inArray } from "drizzle-orm";
 import twilio from "twilio";
 import Stripe from "stripe";
-import { sendSenderNudgeEmail, sendSenderSecondNudgeEmail, sendUnredeemedSenderEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail, sendHappyBirthdayEmail, sendDripEmail1, sendDripEmail2, sendMonthlyDigest } from "./lib/email";
+import { sendSenderNudgeEmail, sendSenderSecondNudgeEmail, sendUnredeemedSenderEmail, sendScheduledGiftReadyEmail, sendPackageDeliveredEmail, sendOccasionReminderEmail, sendHappyBirthdayEmail, sendDripEmail1, sendDripEmail2, sendDripEmail3, sendMonthlyDigest, sendAbandonedGiftEmail } from "./lib/email";
 import { ObjectStorageService } from "./lib/objectStorage";
 
 // ─── Floating occasion date helpers (server-side) ─────────────────────────────
@@ -757,8 +757,10 @@ async function sendDripEmails() {
   try {
     const threeDaysAgo  = new Date(Date.now() - 3  * 24 * 60 * 60 * 1000);
     const sevenDaysAgo  = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     // ── Step 0 → 1: account >3 days old, never sent a paid gift ──
+    // Personalise with the first gift they ever received (the one that drove signup).
     const step0Candidates = await db
       .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName })
       .from(usersTable)
@@ -778,9 +780,50 @@ async function sendDripEmails() {
       const hasSent = new Set(hasSentRows.map(r => r.senderUserId));
       const eligible = step0Candidates.filter(u => !hasSent.has(u.id));
 
+      // Batch-load the first received gift for each eligible user
+      const eligibleIds = eligible.map(u => u.id);
+      const receivedGiftRows = eligibleIds.length
+        ? await db
+            .select({
+              recipientUserId: gifts.recipientUserId,
+              senderName:      gifts.senderName,
+              occasion:        gifts.occasion,
+              amount:          gifts.amount,
+              createdAt:       gifts.createdAt,
+            })
+            .from(gifts)
+            .where(and(
+              inArray(gifts.recipientUserId, eligibleIds),
+              eq(gifts.paid, true),
+            ))
+        : [];
+
+      // Keep only the earliest received gift per user
+      const firstReceivedMap = new Map<string, { senderName: string; occasion: string; amount: string | null }>();
+      for (const row of receivedGiftRows) {
+        if (!row.recipientUserId) continue;
+        const existing = firstReceivedMap.get(row.recipientUserId);
+        if (!existing || row.createdAt! < (existing as any)._createdAt) {
+          firstReceivedMap.set(row.recipientUserId, {
+            senderName: row.senderName,
+            occasion:   row.occasion,
+            amount:     row.amount,
+            _createdAt: row.createdAt,
+          } as any);
+        }
+      }
+
       for (const user of eligible) {
         try {
-          const sent = await sendDripEmail1({ to: user.email!, firstName: user.firstName, userId: user.id });
+          const received = firstReceivedMap.get(user.id);
+          const sent = await sendDripEmail1({
+            to:         user.email!,
+            firstName:  user.firstName,
+            userId:     user.id,
+            senderName: received?.senderName ?? null,
+            occasion:   received?.occasion   ?? null,
+            amount:     received?.amount     ?? null,
+          });
           if (sent) {
             await db.update(usersTable)
               .set({ dripStep: 1, dripLastSentAt: new Date() })
@@ -793,7 +836,7 @@ async function sendDripEmails() {
       }
     }
 
-    // ── Step 1 → 2: drip email 1 sent >7 days ago, still never sent a paid gift ──
+    // ── Step 1 → 2: Email 1 sent >7 days ago (~day 10 post-signup), still no gift sent ──
     const step1Candidates = await db
       .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName })
       .from(usersTable)
@@ -819,7 +862,7 @@ async function sendDripEmails() {
           const sent = await sendDripEmail2({ to: user.email!, firstName: user.firstName, userId: user.id });
           if (sent) {
             await db.update(usersTable)
-              .set({ dripStep: 2 })
+              .set({ dripStep: 2, dripLastSentAt: new Date() })
               .where(eq(usersTable.id, user.id));
             console.log(`[drip] Email 2 sent to ${user.email}`);
           }
@@ -828,8 +871,135 @@ async function sendDripEmails() {
         }
       }
     }
+
+    // ── Step 2 → 3: Email 2 sent >30 days ago, still no gift sent ──
+    const step2Candidates = await db
+      .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName })
+      .from(usersTable)
+      .where(and(
+        isNotNull(usersTable.email),
+        eq(usersTable.dripStep, 2),
+        eq(usersTable.unsubscribedMarketing, false),
+        isNotNull(usersTable.dripLastSentAt),
+        lte(usersTable.dripLastSentAt, thirtyDaysAgo),
+      ));
+
+    if (step2Candidates.length) {
+      const ids = step2Candidates.map(u => u.id);
+      const hasSentRows = await db
+        .selectDistinct({ senderUserId: gifts.senderUserId })
+        .from(gifts)
+        .where(and(eq(gifts.paid, true), inArray(gifts.senderUserId, ids)));
+      const hasSent = new Set(hasSentRows.map(r => r.senderUserId));
+      const eligible = step2Candidates.filter(u => !hasSent.has(u.id));
+
+      if (eligible.length) {
+        // Batch-load upcoming occasions for all eligible users
+        const eligibleIds = eligible.map(u => u.id);
+        const now = new Date();
+        const et = getEasternDateParts(now);
+        const today = new Date(et.year, et.month - 1, et.day);
+
+        const allOccasions = await db
+          .select({
+            userId:      contactOccasions.userId,
+            label:       contactOccasions.label,
+            month:       contactOccasions.month,
+            day:         contactOccasions.day,
+            floatingKey: contactOccasions.floatingKey,
+            contactName: contacts.name,
+          })
+          .from(contactOccasions)
+          .innerJoin(contacts, eq(contactOccasions.contactId, contacts.id))
+          .where(inArray(contactOccasions.userId, eligibleIds));
+
+        const occasionMap = new Map<string, Array<{ contactName: string; label: string; daysAway: number }>>();
+        for (const occ of allOccasions) {
+          let month = occ.month;
+          let day   = occ.day;
+          if (occ.floatingKey) {
+            const fd = computeFloatingDate(occ.floatingKey, et.year);
+            month = fd.month; day = fd.day;
+          }
+          if (!month || !day) continue;
+          const daysAway = daysUntilNextOccurrence(month, day, today);
+          if (daysAway > 60) continue;
+          if (!occasionMap.has(occ.userId)) occasionMap.set(occ.userId, []);
+          occasionMap.get(occ.userId)!.push({ contactName: occ.contactName, label: occ.label, daysAway });
+        }
+        for (const list of occasionMap.values()) list.sort((a, b) => a.daysAway - b.daysAway);
+
+        for (const user of eligible) {
+          try {
+            const upcomingOccasions = occasionMap.get(user.id) ?? [];
+            const sent = await sendDripEmail3({
+              to:               user.email!,
+              firstName:        user.firstName,
+              userId:           user.id,
+              upcomingOccasions,
+            });
+            if (sent) {
+              await db.update(usersTable)
+                .set({ dripStep: 3, dripLastSentAt: new Date() })
+                .where(eq(usersTable.id, user.id));
+              console.log(`[drip] Email 3 sent to ${user.email}`);
+            }
+          } catch (err) {
+            console.error(`[drip] Email 3 failed for ${user.id}:`, err);
+          }
+        }
+      }
+    }
   } catch (err) {
     console.error("[scheduler] sendDripEmails error:", err);
+  }
+}
+
+// ─── Abandoned gift nudge ──────────────────────────────────────────────────────
+
+async function sendAbandonedGiftEmails() {
+  try {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const abandoned = await db
+      .select({
+        id:           gifts.id,
+        senderUserId: gifts.senderUserId,
+        senderEmail:  gifts.senderEmail,
+        senderName:   gifts.senderName,
+        recipientName: gifts.recipientName,
+      })
+      .from(gifts)
+      .where(and(
+        eq(gifts.paid, false),
+        lte(gifts.createdAt, oneDayAgo),
+        isNull(gifts.autoRefundedAt),
+        isNotNull(gifts.recipientName),
+        isNotNull(gifts.senderUserId),
+        isNotNull(gifts.senderEmail),
+        isNull(gifts.abandonedNudgeSentAt),
+      ));
+
+    for (const gift of abandoned) {
+      try {
+        if (!gift.senderEmail || !gift.senderUserId) continue;
+        const sent = await sendAbandonedGiftEmail({
+          to:            gift.senderEmail,
+          userId:        gift.senderUserId,
+          recipientName: gift.recipientName!,
+        });
+        if (sent) {
+          await db.update(gifts)
+            .set({ abandonedNudgeSentAt: new Date() })
+            .where(eq(gifts.id, gift.id));
+          console.log(`[abandoned] Nudge sent for gift ${gift.id}`);
+        }
+      } catch (err) {
+        console.error(`[abandoned] Failed for gift ${gift.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[scheduler] sendAbandonedGiftEmails error:", err);
   }
 }
 
@@ -930,7 +1100,7 @@ async function sendMonthlyDigestEmails() {
 
 export function startScheduler() {
   const INTERVAL_MS = 10 * 60 * 1000;
-  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, occasion reminders, drip emails, monthly digest, expired media cleanup, 90-day auto-refunds, and birthday emails.");
+  console.log("[scheduler] Started — checking every 10 minutes for scheduled gifts, tracking updates, stale gift nudges, unredeemed reminders, occasion reminders, drip emails, abandoned gift nudges, monthly digest, expired media cleanup, 90-day auto-refunds, and birthday emails.");
   setInterval(async () => {
     await sendScheduledGifts();
     await pollAfterShipTrackings();
@@ -939,6 +1109,7 @@ export function startScheduler() {
     await sendOccasionReminders();
     await sendBirthdayEmails();
     await sendDripEmails();
+    await sendAbandonedGiftEmails();
     await sendMonthlyDigestEmails();
     await deleteExpiredMedia();
     await autoRefund90Days();
@@ -950,6 +1121,7 @@ export function startScheduler() {
   sendOccasionReminders();
   sendBirthdayEmails();
   sendDripEmails();
+  sendAbandonedGiftEmails();
   sendMonthlyDigestEmails();
   deleteExpiredMedia();
   autoRefund90Days();

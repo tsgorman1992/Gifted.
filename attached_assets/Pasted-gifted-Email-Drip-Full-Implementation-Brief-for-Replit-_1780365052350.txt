@@ -1,0 +1,64 @@
+gifted. Email Drip — Full Implementation Brief for Replit
+Platform context
+gifted. (gifted.page) is a premium SMS-driven digital gifting platform. Senders build cinematic gift experiences — mood, personal note, video, photos, links, optional cash balance — delivered via a unique link. Recipients experience a choreographed reveal in their browser.
+Email service
+Resend — simple transactional send. No native behavioral triggers or dynamic content blocks. All trigger logic lives in our custom scheduler (runs every 10 minutes) or explicit API calls in route handlers. Everything below needs to be implemented as scheduler logic or route-level calls on our side.
+
+Sequence overview
+This is a recipient-to-sender conversion sequence. Audience is users who received a gift, created an account, but have never sent a gift. Goal is to convert them into first-time senders without feeling pushy or salesy.
+Tone across all emails
+Warm, human, minimal. No feature lists. No emoji overload. Reads like a message from a thoughtful person not a marketing team. Short paragraphs, lots of white space, one clear action per email.
+
+Email 1 — Day 3 post account creation
+Trigger: user has recipientUserId on at least one gift record, createdAt on their account is 3 days ago, hasSentGift = false.
+Personalization query: look up the gift where recipientUserId = user.id and pull senderName, occasion, experience (mood), and amount.
+Subject line: [SenderName] built you something. You could do that for someone too.
+Body direction: Open by referencing the specific moment — "[SenderName] built you something for your [occasion]." Don't explain the product. They lived it. Stay in the feeling — someone took the time to find the photos, write the words, record something just for them. Then a single turn: someone in their life deserves that same feeling. They already know how to give it. One button — "Build a moment." Nothing else.
+If amount > 0, optionally reference: "They even made sure you had something to spend." Keep it light.
+
+Email 2 — Day 10 post account creation
+Trigger: same audience, still hasSentGift = false, account createdAt 10 days ago.
+Subject line: Someone used gifted. this week — here's what happened.
+Body direction: Tell a static composite story. Make it specific and human — not a testimonial, a narrative. Suggested story: a guy built his best friend a birthday gift. Added photos from their last trip together. Recorded a quick video in his car. Put $10 toward hibachi or the driving range — something only they would understand. His friend called him the second he opened it. Didn't say anything for a second. Then just: "bro."
+No feature list after the story. One quiet line: "You could do that for someone this week." One button — "Build a moment."
+
+Email 3 — Day 30 post account creation
+Trigger: same audience, still hasSentGift = false, account createdAt 30 days ago.
+Subject line: A few dates worth knowing about.
+Two versions based on whether user has saved contacts with occasions:
+Version A — has upcoming occasions:
+Query: contactOccasions joined to contacts where userId = user.id, calculate next calendar occurrence of each month/day from today, filter to ≤ 60 days, sort ascending, cap at 5. Render as clean table — contact name, occasion label, days until. One "Build a moment" button per row. No emotional copy needed. Pure utility.
+Version B — no saved occasions:
+Subject: You'll thank yourself for this in about 3 weeks.
+Body: Short and warm. One ask — add one person and their birthday. Frame as peace of mind not product features. "Set it once. We'll remind you before it arrives. You'll never send a lazy last-minute gift again." One button — "Add a birthday."
+
+Monthly digest — sends 1st of each month
+Same two versions as Email 3 based on occasions data. Already partially implemented in scheduler — extend existing logic.
+Version A subject: [FirstContactName]'s [occasion] is coming up.
+Version B subject: Never miss a birthday again.
+Same query logic as Email 3 Version A. This one goes to all users with saved occasions regardless of sender status — it's a utility email for everyone.
+
+New email — abandoned gift trigger
+Trigger logic:
+paid = false
+AND createdAt < now - 24 hours
+AND autoRefundedAt IS NULL
+AND recipientName IS NOT NULL
+AND senderUserId IS NOT NULL
+Available personalization: recipientName, experience (mood), giftTitle, senderName.
+Subject: You started something for [recipientName].
+Body: Short. Warm. Not guilt — just a gentle nudge back to the intention they had. "You were in the middle of building something for [recipientName]. It's still there." One button — "Finish the moment" — deep linked to /create?resume=[giftId].
+Frontend note: needs a resume flow that picks up the existing gift record by giftId and pre-populates all completed steps. The data anchor is already there — paid = false record with recipientName and experience already written.
+
+Implementation questions that need answers before building
+One — for Email 1, if a user received multiple gifts, which do we use for personalization? Most recent, or first received? Recommend first received since that's the gift that drove account creation, but confirm.
+Two — for the abandoned gift trigger, do we want to cap at one email per abandoned gift, or is there a case for a second nudge at 72 hours? Recommend one email only to avoid feeling pushy — confirm.
+Three — for the resume flow on abandoned gifts, what's the current create flow URL structure and how much frontend work is involved in pre-populating from an existing giftId? This could be a meaningful lift — flag if it needs scoping separately.
+Four — do we have open rate and click tracking set up on existing Resend emails? We need baseline metrics to know if this sequence is working. If not, add UTM parameters to all button links at minimum.
+Five — for the monthly digest, is the existing scheduler logic already handling the floating holiday calculation via floatingKey, or does that need to be extended for the digest send?
+
+Priority order for implementation
+One — abandoned gift trigger. Highest intent audience, data already exists, biggest immediate revenue impact.
+Two — Email 1 rewrite with personalization. Highest volume touchpoint, biggest conversion opportunity.
+Three — Email 2 static story. Lowest technical lift, high emotional impact.
+Four — Email 3 and monthly digest. Already partially built, mostly query and template work.

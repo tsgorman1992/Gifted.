@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 import { createHmac, timingSafeEqual } from "crypto";
+import { db } from "@workspace/db";
+import { emailLogs } from "@workspace/db/schema";
 
 const FROM = "gifted. <hello@gifted.page>";
 const REPLY_TO = "help@gifted.page";
@@ -108,6 +110,29 @@ function p(text: string, muted = false): string {
 
 function divider(): string {
   return `<hr style="border:none;border-top:1px solid #ede8e1;margin:28px 0;" />`;
+}
+
+function utmUrl(base: string, content: string, campaign = "recipient_to_sender"): string {
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}utm_source=email&utm_medium=drip&utm_campaign=${campaign}&utm_content=${content}`;
+}
+
+async function logEmail({
+  userId,
+  email,
+  type,
+  resendMessageId,
+}: {
+  userId: string | null;
+  email: string;
+  type: string;
+  resendMessageId?: string | null;
+}): Promise<void> {
+  try {
+    await db.insert(emailLogs).values({ userId, email, type, resendMessageId: resendMessageId ?? null });
+  } catch (err) {
+    console.error("[email] Failed to write email log:", err);
+  }
 }
 
 function detail(label: string, value: string): string {
@@ -711,47 +736,59 @@ export async function sendSenderThankYouNotice({
   }
 }
 
-// ─── 13. Drip email 1 — "Ready to send a moment?" (day 3) ────────────────────
+// ─── 13. Drip email 1 — personalised recipient-to-sender nudge (day 3) ────────
 
 export async function sendDripEmail1({
   to,
   firstName,
   userId,
+  senderName,
+  occasion,
+  amount,
 }: {
   to: string;
   firstName: string | null;
   userId: string;
+  senderName: string | null;
+  occasion: string | null;
+  amount: string | null;
 }): Promise<boolean> {
   const client = getClient();
   if (!client) return false;
 
-  const name = firstName ? firstName.split(" ")[0] : null;
-  const greeting = name ? `Hi ${name},` : "Hi there,";
-  const createUrl = `${BASE_URL}/create`;
+  const createUrl = utmUrl(`${BASE_URL}/create`, "drip1");
   const unsub = unsubscribeUrl(userId);
 
+  const senderLabel = senderName ? senderName.split(" ")[0] : "Someone";
+  const occasionLabel = occasion
+    ? occasion.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+    : "a special occasion";
+  const hasBalance = amount && parseFloat(amount) > 0;
+
   const body = `
-    ${h1("Make someone's day — build a moment")}
-    <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#2c2520;">
-      ${greeting} You received a gift on gifted. — and now you know what it feels like to open one.
+    <p style="margin:0 0 24px;font-size:18px;line-height:1.6;color:#1a1310;font-family:Georgia,serif;font-style:italic;">
+      ${senderLabel} built you something for your ${occasionLabel}.
     </p>
-    ${p(`gifted. isn't just for receiving. It's the best way to send a thoughtful, cinematic gift to someone you care about — a birthday, a thank-you, a "just because." No gift cards. No awkward Amazon links. Just a beautiful moment they'll actually remember.`)}
+    ${p(`Someone took the time to find the photos, write the words, record something just for you.`)}
+    ${hasBalance ? p(`They even made sure you had something to spend.`) : ""}
+    ${p(`Someone in your life deserves that same feeling.`)}
+    ${p(`You already know how to give it to them.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
       ${btn("Build a moment", createUrl)}
-      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Takes about 2 minutes. They'll never forget it.</p>
     </div>
   `;
 
   try {
-    const { error } = await client.emails.send({
+    const { data, error } = await client.emails.send({
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: "You know what it feels like — now send one ✨",
+      subject: `${senderLabel} built you something. You could do that for someone too.`,
       html: layout("Build a moment — gifted.", body, unsub),
     });
     if (error) { console.error("[email] sendDripEmail1 error:", error); return false; }
+    await logEmail({ userId, email: to, type: "drip1", resendMessageId: data?.id });
     console.log(`[email] Drip email 1 sent to ${to}`);
     return true;
   } catch (err) {
@@ -760,7 +797,7 @@ export async function sendDripEmail1({
   }
 }
 
-// ─── 14. Drip email 2 — "Don't miss a birthday" (day 10) ─────────────────────
+// ─── 14. Drip email 2 — static story (day 10) ────────────────────────────────
 
 export async function sendDripEmail2({
   to,
@@ -774,33 +811,30 @@ export async function sendDripEmail2({
   const client = getClient();
   if (!client) return false;
 
-  const name = firstName ? firstName.split(" ")[0] : null;
-  const greeting = name ? `Hi ${name},` : "Hi there,";
-  const createUrl = `${BASE_URL}/create`;
+  const createUrl = utmUrl(`${BASE_URL}/create`, "drip2");
   const unsub = unsubscribeUrl(userId);
 
   const body = `
-    ${h1("Someone in your life deserves a moment")}
-    <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:#2c2520;">
-      ${greeting} A birthday, an anniversary, a promotion — or just a Tuesday that deserves to feel special.
-    </p>
-    ${p(`gifted. makes it easy to send something real. A personal note, photos, a playlist, and an optional cash gift — all wrapped in a beautiful experience that opens like a present.`)}
+    ${p(`Gorman sent Treppy a birthday gift last week.`)}
+    ${p(`Photos from a trip they took together. A video he recorded in his living room. Ten dollars toward hibachi or the driving range — Treppy's call.`)}
+    ${p(`Treppy called him when he opened it.`)}
+    ${p(`That's it. That's the whole story.`, true)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("Send a moment", createUrl)}
-      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Who deserves to feel celebrated today?</p>
+      ${btn("Build a moment", createUrl)}
     </div>
   `;
 
   try {
-    const { error } = await client.emails.send({
+    const { data, error } = await client.emails.send({
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: "Someone's waiting for a moment from you 🎁",
-      html: layout("Send a moment — gifted.", body, unsub),
+      subject: "This is what it looks like when it lands.",
+      html: layout("A moment that landed — gifted.", body, unsub),
     });
     if (error) { console.error("[email] sendDripEmail2 error:", error); return false; }
+    await logEmail({ userId, email: to, type: "drip2", resendMessageId: data?.id });
     console.log(`[email] Drip email 2 sent to ${to}`);
     return true;
   } catch (err) {
@@ -811,10 +845,24 @@ export async function sendDripEmail2({
 
 // ─── 15. Monthly occasions digest ─────────────────────────────────────────────
 
-interface UpcomingOccasion {
+export interface UpcomingOccasion {
   contactName: string;
   label: string;
   daysAway: number;
+}
+
+function occasionTableRows(occasions: UpcomingOccasion[], buildUrlContent: string): string {
+  return occasions.slice(0, 5).map(o => {
+    const buildUrl = utmUrl(`${BASE_URL}/create`, buildUrlContent);
+    const when = o.daysAway === 0 ? "Today" : o.daysAway === 1 ? "Tomorrow" : `In ${o.daysAway} days`;
+    return `<tr>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:14px;color:#1a1310;font-weight:600;">${o.contactName}'s ${o.label}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:14px;color:#6b6059;text-align:right;">${when}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #f0ebe5;text-align:right;">
+        <a href="${buildUrl}" style="font-size:13px;color:#7c4a1e;font-weight:600;text-decoration:none;">Build →</a>
+      </td>
+    </tr>`;
+  }).join("");
 }
 
 export async function sendMonthlyDigest({
@@ -833,69 +881,156 @@ export async function sendMonthlyDigest({
 
   const name = firstName ? firstName.split(" ")[0] : null;
   const greeting = name ? `Hi ${name},` : "Hi there,";
-  const createUrl = `${BASE_URL}/create`;
-  const addOccasionUrl = `${BASE_URL}/my-gifts?tab=people`;
+  const createUrl = utmUrl(`${BASE_URL}/create`, "digest");
+  const addOccasionUrl = utmUrl(`${BASE_URL}/my-gifts?tab=people`, "digest_add_birthday");
   const unsub = unsubscribeUrl(userId);
-
   const hasOccasions = upcomingOccasions.length > 0;
-
-  const occasionRows = upcomingOccasions
-    .slice(0, 5)
-    .map(o => {
-      const when = o.daysAway === 0
-        ? "Today"
-        : o.daysAway === 1
-        ? "Tomorrow"
-        : `In ${o.daysAway} days`;
-      return `<tr>
-        <td style="padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:14px;color:#1a1310;font-weight:600;">${o.contactName}'s ${o.label}</td>
-        <td style="padding:10px 0;border-bottom:1px solid #f0ebe5;font-size:14px;color:#6b6059;text-align:right;">${when}</td>
-      </tr>`;
-    })
-    .join("");
 
   const body = hasOccasions
     ? `
-      ${h1("Occasions coming up this month 🎁")}
       <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#2c2520;">
-        ${greeting} Here's a look at what's coming up in the next 60 days — so you can plan something special ahead of time.
+        ${greeting} Here's what's coming up in the next 60 days.
       </p>
       <table cellpadding="0" cellspacing="0" width="100%">
-        ${occasionRows}
+        ${occasionTableRows(upcomingOccasions, "digest_occasion")}
       </table>
       ${divider()}
       <div style="text-align:center;padding:8px 0 4px;">
         ${btn("Build a moment", createUrl)}
-        <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">A thoughtful moment takes 2 minutes to build and lasts a lifetime.</p>
       </div>
     `
     : `
-      ${h1("Never miss a birthday again 🎂")}
-      <p style="margin:0 0 20px;font-size:15px;line-height:1.65;color:#2c2520;">
-        ${greeting} Add a birthday or anniversary to gifted. and we'll remind you a week before — so you're never scrambling at the last minute.
-      </p>
+      ${p(`${greeting} Add someone you care about — their name, their birthday.`)}
+      ${p(`We'll remind you before it arrives every year.`)}
+      ${p(`Set it once. Never scramble again.`, true)}
       ${divider()}
       <div style="text-align:center;padding:8px 0 4px;">
-        ${btn("Add a birthday reminder", addOccasionUrl)}
-        <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">Free, takes 30 seconds, and you'll thank yourself later.</p>
+        ${btn("Add a birthday", addOccasionUrl)}
       </div>
     `;
 
   try {
-    const { error } = await client.emails.send({
+    const { data, error } = await client.emails.send({
       from: FROM,
       to,
       replyTo: REPLY_TO,
       subject: hasOccasions
-        ? `${upcomingOccasions[0].contactName}'s ${upcomingOccasions[0].label} is coming up 🎁`
-        : "Never miss a birthday — add a reminder ✨",
+        ? `${upcomingOccasions[0].contactName}'s ${upcomingOccasions[0].label} is coming up.`
+        : "Never miss a birthday again.",
       html: layout("gifted. — monthly update", body, unsub),
     });
     if (error) { console.error("[email] sendMonthlyDigest error:", error); return false; }
+    await logEmail({ userId, email: to, type: "digest", resendMessageId: data?.id });
     console.log(`[email] Monthly digest sent to ${to}`);
     return true;
   } catch (err) {
     console.error("[email] sendMonthlyDigest exception:", err);
+    return false;
+  }
+}
+
+// ─── 16. Drip email 3 — utility occasions nudge (day 30) ──────────────────────
+
+export async function sendDripEmail3({
+  to,
+  firstName,
+  userId,
+  upcomingOccasions,
+}: {
+  to: string;
+  firstName: string | null;
+  userId: string;
+  upcomingOccasions: UpcomingOccasion[];
+}): Promise<boolean> {
+  const client = getClient();
+  if (!client) return false;
+
+  const createUrl = utmUrl(`${BASE_URL}/create`, "drip3");
+  const addOccasionUrl = utmUrl(`${BASE_URL}/my-gifts?tab=people`, "drip3_add_birthday");
+  const unsub = unsubscribeUrl(userId);
+  const hasOccasions = upcomingOccasions.length > 0;
+
+  const body = hasOccasions
+    ? `
+      ${h1("A few dates worth knowing about.")}
+      <table cellpadding="0" cellspacing="0" width="100%">
+        ${occasionTableRows(upcomingOccasions, "drip3_occasion")}
+      </table>
+      ${divider()}
+      <div style="text-align:center;padding:8px 0 4px;">
+        ${btn("Build a moment", createUrl)}
+      </div>
+    `
+    : `
+      ${p(`Add one person and their birthday.`)}
+      ${p(`We'll remind you before it arrives — 3 days before and the morning of. You'll never send a lazy last-minute gift again.`)}
+      ${divider()}
+      <div style="text-align:center;padding:8px 0 4px;">
+        ${btn("Add a birthday", addOccasionUrl)}
+      </div>
+    `;
+
+  const subject = hasOccasions
+    ? "A few dates worth knowing about."
+    : "You'll thank yourself for this in about 3 weeks.";
+
+  try {
+    const { data, error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject,
+      html: layout("gifted. — upcoming occasions", body, unsub),
+    });
+    if (error) { console.error("[email] sendDripEmail3 error:", error); return false; }
+    await logEmail({ userId, email: to, type: "drip3", resendMessageId: data?.id });
+    console.log(`[email] Drip email 3 sent to ${to}`);
+    return true;
+  } catch (err) {
+    console.error("[email] sendDripEmail3 exception:", err);
+    return false;
+  }
+}
+
+// ─── 17. Abandoned gift nudge ──────────────────────────────────────────────────
+
+export async function sendAbandonedGiftEmail({
+  to,
+  userId,
+  recipientName,
+}: {
+  to: string;
+  userId: string;
+  recipientName: string;
+}): Promise<boolean> {
+  const client = getClient();
+  if (!client) return false;
+
+  const resumeUrl = utmUrl(`${BASE_URL}/create`, "abandoned_gift", "abandoned_gift");
+
+  const body = `
+    ${p(`You were in the middle of building something for ${recipientName}.`)}
+    ${p(`It's still there.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Finish the moment", resumeUrl)}
+    </div>
+  `;
+
+  try {
+    const { data, error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `You started something for ${recipientName}.`,
+      html: layout("gifted. — finish your moment", body),
+    });
+    if (error) { console.error("[email] sendAbandonedGiftEmail error:", error); return false; }
+    await logEmail({ userId, email: to, type: "abandoned_nudge", resendMessageId: data?.id });
+    console.log(`[email] Abandoned gift nudge sent to ${to}`);
+    return true;
+  } catch (err) {
+    console.error("[email] sendAbandonedGiftEmail exception:", err);
     return false;
   }
 }

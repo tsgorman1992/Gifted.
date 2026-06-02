@@ -1,0 +1,212 @@
+gifted. Email Drip — Final Implementation Brief with Schema Confirmed
+Platform context
+gifted. (gifted.page) — premium SMS-driven digital gifting platform. Email service is Resend. All trigger logic lives in our custom scheduler (runs every 10 minutes) or explicit API calls in route handlers. No native Resend automations.
+
+Schema changes — do these first
+gifts table:
+Add abandonedNudgeSentAt timestamp, nullable.
+users table:
+Extend existing dripStep state machine from 0-2 to 0-3.
+Current:
+
+0 = no drip sent
+1 = Email 1 sent
+2 = Email 2 sent
+
+Add:
+
+3 = Email 3 sent
+
+New table — email_logs:
+sqlCREATE TABLE email_logs (
+  id              SERIAL PRIMARY KEY,
+  userId          INTEGER REFERENCES users(id),
+  email           TEXT NOT NULL,
+  type            TEXT NOT NULL,
+  sentAt          TIMESTAMP NOT NULL DEFAULT NOW(),
+  resendMessageId TEXT,
+  status          TEXT DEFAULT 'sent'
+);
+Type values: drip1, drip2, drip3, digest, abandoned_nudge
+Write a row to email_logs after every successful Resend API call across all email functions — existing and new. If Resend returns a messageId, store it in resendMessageId.
+
+Pre-launch requirement for all emails
+Add UTM parameters to every CTA button before any email goes live:
+
+utm_source=email
+utm_medium=drip
+utm_campaign=recipient_to_sender
+utm_content=drip1 (adjust per email type)
+
+For abandoned nudge: utm_campaign=abandoned_gift
+
+Task 1 — Abandoned gift trigger
+Priority: build first.
+Scheduler logic: runs every 10 minutes, queries:
+paid = false
+AND createdAt < now - 24 hours
+AND autoRefundedAt IS NULL
+AND recipientName IS NOT NULL
+AND senderUserId IS NOT NULL
+AND abandonedNudgeSentAt IS NULL
+On successful send:
+
+Write current timestamp to abandonedNudgeSentAt on gift record
+Write row to email_logs with type = 'abandoned_nudge'
+
+Available personalization: recipientName, experience, giftTitle, senderName.
+Subject: You started something for [recipientName].
+Body:
+You were in the middle of building something for [recipientName].
+
+It's still there.
+
+[Finish the moment →]
+CTA links to /create for now. Resume flow scoped separately — do not block on it.
+
+Task 2 — Email 1 rewrite with personalization
+Trigger: scheduler checks daily for users where:
+
+Account createdAt = 3 days ago
+recipientUserId exists on at least one gift record
+dripStep = 0
+hasSentGift = false
+
+Personalization query:
+sqlSELECT senderName, occasion, experience, amount
+FROM gifts
+WHERE recipientUserId = user.id
+ORDER BY createdAt ASC
+LIMIT 1
+Use first received gift only.
+Subject: [SenderName] built you something. You could do that for someone too.
+Body:
+[SenderName] built you something for your [occasion].
+
+Someone took the time to find the photos, write the words,
+record something just for you.
+
+Someone in your life deserves that same feeling.
+
+You already know how to give it to them.
+
+[Build a moment →]
+If amount > 0, insert after second paragraph:
+"They even made sure you had something to spend."
+On successful send:
+
+Set dripStep = 1 on user record
+Update dripLastSentAt to now
+Write row to email_logs with type = 'drip1'
+
+
+Task 3 — Email 2 static story
+Trigger: scheduler checks daily for users where:
+
+dripStep = 1
+dripLastSentAt < now - 10 days
+hasSentGift = false
+
+No personalization needed. Static content only.
+Subject: This is what it looks like when it lands.
+Body:
+Gorman sent Treppy a birthday gift last week.
+
+Photos from a trip they took together. A video he recorded
+in his living room. Ten dollars toward hibachi or the
+driving range — Treppy's call.
+
+Treppy called him when he opened it.
+
+That's it. That's the whole story.
+
+[Build a moment →]
+On successful send:
+
+Set dripStep = 2 on user record
+Update dripLastSentAt to now
+Write row to email_logs with type = 'drip2'
+
+
+Task 4 — Email 3 utility email
+Trigger: scheduler checks daily for users where:
+
+dripStep = 2
+dripLastSentAt < now - 30 days
+hasSentGift = false
+
+Two versions based on occasions data:
+Version A — user has upcoming occasions:
+Query:
+sqlSELECT c.name, co.label, co.month, co.day, co.floatingKey
+FROM contactOccasions co
+JOIN contacts c ON co.contactId = c.id
+WHERE co.userId = user.id
+Run through existing computeFloatingDate logic. Filter to ≤ 60 days from today. Sort ascending. Cap at 5.
+Subject: A few dates worth knowing about.
+Body: Clean table — contact name, occasion label, days until. One "Build a moment →" button per row. No emotional copy. Pure utility.
+Version B — no upcoming occasions:
+Subject: You'll thank yourself for this in about 3 weeks.
+Body:
+Add one person and their birthday.
+
+We'll remind you before it arrives — 3 days before
+and the morning of. You'll never send a lazy
+last-minute gift again.
+
+[Add a birthday →]
+CTA links to contacts/people section of dashboard.
+On successful send either version:
+
+Set dripStep = 3 on user record
+Update dripLastSentAt to now
+Write row to email_logs with type = 'drip3'
+
+
+Task 5 — Monthly digest
+Trigger: runs on 1st of each month for all users. Extend existing scheduler logic.
+digestLastSentAt already exists on users table — use to prevent double sends within same month.
+Same occasions query and computeFloatingDate logic as Email 3. Floating holidays already fully handled — no changes needed.
+Version A — has upcoming occasions within 60 days:
+Subject: [FirstContactName]'s [occasion] is coming up.
+Same table format as Email 3 Version A. Cap at 5.
+Version B — no saved occasions:
+Subject: Never miss a birthday again.
+Body:
+Add someone you care about — their name, their birthday.
+
+We'll remind you before it arrives every year.
+
+Set it once. Never scramble again.
+
+[Add a birthday →]
+On successful send:
+
+Update digestLastSentAt to now on user record
+Write row to email_logs with type = 'digest'
+
+
+Task 6 — Resume flow (scope separately, do not block email launch)
+When ready: build ?resume=giftId on create page. Fetch existing gift record by ID via API, map all fields back into component state, drop user at correct step. Follow existing ?draft= param pattern used for mobile QR handoff. Estimated half-day. Once live, update abandoned gift email CTA from /create to /create?resume=[giftId].
+
+Build order
+
+Schema changes — email_logs table, abandonedNudgeSentAt on gifts, dripStep extended to support step 3
+Backfill email_logs write to all existing email functions before building new ones
+Abandoned gift trigger + email template
+Email 1 rewrite + personalization query
+Email 2 static template
+Email 3 both versions
+Monthly digest extension
+UTM params on all CTAs across all emails
+Resume flow — separate scope, separate task
+
+
+Definition of done for each email
+
+Scheduler trigger logic implemented and tested
+Email template built in Resend
+Correct user/gift record updated on send
+Row written to email_logs on send
+UTM params on all CTAs
+Tested end to end in staging before any live sends

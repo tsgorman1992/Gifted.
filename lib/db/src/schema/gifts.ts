@@ -61,6 +61,7 @@ export const gifts = pgTable("gifts", {
   idempotencyKey: text("idempotency_key").unique(),
   thankYouNote: text("thank_you_note"),
   thankYouSentAt: timestamp("thank_you_sent_at", { withTimezone: true }),
+  abandonedNudgeSentAt: timestamp("abandoned_nudge_sent_at", { withTimezone: true }),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({
