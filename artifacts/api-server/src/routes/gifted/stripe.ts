@@ -2,7 +2,7 @@ import { Router } from "express";
 import Stripe from "stripe";
 import twilio from "twilio";
 import { db, gifts, usersTable } from "@workspace/db";
-import { eq, and, ne, isNotNull } from "drizzle-orm";
+import { eq, and, ne, isNotNull, isNull } from "drizzle-orm";
 import {
   sendSenderReceipt,
   sendSenderRedemptionNotice,
@@ -158,7 +158,11 @@ router.post("/gifted/checkout-session", async (req, res) => {
  */
 router.post("/gifted/confirm-payment", async (req, res) => {
   try {
-    const { sessionId, giftId } = req.body as { sessionId: string; giftId: string };
+    const { sessionId, giftId, acquisitionSource } = req.body as {
+      sessionId: string;
+      giftId: string;
+      acquisitionSource?: string;
+    };
 
     if (!sessionId || !giftId) {
       res.status(400).json({ error: "sessionId and giftId are required" });
@@ -208,6 +212,19 @@ router.post("/gifted/confirm-payment", async (req, res) => {
         occasion:      existing.occasion,
         giftTitle:     existing.giftTitle,
       }).catch(() => {});
+    }
+
+    // Record the user's very first send — only written once, never overwritten.
+    // acquisitionSource comes from utm_content captured when they landed on /create.
+    if (!alreadyPaid && existing?.senderUserId) {
+      const validSources = ["drip1", "drip2", "drip3", "abandoned_nudge", "digest"];
+      const source = acquisitionSource && validSources.includes(acquisitionSource)
+        ? acquisitionSource
+        : "organic";
+      db.update(usersTable)
+        .set({ firstSentAt: new Date(), firstSentSource: source })
+        .where(and(eq(usersTable.id, existing.senderUserId), isNull(usersTable.firstSentAt)))
+        .catch(err => console.warn("[confirm-payment] firstSentAt write failed:", err));
     }
 
     // Missed-window: recipient already opened before payment was confirmed — notify sender now

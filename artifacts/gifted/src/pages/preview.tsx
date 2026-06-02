@@ -284,14 +284,16 @@ export default function PreviewPage() {
       setShareUrl(url);
       setPaymentStatus("confirming");
 
+      const acquisitionSource = localStorage.getItem("gifted_acquisition_source") || undefined;
       fetch(`${base}/api/gifted/confirm-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ sessionId, giftId: giftParam }),
+        body: JSON.stringify({ sessionId, giftId: giftParam, acquisitionSource }),
       })
         .then(async (res) => {
           if (!res.ok) throw new Error(`Confirm failed: ${res.status}`);
+          localStorage.removeItem("gifted_acquisition_source");
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", giftParam);
           const paidAmt = localStorage.getItem("gifted_amount");

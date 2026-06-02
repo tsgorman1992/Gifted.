@@ -1044,6 +1044,14 @@ export default function CreatePage() {
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+    // Capture utm_content for conversion tracking — written once on landing,
+    // cleared by preview.tsx when the first gift is successfully paid.
+    const utmParams = new URLSearchParams(window.location.search);
+    const utmContent = utmParams.get("utm_content");
+    if (utmContent && !localStorage.getItem("gifted_acquisition_source")) {
+      localStorage.setItem("gifted_acquisition_source", utmContent);
+    }
+
     // ── Edit mode: ?edit_gift_id=GIFT_ID ────────────────────────────────────
     // Launched from preview.tsx when sender wants to edit an already-created gift.
     // Skip the hasPaidUnshared guard and localStorage restore — fetch the gift

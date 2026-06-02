@@ -14,6 +14,7 @@ app.use(cookieParser());
 
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }));
 app.use("/api/gifted/aftership-webhook", express.raw({ type: "*/*" }));
+app.use("/api/webhooks/resend", express.raw({ type: "*/*" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

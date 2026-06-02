@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, gifts, usersTable } from "@workspace/db";
-import { desc, isNotNull, eq, ilike, count, gte, lte, ne, and, sql } from "drizzle-orm";
+import { desc, isNotNull, isNull, eq, ilike, count, gte, lte, ne, and, sql } from "drizzle-orm";
 import { physicalGifts, conversations, messages } from "@workspace/db";
 import rateLimit from "express-rate-limit";
 
@@ -720,6 +720,153 @@ router.delete("/admin/ghost-drafts", async (req, res) => {
   } catch (err) {
     console.error("[admin] ghost-drafts delete error:", err);
     res.status(500).json({ error: "Failed to delete ghost drafts" });
+  }
+});
+
+/**
+ * GET /api/internal/email-metrics
+ * Live snapshot of email sequence performance. Admin-auth required.
+ */
+router.get("/internal/email-metrics", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const { emailLogs } = await import("@workspace/db");
+    const { isNotNull: isNotNullEl } = await import("drizzle-orm");
+
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    const oneDayAgo   = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [
+      step0EligibleRows,
+      drip1Rows,
+      drip2Rows,
+      drip3Rows,
+      dripConvertedRows,
+      abandonedEligibleRows,
+      nudgesSentRows,
+      abandonedConvertedRows,
+      deliveryRows,
+      sourceRows,
+    ] = await Promise.all([
+      // drip sequence eligible (step=0, email present, account >3 days, not unsubscribed)
+      db.select({ id: usersTable.id }).from(usersTable).where(
+        and(
+          isNotNull(usersTable.email),
+          eq(usersTable.dripStep, 0),
+          eq(usersTable.unsubscribedMarketing, false),
+          lte(usersTable.createdAt, threeDaysAgo),
+        )
+      ),
+      // drip1 sent count
+      db.select({ id: emailLogs.id }).from(emailLogs).where(eq(emailLogs.type, "drip1")),
+      // drip2 sent count
+      db.select({ id: emailLogs.id }).from(emailLogs).where(eq(emailLogs.type, "drip2")),
+      // drip3 sent count
+      db.select({ id: emailLogs.id }).from(emailLogs).where(eq(emailLogs.type, "drip3")),
+      // converted to sender via drip (dripStep != 0 and has sent a paid gift)
+      db.select({ id: usersTable.id }).from(usersTable).where(
+        and(
+          isNotNull(usersTable.firstSentAt),
+          sql`${usersTable.firstSentSource} IN ('drip1','drip2','drip3')`,
+        )
+      ),
+      // abandoned gift nudge eligible (unpaid, >24h, not nudged, has recipient)
+      db.select({ id: gifts.id }).from(gifts).where(
+        and(
+          eq(gifts.paid, false),
+          lte(gifts.createdAt, oneDayAgo),
+          isNull(gifts.autoRefundedAt),
+          isNotNull(gifts.recipientName),
+          isNotNull(gifts.senderUserId),
+          isNotNull(gifts.senderEmail),
+          isNull(gifts.abandonedNudgeSentAt),
+        )
+      ),
+      // nudges sent
+      db.select({ id: emailLogs.id }).from(emailLogs).where(eq(emailLogs.type, "abandoned_nudge")),
+      // converted via abandoned nudge
+      db.select({ id: usersTable.id }).from(usersTable).where(
+        and(
+          isNotNull(usersTable.firstSentAt),
+          eq(usersTable.firstSentSource, "abandoned_nudge"),
+        )
+      ),
+      // delivery health — count by status
+      db.select({
+        status: emailLogs.status,
+        count:  count(),
+      }).from(emailLogs).groupBy(emailLogs.status),
+      // source breakdown
+      db.select({
+        source: usersTable.firstSentSource,
+        count:  count(),
+      }).from(usersTable).where(isNotNullEl(usersTable.firstSentAt)).groupBy(usersTable.firstSentSource),
+    ]);
+
+    // Delivery health
+    const statusMap: Record<string, number> = {};
+    for (const row of deliveryRows) statusMap[row.status ?? "sent"] = Number(row.count);
+    const totalSent    = Object.values(statusMap).reduce((a, b) => a + b, 0);
+    const delivered    = statusMap["delivered"] ?? 0;
+    const bounced      = statusMap["bounced"]   ?? 0;
+    const complained   = statusMap["complained"] ?? 0;
+    const deliveryRate = totalSent > 0 ? `${((delivered / totalSent) * 100).toFixed(1)}%` : "n/a";
+
+    // Drip sequence
+    const dripStep0 = step0EligibleRows.length;
+    const d1 = drip1Rows.length;
+    const d2 = drip2Rows.length;
+    const d3 = drip3Rows.length;
+    const dripConverted = dripConvertedRows.length;
+    const dripBase = d1 || 1;
+    const dripConversionRate = `${((dripConverted / dripBase) * 100).toFixed(1)}%`;
+
+    // Abandoned nudge
+    const nudgesEligible = abandonedEligibleRows.length;
+    const nudgesSent = nudgesSentRows.length;
+    const nudgesConverted = abandonedConvertedRows.length;
+    const nudgeConversionRate = nudgesSent > 0
+      ? `${((nudgesConverted / nudgesSent) * 100).toFixed(1)}%`
+      : "n/a";
+
+    // Source breakdown
+    const srcMap: Record<string, number> = {};
+    for (const row of sourceRows) srcMap[row.source ?? "organic"] = Number(row.count);
+
+    res.json({
+      drip_sequence: {
+        step0_eligible:     dripStep0,
+        drip1_sent:         d1,
+        drip2_sent:         d2,
+        drip3_sent:         d3,
+        converted_to_sender: dripConverted,
+        conversion_rate:    dripConversionRate,
+      },
+      abandoned_nudge: {
+        eligible_gifts:  nudgesEligible,
+        nudges_sent:     nudgesSent,
+        converted:       nudgesConverted,
+        conversion_rate: nudgeConversionRate,
+      },
+      delivery_health: {
+        total_sent:    totalSent,
+        delivered,
+        bounced,
+        complained,
+        delivery_rate: deliveryRate,
+      },
+      source_breakdown: {
+        drip1:         srcMap["drip1"]          ?? 0,
+        drip2:         srcMap["drip2"]          ?? 0,
+        drip3:         srcMap["drip3"]          ?? 0,
+        abandoned_nudge: srcMap["abandoned_nudge"] ?? 0,
+        digest:        srcMap["digest"]         ?? 0,
+        organic:       srcMap["organic"]        ?? 0,
+      },
+    });
+  } catch (err) {
+    console.error("[admin] email-metrics error:", err);
+    res.status(500).json({ error: "Failed to fetch email metrics" });
   }
 });
 

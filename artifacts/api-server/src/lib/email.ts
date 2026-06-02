@@ -1,7 +1,8 @@
 import { Resend } from "resend";
 import { createHmac, timingSafeEqual } from "crypto";
 import { db } from "@workspace/db";
-import { emailLogs } from "@workspace/db/schema";
+import { emailLogs, usersTable } from "@workspace/db/schema";
+import { eq, or } from "drizzle-orm";
 
 const FROM = "gifted. <hello@gifted.page>";
 const REPLY_TO = "help@gifted.page";
@@ -135,6 +136,26 @@ async function logEmail({
   }
 }
 
+/**
+ * Returns true if the given email address belongs to a user who has
+ * bounced or filed a spam complaint — meaning we must not send to them.
+ * Returns false when the email is not in the users table (non-user recipients
+ * are assumed deliverable).
+ */
+async function isEmailSuppressed(email: string): Promise<boolean> {
+  try {
+    const [user] = await db
+      .select({ emailBounced: usersTable.emailBounced, emailComplained: usersTable.emailComplained })
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+    if (!user) return false;
+    return user.emailBounced || user.emailComplained;
+  } catch {
+    return false; // never block sends due to lookup failures
+  }
+}
+
 function detail(label: string, value: string): string {
   return `<tr>
     <td style="padding:6px 0;font-size:13px;color:#6b6059;vertical-align:top;width:40%;">${label}</td>
@@ -157,6 +178,7 @@ interface SenderReceiptParams {
 export async function sendSenderReceipt(params: SenderReceiptParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName, giftId, amount, occasion, giftTitle } = params;
   const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
@@ -210,6 +232,7 @@ interface SenderRedemptionParams {
 export async function sendSenderRedemptionNotice(params: SenderRedemptionParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName, giftId, amount, payoutMethod } = params;
   const dashboardUrl = `${BASE_URL}/my-gifts`;
@@ -317,6 +340,7 @@ interface GiftOpenedParams {
 export async function sendGiftOpenedNotice(params: GiftOpenedParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName, giftId } = params;
   const dashboardUrl = `${BASE_URL}/my-gifts`;
@@ -357,6 +381,7 @@ interface SenderNudgeParams {
 export async function sendSenderNudgeEmail(params: SenderNudgeParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName, giftId } = params;
   const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
@@ -398,6 +423,7 @@ interface ScheduledReadyParams {
 export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName, giftId } = params;
   const giftUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
@@ -438,6 +464,7 @@ interface PackageDeliveredParams {
 export async function sendPackageDeliveredEmail(params: PackageDeliveredParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName } = params;
   const dashboardUrl = `${BASE_URL}/my-gifts`;
@@ -478,6 +505,7 @@ interface SenderSecondNudgeParams {
 export async function sendSenderSecondNudgeEmail(params: SenderSecondNudgeParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName, giftId } = params;
   const giftUrl = `${BASE_URL}/open/${giftId}?preview=true`;
@@ -522,6 +550,7 @@ interface UnredeemedSenderParams {
 export async function sendUnredeemedSenderEmail(params: UnredeemedSenderParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName, amount } = params;
 
@@ -561,6 +590,7 @@ interface GiftLinkEmailParams {
 export async function sendGiftLinkEmail(params: GiftLinkEmailParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, recipientName, giftId } = params;
   const previewUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
@@ -604,6 +634,7 @@ interface RecipientPayoutParams {
 export async function sendRecipientPayoutConfirmation(params: RecipientPayoutParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, recipientName, senderName, amount, payoutMethod, payoutHandle } = params;
   const amtStr = `$${parseFloat(amount).toFixed(2)}`;
@@ -652,6 +683,7 @@ interface HappyBirthdayParams {
 export async function sendHappyBirthdayEmail(params: HappyBirthdayParams): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, firstName } = params;
   const name = firstName || "you";
@@ -702,6 +734,7 @@ export async function sendSenderThankYouNotice({
 }): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(to)) { console.log(`[email] Suppressed: ${to}`); return; }
 
   const greeting = senderName ? `Hi ${senderName},` : "Hi there,";
   const fromName = recipientName || "Your recipient";
@@ -755,6 +788,7 @@ export async function sendDripEmail1({
 }): Promise<boolean> {
   const client = getClient();
   if (!client) return false;
+  if (await isEmailSuppressed(to)) { console.log(`[email] Suppressed: ${to}`); return false; }
 
   const createUrl = utmUrl(`${BASE_URL}/create`, "drip1");
   const unsub = unsubscribeUrl(userId);
@@ -810,6 +844,7 @@ export async function sendDripEmail2({
 }): Promise<boolean> {
   const client = getClient();
   if (!client) return false;
+  if (await isEmailSuppressed(to)) { console.log(`[email] Suppressed: ${to}`); return false; }
 
   const createUrl = utmUrl(`${BASE_URL}/create`, "drip2");
   const unsub = unsubscribeUrl(userId);
@@ -878,6 +913,7 @@ export async function sendMonthlyDigest({
 }): Promise<boolean> {
   const client = getClient();
   if (!client) return false;
+  if (await isEmailSuppressed(to)) { console.log(`[email] Suppressed: ${to}`); return false; }
 
   const name = firstName ? firstName.split(" ")[0] : null;
   const greeting = name ? `Hi ${name},` : "Hi there,";
@@ -944,6 +980,7 @@ export async function sendDripEmail3({
 }): Promise<boolean> {
   const client = getClient();
   if (!client) return false;
+  if (await isEmailSuppressed(to)) { console.log(`[email] Suppressed: ${to}`); return false; }
 
   const createUrl = utmUrl(`${BASE_URL}/create`, "drip3");
   const addOccasionUrl = utmUrl(`${BASE_URL}/my-gifts?tab=people`, "drip3_add_birthday");
@@ -1005,6 +1042,7 @@ export async function sendAbandonedGiftEmail({
 }): Promise<boolean> {
   const client = getClient();
   if (!client) return false;
+  if (await isEmailSuppressed(to)) { console.log(`[email] Suppressed: ${to}`); return false; }
 
   const resumeUrl = utmUrl(`${BASE_URL}/create`, "abandoned_gift", "abandoned_gift");
 
@@ -1052,6 +1090,7 @@ export async function sendOccasionReminderEmail({
 }): Promise<void> {
   const client = getClient();
   if (!client) return;
+  if (await isEmailSuppressed(to)) { console.log(`[email] Suppressed: ${to}`); return; }
 
   const greeting = userName ? `Hi ${userName},` : "Hi there,";
   const urgency = daysAway === 0 ? "is today" : `is in ${daysAway} day${daysAway !== 1 ? "s" : ""}`;

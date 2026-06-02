@@ -1,0 +1,138 @@
+Yes — none of this is automatic. Resend gives you open and click data in their dashboard but it knows nothing about what happens on your site after the click. And your email_logs table currently has no way to connect a click to a gift sent. You need to build that bridge yourself.
+Here's the prompt:
+
+gifted. — Conversion Tracking & Email Deliverability Brief
+Context
+We just shipped a full email drip sequence. Email sends are logged to email_logs with type, userId, resendMessageId, and sentAt. UTM params are on all CTAs. What we don't have yet: any way to measure whether emails are actually converting people into senders, or whether our emails are being delivered cleanly. This brief covers both.
+
+Part 1 — Conversion tracking
+What we need to know
+When someone who received a drip email actually sends their first gift, we need to be able to connect that action back to the email that triggered it. Right now we have no way to do that.
+Schema change needed
+Add the following columns to the users table:
+sqlfirstSentAt        TIMESTAMP, nullable
+firstSentSource    TEXT, nullable
+firstSentAt: timestamp of when they sent their very first gift. Write this once, never overwrite.
+firstSentSource: what drove the conversion. Possible values:
+
+drip1
+drip2
+drip3
+abandoned_nudge
+digest
+organic
+
+How to populate firstSentSource
+UTM params are already on every email CTA. When a user lands on /create from an email link, the utm_content value will be in the URL — drip1, drip2, drip3 etc. We need to:
+
+On landing at /create with a utm_content param, write that value to a short-lived session cookie or localStorage key called gifted_acquisition_source
+When a gift is successfully paid — at the point where we'd update any post-payment state — check if the user has firstSentAt = null
+If null: write current timestamp to firstSentAt, read gifted_acquisition_source and write it to firstSentSource, then clear the cookie
+If firstSentAt is already set: do nothing. We only track first send ever.
+
+This gives us a clean queryable record of what drove each user's first send without any third party analytics dependency.
+Reporting query this enables:
+sqlSELECT 
+  firstSentSource,
+  COUNT(*) as conversions,
+  AVG(EXTRACT(EPOCH FROM (firstSentAt - createdAt))/86400) as avg_days_to_convert
+FROM users
+WHERE firstSentAt IS NOT NULL
+GROUP BY firstSentSource
+ORDER BY conversions DESC
+This tells us which email drives the most first sends and how long it takes. That's the only conversion report that matters right now.
+
+Part 2 — Resend webhook handler for delivery status
+What we need
+Currently email_logs writes a row on send with status = 'sent' by default. We never update that status. If an email bounces, fails, or gets marked as spam we have no record of it and we keep trying to send to that address. This will hurt deliverability at scale.
+What to build
+A webhook endpoint that receives Resend delivery events and updates email_logs accordingly.
+Endpoint: POST /api/webhooks/resend
+Resend fires the following events we care about:
+
+email.delivered — successful delivery
+email.bounced — hard or soft bounce
+email.complained — marked as spam
+
+Handler logic:
+
+Verify the webhook signature using Resend's webhook secret — this is critical, do not skip
+Extract the resendMessageId from the event payload
+Look up the matching row in email_logs WHERE resendMessageId = extracted ID
+Update the status column:
+
+email.delivered → 'delivered'
+email.bounced → 'bounced'
+email.complained → 'complained'
+
+
+For bounced and complained events, also set a flag on the users table
+
+Schema change needed on users table:
+sqlemailBounced      BOOLEAN DEFAULT false
+emailComplained   BOOLEAN DEFAULT false
+Update all email sending functions:
+Before attempting to send any email, add a check:
+IF user.emailBounced = true OR user.emailComplained = true
+THEN skip send entirely, log reason, continue
+This prevents us from repeatedly attempting delivery to dead addresses and protects our sender reputation.
+Resend webhook setup:
+In the Resend dashboard, add the webhook URL pointing to our /api/webhooks/resend endpoint and enable email.delivered, email.bounced, and email.complained event types. Store the webhook signing secret in environment variables — never hardcode.
+
+Part 3 — Simple internal metrics endpoint
+What we need
+A single internal endpoint we can hit to see how the sequence is performing. No external dashboard, no third party tool. Just a JSON response we can check directly.
+Endpoint: GET /api/internal/email-metrics
+Protect with an admin check — only accessible to authenticated admin users.
+Response shape:
+json{
+  "drip_sequence": {
+    "step0_eligible": 0,
+    "drip1_sent": 0,
+    "drip2_sent": 0,
+    "drip3_sent": 0,
+    "converted_to_sender": 0,
+    "conversion_rate": "0%"
+  },
+  "abandoned_nudge": {
+    "eligible_gifts": 0,
+    "nudges_sent": 0,
+    "converted": 0,
+    "conversion_rate": "0%"
+  },
+  "delivery_health": {
+    "total_sent": 0,
+    "delivered": 0,
+    "bounced": 0,
+    "complained": 0,
+    "delivery_rate": "0%"
+  },
+  "source_breakdown": {
+    "drip1": 0,
+    "drip2": 0,
+    "drip3": 0,
+    "abandoned_nudge": 0,
+    "digest": 0,
+    "organic": 0
+  }
+}
+All numbers pulled live from email_logs, users, and gifts tables at request time. No caching needed at this stage — volume is low enough that a direct query is fine.
+
+Build order
+
+Schema changes — firstSentAt, firstSentSource on users; emailBounced, emailComplained on users
+Acquisition source cookie logic on /create page
+firstSentAt and firstSentSource write on successful payment
+Resend webhook handler with signature verification
+Pre-send bounce and complaint check in all email functions
+Internal metrics endpoint
+Configure webhook URL in Resend dashboard
+
+
+Definition of done
+
+Sending a test gift from a drip-eligible account writes firstSentSource correctly
+Simulating a Resend bounce webhook updates email_logs status and sets emailBounced on user
+Bounced user is skipped on next scheduler run
+/api/internal/email-metrics returns accurate live numbers
+No email attempts to a bounced or complained address ever

@@ -30,6 +30,10 @@ export const usersTable = pgTable("users", {
   dripLastSentAt: timestamp("drip_last_sent_at", { withTimezone: true }),
   unsubscribedMarketing: boolean("unsubscribed_marketing").notNull().default(false),
   digestLastSentAt: timestamp("digest_last_sent_at", { withTimezone: true }),
+  firstSentAt: timestamp("first_sent_at", { withTimezone: true }),
+  firstSentSource: varchar("first_sent_source"),
+  emailBounced: boolean("email_bounced").notNull().default(false),
+  emailComplained: boolean("email_complained").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

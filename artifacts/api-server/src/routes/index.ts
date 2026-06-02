@@ -14,6 +14,7 @@ import shareRouter from "./share";
 import readyRouter from "./ready";
 import ogRouter from "./og";
 import adminRouter from "./admin";
+import webhooksRouter from "./webhooks";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(shareRouter);
 router.use(readyRouter);
 router.use("/og", ogRouter);
 router.use(adminRouter);
+router.use(webhooksRouter);
 
 export default router;
