@@ -108,7 +108,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             className="text-base md:text-xl text-muted-foreground max-w-xl mb-8 md:mb-10 leading-relaxed"
           >
-            A video, your photos, a personal note, and real money they can actually use. All wrapped into one moment they'll remember.
+            A video, your photos, a personal note, and real money they can spend however they want. Wrapped into one moment, delivered as a text.
           </motion.p>
 
           <motion.div
@@ -136,7 +136,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="text-[11px] text-muted-foreground mt-5 whitespace-nowrap"
           >
-            No account needed&nbsp;&nbsp;·&nbsp;&nbsp;Quick to build&nbsp;&nbsp;·&nbsp;&nbsp;Same-day payouts
+            No account needed&nbsp;&nbsp;·&nbsp;&nbsp;Sent as a text from your number&nbsp;&nbsp;·&nbsp;&nbsp;Same-day payouts
           </motion.p>
           </div>{/* end left col */}
 

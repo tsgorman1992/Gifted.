@@ -403,52 +403,80 @@ function WordBurstTitle({ text, delayS = 0 }: { text: string; delayS?: number })
 }
 
 function StarfieldBg() {
-  const stars = useMemo(() =>
-    Array.from({ length: 90 }, (_, id) => ({
-      id,
-      left: Math.random() * 100,
-      top: Math.random() * 100,
-      size: 1 + Math.random() * 2.2,
-      dur: 2 + Math.random() * 4,
-      del: Math.random() * 5,
-      op: 0.25 + Math.random() * 0.75,
-    })), []);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const sid = "gifted-starfield-style";
-    if (!document.getElementById(sid)) {
-      const s = document.createElement("style");
-      s.id = sid;
-      s.textContent = `
-        @keyframes gifted-twinkle {
-          0%   { opacity: var(--op-lo); transform: scale(0.85); }
-          100% { opacity: var(--op-hi); transform: scale(1.15); }
-        }
-      `;
-      document.head.appendChild(s);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let animId: number;
+    let active = true;
+
+    function resize() {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     }
+    resize();
+    window.addEventListener("resize", resize);
+
+    interface Star {
+      x: number; y: number;
+      r: number; baseAlpha: number;
+      twinkleSpeed: number; twinkleOffset: number;
+    }
+
+    const stars: Star[] = Array.from({ length: 160 }, () => {
+      const layer = Math.floor(Math.random() * 3);
+      const layerProps = [
+        { rMin: 0.4, rMax: 1.0, aMin: 0.2, aMax: 0.5 },
+        { rMin: 0.7, rMax: 1.5, aMin: 0.35, aMax: 0.7 },
+        { rMin: 1.1, rMax: 2.3, aMin: 0.6, aMax: 1.0 },
+      ][layer];
+      return {
+        x: Math.random(),
+        y: Math.random(),
+        r: layerProps.rMin + Math.random() * (layerProps.rMax - layerProps.rMin),
+        baseAlpha: layerProps.aMin + Math.random() * (layerProps.aMax - layerProps.aMin),
+        twinkleSpeed: 0.4 + Math.random() * 1.2,
+        twinkleOffset: Math.random() * Math.PI * 2,
+      };
+    });
+
+    function frame(ts: number) {
+      if (!active || !canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const t = ts * 0.001;
+      for (const s of stars) {
+        const twinkle = 0.5 + 0.5 * Math.sin(t * s.twinkleSpeed + s.twinkleOffset);
+        const alpha = s.baseAlpha * (0.4 + 0.6 * twinkle);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(frame);
+    }
+
+    animId = requestAnimationFrame(frame);
+    return () => {
+      active = false;
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+    };
   }, []);
 
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-      {stars.map(s => (
-        <div
-          key={s.id}
-          style={{
-            position: "absolute",
-            left: `${s.left}%`,
-            top: `${s.top}%`,
-            width: `${s.size}px`,
-            height: `${s.size}px`,
-            borderRadius: "50%",
-            background: "white",
-            "--op-lo": s.op * 0.3,
-            "--op-hi": s.op,
-            animation: `gifted-twinkle ${s.dur}s ${s.del}s ease-in-out infinite alternate`,
-          } as React.CSSProperties}
-        />
-      ))}
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
+    />
   );
 }
 
@@ -583,8 +611,16 @@ function SmokeEmberBg() {
       maxLife: number; color: string;
     }
 
+    interface Wisp {
+      x: number; y: number;
+      vx: number; vy: number;
+      r: number; life: number;
+      maxLife: number; spin: number;
+    }
+
     const palette = ["#FF8C00","#E07000","#FFA53A","#FFD060","#FF5500","#FFB347"];
     const embers: Ember[] = [];
+    const wisps: Wisp[] = [];
 
     function spawn() {
       if (!canvas) return;
@@ -601,7 +637,23 @@ function SmokeEmberBg() {
       });
     }
 
+    function spawnWisp() {
+      if (!canvas) return;
+      const W = canvas.width, H = canvas.height;
+      wisps.push({
+        x: W * (0.05 + Math.random() * 0.9),
+        y: H + 40,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: -(0.3 + Math.random() * 0.8),
+        r: 28 + Math.random() * 55,
+        life: 0,
+        maxLife: 5000 + Math.random() * 4000,
+        spin: (Math.random() - 0.5) * 0.01,
+      });
+    }
+
     let lastSpawn = 0;
+    let lastWispSpawn = 0;
 
     function frame(ts: number) {
       if (!active || !canvas) return;
@@ -617,6 +669,35 @@ function SmokeEmberBg() {
         lastSpawn = ts;
       }
 
+      if (ts - lastWispSpawn > 800) {
+        spawnWisp();
+        lastWispSpawn = ts;
+      }
+
+      // Draw wisps
+      for (let i = wisps.length - 1; i >= 0; i--) {
+        const w = wisps[i];
+        w.life += 16;
+        w.x += w.vx + Math.sin(w.life * 0.0008) * 0.4;
+        w.y += w.vy;
+        w.r += 0.25;
+        const t = w.life / w.maxLife;
+        if (t >= 1 || w.y < -w.r * 2) { wisps.splice(i, 1); continue; }
+        const peakAlpha = t < 0.15 ? t / 0.15 : t > 0.6 ? (1 - t) / 0.4 : 1;
+        ctx.save();
+        ctx.globalAlpha = peakAlpha * 0.07;
+        const wgrad = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, w.r);
+        wgrad.addColorStop(0, "#8B4513");
+        wgrad.addColorStop(0.5, "#5a2d0c");
+        wgrad.addColorStop(1, "transparent");
+        ctx.fillStyle = wgrad;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Draw embers (outer halo + inner core)
       for (let i = embers.length - 1; i >= 0; i--) {
         const e = embers[i];
         e.life += 16;
@@ -625,6 +706,20 @@ function SmokeEmberBg() {
         const t = e.life / e.maxLife;
         if (t >= 1 || e.y < -20) { embers.splice(i, 1); continue; }
         const alpha = t < 0.1 ? t * 10 : t > 0.7 ? (1 - t) / 0.3 : 1;
+
+        // Outer halo at 5× radius
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.22;
+        const halo = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 5);
+        halo.addColorStop(0, e.color + "cc");
+        halo.addColorStop(1, "transparent");
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.r * 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Inner core
         ctx.save();
         ctx.globalAlpha = alpha * 0.85;
         const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.r * 2.8);
@@ -661,6 +756,7 @@ function SmokeEmberBg() {
 
 function CarbonLightningBg() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const flashRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -685,6 +781,13 @@ function CarbonLightningBg() {
       return [...genBolt(x1, y1, mx, my, depth - 1), ...genBolt(mx, my, x2, y2, depth - 1)];
     }
 
+    function triggerFlash() {
+      const el = flashRef.current;
+      if (!el) return;
+      el.style.opacity = "0.12";
+      setTimeout(() => { el.style.opacity = "0"; }, 80);
+    }
+
     interface Strike { points: [number, number][]; alpha: number; born: number; hold: number; fade: number; color: string; width: number; }
     const strikes: Strike[] = [];
 
@@ -700,6 +803,7 @@ function CarbonLightningBg() {
         color: Math.random() > 0.5 ? "#60A5FA" : "#BAE6FD",
         width: 1.2 + Math.random() * 1.2,
       });
+      triggerFlash();
       if (Math.random() > 0.45) {
         strikes.push({
           points: genBolt(W * (0.1 + Math.random() * 0.8), -10, W * (0.1 + Math.random() * 0.8), H + 10, 4),
@@ -738,12 +842,27 @@ function CarbonLightningBg() {
         }
         if (a <= 0) { strikes.splice(i, 1); continue; }
 
+        // Main bolt
         ctx.save();
         ctx.globalAlpha = a;
         ctx.strokeStyle = s.color;
         ctx.lineWidth = s.width;
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 28;
         ctx.shadowColor = s.color;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(s.points[0][0], s.points[0][1]);
+        for (let j = 1; j < s.points.length; j++) ctx.lineTo(s.points[j][0], s.points[j][1]);
+        ctx.stroke();
+        ctx.restore();
+
+        // Blue glow layer
+        ctx.save();
+        ctx.globalAlpha = a * 0.65;
+        ctx.strokeStyle = "#60A5FA";
+        ctx.lineWidth = 4.5;
+        ctx.shadowBlur = 40;
+        ctx.shadowColor = "#60A5FA";
         ctx.lineJoin = "round";
         ctx.beginPath();
         ctx.moveTo(s.points[0][0], s.points[0][1]);
@@ -764,10 +883,16 @@ function CarbonLightningBg() {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        style={{ position: "fixed", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
+      />
+      <div
+        ref={flashRef}
+        style={{ position: "fixed", inset: 0, background: "white", pointerEvents: "none", zIndex: 1, opacity: 0, transition: "opacity 80ms ease-out" }}
+      />
+    </>
   );
 }
 
@@ -3734,9 +3859,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                       <button
                         type="button"
                         onClick={() => setEndCardDismissed(true)}
-                        className={`mt-3 w-full text-center text-[11px] transition-colors ${isDark ? "text-white/25 hover:text-white/40" : "text-muted-foreground/40 hover:text-muted-foreground/60"}`}
+                        className={`mt-4 block mx-auto text-[10px] transition-colors ${isDark ? "text-white/20 hover:text-white/35" : "text-muted-foreground/30 hover:text-muted-foreground/50"}`}
                       >
-                        Skip — I don't need an account
+                        Maybe later
                       </button>
                     </div>
                   )}

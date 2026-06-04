@@ -1,0 +1,32 @@
+Make the following exact changes to two files. Do not change anything else.
+
+artifacts/gifted/src/pages/landing.tsx
+
+Change 1 — find and replace this exact string:
+
+A video, your photos, a personal note, and real money they can actually use. All wrapped into one moment they'll remember.
+Replace with:
+
+A video, your photos, a personal note, and real money they can spend however they want. Wrapped into one moment, delivered as a text.
+Change 2 — find and replace this exact string:
+
+No account needed&nbsp;&nbsp;·&nbsp;&nbsp;Quick to build&nbsp;&nbsp;·&nbsp;&nbsp;Same-day payouts
+Replace with:
+
+No account needed&nbsp;&nbsp;·&nbsp;&nbsp;Sent as a text from your number&nbsp;&nbsp;·&nbsp;&nbsp;Same-day payouts
+artifacts/gifted/src/pages/reveal.tsx
+
+Change 3 — find the button element that contains the text Skip — I don't need an account and replace the entire button with:
+
+<button
+  type="button"
+  onClick={() => setEndCardDismissed(true)}
+  className={`mt-4 block mx-auto text-[10px] transition-colors ${isDark ? "text-white/20 hover:text-white/35" : "text-muted-foreground/30 hover:text-muted-foreground/50"}`}
+>
+  Maybe later
+</button>
+Change 4 — replace the entire StarfieldBg function. Find the function starting with function StarfieldBg() and ending at its closing }. Replace it with a canvas-based version: use useRef<HTMLCanvasElement>, on mount create 160 stars across 3 depth layers (layer 0: r 0.4–1.0, baseAlpha 0.2–0.5; layer 1: r 0.7–1.5, baseAlpha 0.35–0.7; layer 2: r 1.1–2.3, baseAlpha 0.6–1.0). Each star has twinkleSpeed (0.4–1.6) and twinkleOffset (random). In the animation loop compute alpha = baseAlpha * (0.6 + 0.4 * Math.sin(t * twinkleSpeed + twinkleOffset)). For layer 2 stars draw a radial gradient halo at 3.5× radius with rgba(200,210,255,0.5) center. Draw the star dot in color #E8EEFF (layer 2), #C8D0FF (layer 1), #A0A8D0 (layer 0). Add shooting stars that spawn every 4000–10000ms: each has position, velocity, length 80–200px, life 700–1100ms, drawn as a linear gradient line from transparent tail to white tip. Return <canvas ref={canvasRef} style={{ position:"fixed", inset:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:0 }} />.
+
+Change 5 — in SmokeEmberBg, add a Wisp interface: { x, y, vx, vy, r, life, maxLife, spin }. Create a wisps: Wisp[] array. In the spawn logic add spawnWisp() that pushes wisps starting at bottom with r 28–83, vy −0.3 to −1.1, vx ±0.25. In the frame loop draw wisps before embers: increment r += 0.25 each frame, draw a dark radial gradient (#8B4513 → #5a2d0c → transparent) at globalAlpha = peakAlpha * 0.07. For embers add a two-layer draw: outer halo at 5× radius then inner core at 2.2× radius with #FFF0A0 at colorStop 0 (the hot white center).
+
+Change 6 — in CarbonLightningBg, add const flashRef = useRef<HTMLDivElement>(null) alongside canvasRef. Add a triggerFlash() function that sets flashRef.current.style.opacity = "0.12" then after 80ms sets it back to "0". Call triggerFlash() inside spawnStrike. Increase shadowBlur on the main bolt from 18 to 28. Add a second stroke pass for the blue glow layer with shadowBlur: 40, strokeStyle: "#60A5FA", lineWidth: 4.5, alpha: 0.65. Change the return value from <canvas ... /> to a fragment containing the canvas plus <div ref={flashRef} style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:1, background:"rgba(150,200,255,1)", opacity:0, transition:"opacity 0.08s ease-out" }} />.
