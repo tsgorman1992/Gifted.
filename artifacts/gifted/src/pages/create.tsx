@@ -1040,6 +1040,7 @@ export default function CreatePage() {
   const [videoError, setVideoError] = useState<string | null>(null);
 
   const currentExperience = EXPERIENCE_LIST.find((e) => e.id === selectedExperience) ?? EXPERIENCE_LIST[0];
+  const isTestMode = new URLSearchParams(window.location.search).get("test") === "true";
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -1712,6 +1713,7 @@ export default function CreatePage() {
         payload.trackingCarrier = trackingCarrier;
         payload.trackingNumber = trackingNumber;
       }
+      if (isTestMode) payload.isTest = true;
 
       const res = await fetch(`${base}/api/gifted/gifts`, {
         method: "POST",
@@ -1826,6 +1828,14 @@ export default function CreatePage() {
   return (
     <div className="min-h-screen relative">
       <GiftRecoveryBanner />
+
+      {/* Test mode banner */}
+      {isTestMode && (
+        <div className="sticky top-0 z-50 bg-amber-400/15 border-b border-amber-400/30 px-4 py-2.5 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300 font-medium">
+          <span className="text-base">🧪</span>
+          Test mode — this gift won't appear in your main feed
+        </div>
+      )}
 
       {/* Edit mode banner */}
       {editGiftId && (

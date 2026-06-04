@@ -44,6 +44,7 @@ interface GiftSummary {
   senderUserId: string | null;
   thankYouNote: string | null;
   thankYouSentAt: string | null;
+  isTest?: boolean;
 }
 
 interface ReceivedGiftSummary {
@@ -1773,6 +1774,7 @@ export default function MyGiftsPage() {
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddPhysical, setShowAddPhysical] = useState(false);
   const [showAllReceived, setShowAllReceived] = useState(false);
+  const [showTestGifts, setShowTestGifts] = useState(false);
   const [copiedGiftId, setCopiedGiftId] = useState<string | null>(null);
   const [occasionBannerDismissed, setOccasionBannerDismissed] = useState(
     () => sessionStorage.getItem("gifted_occasion_banner_dismissed") === "1"
@@ -1929,11 +1931,12 @@ export default function MyGiftsPage() {
     );
   }
 
-  // Stats
-  const totalSent     = myGifts?.length ?? 0;
-  const totalValue    = myGifts?.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0) ?? 0;
-  const openedCount   = myGifts?.filter(g => !!g.openedAt && !g.redeemedAt).length ?? 0;
-  const redeemed      = myGifts?.filter(g => !!g.redeemedAt && hasBalance(g)).length ?? 0;
+  // Stats (exclude test gifts so numbers reflect real usage)
+  const realGifts   = myGifts?.filter(g => !g.isTest) ?? [];
+  const totalSent   = realGifts.length;
+  const totalValue  = realGifts.filter(g => g.paid).reduce((sum, g) => sum + (parseFloat(g.amount ?? "0") || 0), 0);
+  const openedCount = realGifts.filter(g => !!g.openedAt && !g.redeemedAt).length;
+  const redeemed    = realGifts.filter(g => !!g.redeemedAt && hasBalance(g)).length;
   const totalReceived = receivedGifts?.length ?? 0;
 
   const recipientCounts: Record<string, number> = {};
@@ -2171,12 +2174,24 @@ export default function MyGiftsPage() {
                   <p className="text-xs text-muted-foreground">{totalSent} gift{totalSent !== 1 ? "s" : ""} sent · most recent first</p>
                 )}
               </motion.div>
+              {/* Show test gifts toggle */}
+              {myGifts.some(g => g.isTest) && (
+                <div className="flex justify-end mb-2">
+                  <button
+                    onClick={() => setShowTestGifts(v => !v)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showTestGifts ? "Hide test gifts" : "Show test gifts"}
+                  </button>
+                </div>
+              )}
               {(() => {
+                const visibleGifts = showTestGifts ? myGifts : myGifts.filter(g => !g.isTest);
                 const filtered = activeStatFilter
-                  ? myGifts.filter(g =>
+                  ? visibleGifts.filter(g =>
                       activeStatFilter === "opened" ? !!g.openedAt && !g.redeemedAt : !!g.redeemedAt
                     )
-                  : myGifts;
+                  : visibleGifts;
 
                 if (filtered.length === 0) {
                   return (
@@ -2196,7 +2211,16 @@ export default function MyGiftsPage() {
                 return (
                   <div className="border border-border/60 rounded-xl bg-card overflow-hidden">
                     {filtered.map((gift, i) => (
-                      <GiftCard key={gift.id} gift={gift} idx={i} />
+                      <div key={gift.id} className="relative">
+                        {gift.isTest && showTestGifts && (
+                          <span className="absolute top-3 right-3 z-10 text-[10px] font-semibold tracking-widest uppercase px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-600 dark:text-amber-400 border border-amber-400/30 pointer-events-none">
+                            TEST
+                          </span>
+                        )}
+                        <div className={gift.isTest && showTestGifts ? "opacity-60" : undefined}>
+                          <GiftCard gift={gift} idx={i} />
+                        </div>
+                      </div>
                     ))}
                   </div>
                 );

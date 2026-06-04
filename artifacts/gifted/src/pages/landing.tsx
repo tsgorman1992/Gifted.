@@ -16,9 +16,9 @@ const PHOTOS = [
 ];
 
 const HOW_STEPS = [
-  { icon: Heart,      label: "Build the moment",   desc: "Write a note that sounds like you. Add a video message, photos, or link anything — concert tickets, a restaurant reservation, a song." },
-  { icon: Gift,       label: "Add a balance",  desc: "Fund it with whatever feels right. Add a spending intention like 'Coffee on me' or 'Date night' so they know it was thoughtful, not lazy." },
-  { icon: CreditCard, label: "They open. They feel it.", desc: "A choreographed reveal plays through your content. When it lands, they provide their payout details and the balance lands in their account — same day." },
+  { icon: Sparkles, label: "Choose the feeling", desc: "Pick a mood — 12 cinematic themes each with a distinct look and sound. Set the occasion, who it's from, and who it's for." },
+  { icon: Heart,    label: "Write the moment",   desc: "Write a headline and personal note that sounds like you. Add links to anything — concert tickets, a song, a reservation. AI assist included." },
+  { icon: Gift,     label: "Add media and send", desc: "Drop in a video message and up to 6 photos. Optionally add a cash balance with a spending intention. Schedule it or send now." },
 ];
 
 const FEATURES = [

@@ -62,6 +62,7 @@ export const gifts = pgTable("gifts", {
   thankYouNote: text("thank_you_note"),
   thankYouSentAt: timestamp("thank_you_sent_at", { withTimezone: true }),
   abandonedNudgeSentAt: timestamp("abandoned_nudge_sent_at", { withTimezone: true }),
+  isTest: boolean("is_test").notNull().default(false),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({

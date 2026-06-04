@@ -350,6 +350,7 @@ router.post("/gifted/gifts", async (req, res) => {
       trackingCarrier: trackingCarrier || null,
       trackingNumber: trackingNumber || null,
       idempotencyKey: iKey,
+      isTest: req.body.isTest === true,
     }).onConflictDoNothing().returning({ id: gifts.id });
 
     // Idempotency: if conflict suppressed the insert (same key from concurrent request),
@@ -919,6 +920,7 @@ router.get("/gifted/my-gifts", async (req, res) => {
         senderUserId: g.senderUserId,
         thankYouNote: g.thankYouNote ?? null,
         thankYouSentAt: g.thankYouSentAt ?? null,
+        isTest: (g as any).isTest ?? false,
       }))
     );
   } catch (err) {
