@@ -850,10 +850,10 @@ export async function sendDripEmail2({
   const unsub = unsubscribeUrl(userId);
 
   const body = `
-    ${p(`Gorman sent Treppy a birthday gift last week.`)}
-    ${p(`Photos from a trip they took together. A video he recorded in his living room. Ten dollars toward hibachi or the driving range — Treppy's call.`)}
-    ${p(`Treppy called him when he opened it.`)}
-    ${p(`That's it. That's the whole story.`, true)}
+    ${p(`You know what it felt like when you opened yours.`)}
+    ${p(`Someone took the time. Found the photos. Wrote something real. Maybe left you something to spend.`)}
+    ${p(`Someone in your life is waiting for that same feeling — they just don't know it yet.`)}
+    ${p(`You already know exactly how to give it to them.`, true)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
       ${btn("Build a moment", createUrl)}
@@ -865,8 +865,8 @@ export async function sendDripEmail2({
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: "This is what it looks like when it lands.",
-      html: layout("A moment that landed — gifted.", body, unsub),
+      subject: "You already know what it felt like.",
+      html: layout("You already know what it felt like — gifted.", body, unsub),
     });
     if (error) { console.error("[email] sendDripEmail2 error:", error); return false; }
     await logEmail({ userId, email: to, type: "drip2", resendMessageId: data?.id });
