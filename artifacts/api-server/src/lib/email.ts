@@ -429,11 +429,12 @@ export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams):
   const giftUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
 
   const body = `
-    ${h1(`Your moment for ${recipientName} is ready to send.`)}
-    ${p(`The date you picked has arrived. Head in, look it over, and send it to ${recipientName} whenever you're ready.`)}
+    ${h1(`Your moment for ${recipientName} is ready.`)}
+    ${p(`The date you picked has arrived. Click the button below to open your gift — you'll see a share link to copy.`)}
+    ${p(`Copy that link and send it directly to ${recipientName} via text or iMessage — from your own number, not by forwarding this email.`)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
-      ${btn(`Send to ${recipientName}`, giftUrl)}
+      ${btn(`Open my moment →`, giftUrl)}
       <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">When it comes from you directly, it lands differently.</p>
     </div>
   `;

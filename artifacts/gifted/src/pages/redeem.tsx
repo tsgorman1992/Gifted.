@@ -313,7 +313,12 @@ export default function RedeemPage() {
       localStorage.setItem("gifted_just_redeemed", "1");
       setScreen("success");
     } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again or contact help@gifted.page.");
+      const msg: string = err.message || "";
+      if (msg.toLowerCase().includes("sender") || msg.toLowerCase().includes("cannot redeem")) {
+        setError("It looks like you're signed in as the gift sender. To redeem this gift, open the gift link in a private / incognito window — or contact help@gifted.page if you need help.");
+      } else {
+        setError(msg || "Something went wrong. Please try again or contact help@gifted.page.");
+      }
     } finally {
       setIsProcessing(false);
     }

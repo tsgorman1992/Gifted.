@@ -1206,12 +1206,16 @@ export default function PreviewPage() {
 
             {/* ── Scheduled delivery arrival callout ── */}
             {isPaid && scheduleDelivered && (
-              <div className="rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center gap-3">
-                <span className="text-xl">🎁</span>
-                <div>
-                  <p className="text-sm font-semibold text-primary leading-tight">The day is here — send it now.</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Use the button below to send to {recipientName}.</p>
+              <div className="rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3.5 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎁</span>
+                  <p className="text-sm font-semibold text-primary leading-tight">The day is here — copy the link and send it to {recipientName}.</p>
                 </div>
+                <ol className="text-xs text-muted-foreground space-y-0.5 list-none pl-1">
+                  <li><span className="font-semibold text-foreground">1.</span> Copy the gift link using the button below.</li>
+                  <li><span className="font-semibold text-foreground">2.</span> Paste it into a text or message to {recipientName} — from your own number or account.</li>
+                  <li><span className="font-semibold text-foreground">3.</span> Don't forward this email — {recipientName} needs the gift link, not your sender view.</li>
+                </ol>
               </div>
             )}
 
