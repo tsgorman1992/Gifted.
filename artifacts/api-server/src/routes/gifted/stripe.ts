@@ -318,13 +318,19 @@ router.post("/gifted/redeem", async (req, res) => {
     const callerUserId = authUser?.id as string | undefined;
     const callerEmail  = (authUser?.email as string | undefined)?.toLowerCase();
 
-    if (callerUserId && gift.senderUserId && callerUserId === gift.senderUserId) {
-      res.status(403).json({ error: "Senders cannot redeem their own gift." });
-      return;
-    }
-    if (callerEmail && gift.senderEmail && callerEmail === gift.senderEmail.toLowerCase()) {
-      res.status(403).json({ error: "Senders cannot redeem their own gift." });
-      return;
+    // If the recipient already passed phone OTP, their identity is confirmed —
+    // skip the sender guard entirely. Without this, a recipient logged into
+    // the same browser session as the sender (shared device / family account)
+    // would be incorrectly blocked even after proving they own the recipient phone.
+    if (!gift.redemptionVerified) {
+      if (callerUserId && gift.senderUserId && callerUserId === gift.senderUserId) {
+        res.status(403).json({ error: "Senders cannot redeem their own gift." });
+        return;
+      }
+      if (callerEmail && gift.senderEmail && callerEmail === gift.senderEmail.toLowerCase()) {
+        res.status(403).json({ error: "Senders cannot redeem their own gift." });
+        return;
+      }
     }
 
     if (gift.recipientUserId && callerUserId && callerUserId !== gift.recipientUserId) {
