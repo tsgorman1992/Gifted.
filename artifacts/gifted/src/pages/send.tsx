@@ -5,7 +5,6 @@ import { Copy, Check, Share2, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
-const SHARE_ORIGIN = "https://gifted.page";
 
 function fade(delay = 0) {
   return {
@@ -32,7 +31,8 @@ export default function SendPage() {
   const [copied, setCopied] = useState(false);
   const [canShare, setCanShare] = useState(false);
 
-  const shareUrl = `${SHARE_ORIGIN}/open/${id}`;
+  // Build share URL from current origin — same pattern as preview.tsx
+  const shareUrl = `${window.location.origin}${BASE}/api/share/${id}`;
 
   useEffect(() => {
     setCanShare(
@@ -68,8 +68,6 @@ export default function SendPage() {
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3500);
     } catch {
       const el = document.createElement("textarea");
       el.value = shareUrl;
@@ -77,9 +75,9 @@ export default function SendPage() {
       el.select();
       document.execCommand("copy");
       document.body.removeChild(el);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3500);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3500);
   }
 
   async function handleShare() {
@@ -89,7 +87,7 @@ export default function SendPage() {
         url: shareUrl,
       });
     } catch {
-      handleCopy();
+      // User cancelled or share not available — fall through silently
     }
   }
 
@@ -113,7 +111,7 @@ export default function SendPage() {
     );
   }
 
-  const recipientName = gift.recipientName;
+  const { recipientName, occasion } = gift;
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-5 py-16">
@@ -123,35 +121,25 @@ export default function SendPage() {
         <motion.div {...fade(0)} className="text-center space-y-2">
           <p className="text-3xl">🎁</p>
           <h1 className="font-serif text-3xl font-medium text-foreground leading-tight">
-            {gift.scheduleDelivered
-              ? <>The day is here.</>
-              : <>Your gift is ready.</>}
+            {gift.scheduleDelivered ? <>The day is here.</> : <>Your gift is ready.</>}
           </h1>
-          <p className="text-muted-foreground text-base leading-snug">
+          {occasion && (
+            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground/70">
+              {occasion} · for {recipientName}
+            </p>
+          )}
+          <p className="text-muted-foreground text-base leading-snug pt-0.5">
             {gift.scheduleDelivered
               ? <>Copy the link below and text it to {recipientName} — straight from you.</>
               : <>Send {recipientName} the link below and they'll see a beautiful animated reveal.</>}
           </p>
         </motion.div>
 
-        {/* Main action */}
+        {/* Primary action: Copy link (always prominent) */}
         <motion.div {...fade(0.1)} className="space-y-3">
-          {canShare ? (
-            <Button
-              onClick={handleShare}
-              className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20"
-            >
-              <Share2 className="w-5 h-5 mr-2" />
-              Send to {recipientName}
-            </Button>
-          ) : null}
-
           <Button
             onClick={handleCopy}
-            variant={canShare ? "outline" : "default"}
-            className={`w-full rounded-2xl text-base font-semibold ${
-              canShare ? "h-12" : "h-14 shadow-lg shadow-primary/20"
-            } transition-all`}
+            className="w-full h-14 rounded-2xl text-base font-semibold shadow-lg shadow-primary/20"
           >
             {copied
               ? <><Check className="w-5 h-5 mr-2" /> Copied!</>
@@ -169,6 +157,18 @@ export default function SendPage() {
               Now text it to {recipientName} — it lands better from you directly. 💛
             </p>
           </motion.div>
+
+          {/* Secondary: native share on mobile */}
+          {canShare && (
+            <Button
+              onClick={handleShare}
+              variant="outline"
+              className="w-full h-11 rounded-2xl text-sm font-medium"
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              Share via…
+            </Button>
+          )}
         </motion.div>
 
         {/* URL preview */}
@@ -183,9 +183,9 @@ export default function SendPage() {
         {/* Reminder */}
         <motion.div {...fade(0.24)}>
           <div className="rounded-2xl bg-amber-50 border border-amber-200/70 px-4 py-3 space-y-0.5">
-            <p className="text-xs text-amber-800 font-semibold">Send this link, not this page</p>
+            <p className="text-xs text-amber-800 font-semibold">Send this link, not this notification</p>
             <p className="text-xs text-amber-700/80 leading-snug">
-              Don't forward the notification — {recipientName} needs the gift link above, not your sender view.
+              Don't forward the SMS or email — {recipientName} needs the gift link above, not your sender view.
             </p>
           </div>
         </motion.div>
