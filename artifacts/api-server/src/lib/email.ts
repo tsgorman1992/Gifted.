@@ -426,7 +426,7 @@ export async function sendScheduledGiftReadyEmail(params: ScheduledReadyParams):
   if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
 
   const { to, senderName, recipientName, giftId } = params;
-  const giftUrl = `${BASE_URL}/preview?gift_id=${giftId}`;
+  const giftUrl = `${BASE_URL}/api/ready/${giftId}`;
 
   const body = `
     ${h1(`Your moment for ${recipientName} is ready.`)}
