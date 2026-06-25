@@ -980,6 +980,7 @@ export default function CreatePage() {
   const [intent, setIntent] = useState("");
   const [customIntentMode, setCustomIntentMode] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [isGroup, setIsGroup] = useState(false);
   const [scheduledFor, setScheduledFor] = useState("");
   const [scheduledTime, setScheduledTime] = useState("09:00");
   const [occasion, setOccasion] = useState("Birthday");
@@ -1714,6 +1715,7 @@ export default function CreatePage() {
         payload.trackingNumber = trackingNumber;
       }
       if (isTestMode) payload.isTest = true;
+      if (isGroup) payload.isGroup = true;
 
       const res = await fetch(`${base}/api/gifted/gifts`, {
         method: "POST",
@@ -2100,6 +2102,39 @@ export default function CreatePage() {
                     <p className="text-xs text-muted-foreground">
                       We'll suggest the matching experience, but you can always choose your own.
                     </p>
+                  </div>
+
+                  {/* Group Moment toggle */}
+                  <div className="mb-8">
+                    <button
+                      type="button"
+                      onClick={() => setIsGroup(g => !g)}
+                      className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border transition-all ${
+                        isGroup
+                          ? "bg-violet-50 border-violet-200 dark:bg-violet-950/20 dark:border-violet-800"
+                          : "bg-secondary border-transparent hover:border-border"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl leading-none">👥</span>
+                        <div className="text-left">
+                          <p className={`text-sm font-semibold ${isGroup ? "text-violet-700 dark:text-violet-300" : "text-foreground"}`}>
+                            Group Moment
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Share to a group chat — anyone can leave a reaction
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 ${isGroup ? "bg-violet-500" : "bg-border"}`}>
+                        <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isGroup ? "translate-x-5" : "translate-x-0"}`} />
+                      </div>
+                    </button>
+                    {isGroup && (
+                      <p className="text-xs text-violet-600 dark:text-violet-400 mt-2 pl-1">
+                        Free to send — no balance, no phone number required. Just vibes. ✨
+                      </p>
+                    )}
                   </div>
 
                   {/* Step error */}
@@ -2741,8 +2776,8 @@ export default function CreatePage() {
                   </div>
                 </div>
 
-                {/* Give it weight */}
-                <div className="rounded-3xl p-6 border space-y-5" style={{ background: "hsl(var(--card))" }}>
+                {/* Give it weight — hidden for group moments */}
+                {!isGroup && <div className="rounded-3xl p-6 border space-y-5" style={{ background: "hsl(var(--card))" }}>
                   <div className="flex items-center justify-between border-b border-border pb-4">
                     <div>
                       <h2 className="text-base font-semibold">Give it weight</h2>
@@ -2936,7 +2971,7 @@ export default function CreatePage() {
                     </div>
                     )}
                   </div>
-                </div>
+                </div>}
               </div>
 
               {/* Physical gift tracking */}

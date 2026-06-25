@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -63,6 +63,7 @@ export const gifts = pgTable("gifts", {
   thankYouSentAt: timestamp("thank_you_sent_at", { withTimezone: true }),
   abandonedNudgeSentAt: timestamp("abandoned_nudge_sent_at", { withTimezone: true }),
   isTest: boolean("is_test").notNull().default(false),
+  isGroup: boolean("is_group").notNull().default(false),
 });
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({
@@ -71,6 +72,17 @@ export const insertGiftSchema = createInsertSchema(gifts).omit({
 
 export type Gift = typeof gifts.$inferSelect;
 export type InsertGift = z.infer<typeof insertGiftSchema>;
+
+export const giftReactions = pgTable("gift_reactions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  giftId: text("gift_id").notNull().references(() => gifts.id, { onDelete: "cascade" }),
+  reactorName: text("reactor_name").notNull(),
+  message: text("message"),
+  reactorUserId: text("reactor_user_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type GiftReaction = typeof giftReactions.$inferSelect;
 
 export const physicalGifts = pgTable("physical_gifts", {
   id: text("id").primaryKey().default(sql`gen_random_uuid()`),

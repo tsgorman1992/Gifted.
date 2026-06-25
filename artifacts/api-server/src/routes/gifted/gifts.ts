@@ -2,8 +2,8 @@ import { Router } from "express";
 import { Readable } from "stream";
 import { nanoid } from "nanoid";
 import { createHmac, timingSafeEqual } from "crypto";
-import { db, gifts, usersTable, contacts as contactsTable, contactOccasions } from "@workspace/db";
-import { eq, desc, isNull, and, ne, gte, lte, sql } from "drizzle-orm";
+import { db, gifts, giftReactions, usersTable, contacts as contactsTable, contactOccasions } from "@workspace/db";
+import { eq, desc, isNull, and, ne, gte, lte, sql, inArray, count } from "drizzle-orm";
 import Stripe from "stripe";
 
 function getStripe(): Stripe {
@@ -264,6 +264,7 @@ router.post("/gifted/gifts", async (req, res) => {
       trackingCarrier,
       trackingNumber,
       idempotencyKey,
+      isGroup,
     } = req.body;
 
     if (!recipientName || !senderName || !experience || !occasion || !giftTitle) {
@@ -351,6 +352,7 @@ router.post("/gifted/gifts", async (req, res) => {
       trackingNumber: trackingNumber || null,
       idempotencyKey: iKey,
       isTest: req.body.isTest === true,
+      isGroup: isGroup === true,
     }).onConflictDoNothing().returning({ id: gifts.id });
 
     // Idempotency: if conflict suppressed the insert (same key from concurrent request),
@@ -605,6 +607,7 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       redemptionVerified: gift.redemptionVerified ?? false,
       thankYouNote: gift.thankYouNote ?? null,
       thankYouSentAt: gift.thankYouSentAt ?? null,
+      isGroup: gift.isGroup ?? false,
     });
   } catch (err) {
     console.error("Error fetching gift:", err);
@@ -617,7 +620,7 @@ router.patch("/gifted/gifts/:id/opened", async (req, res) => {
     const { id } = req.params;
     const requestingUserId = (req as any).user?.id;
     const [gift] = await db
-      .select({ id: gifts.id, openedAt: gifts.openedAt, senderUserId: gifts.senderUserId, senderPhone: gifts.senderPhone, senderEmail: gifts.senderEmail, senderName: gifts.senderName, recipientName: gifts.recipientName })
+      .select({ id: gifts.id, openedAt: gifts.openedAt, senderUserId: gifts.senderUserId, senderPhone: gifts.senderPhone, senderEmail: gifts.senderEmail, senderName: gifts.senderName, recipientName: gifts.recipientName, isGroup: gifts.isGroup })
       .from(gifts).where(eq(gifts.id, id)).limit(1);
     if (!gift) return res.status(404).json({ error: "Gift not found" });
     // If the sender is viewing their own gift, don't mark it as opened
@@ -626,25 +629,118 @@ router.patch("/gifted/gifts/:id/opened", async (req, res) => {
     }
     if (!gift.openedAt) {
       await db.update(gifts).set({ openedAt: new Date() }).where(eq(gifts.id, id));
-      if (gift.senderPhone) {
-        smsSender(
-          gift.senderPhone,
-          `gifted. 🎁\n${gift.recipientName} just opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
-        );
-      }
-      if (gift.senderEmail) {
-        sendGiftOpenedNotice({
-          to: gift.senderEmail,
-          senderName: gift.senderName,
-          recipientName: gift.recipientName,
-          giftId: gift.id,
-        }).catch(() => {});
+      // Group moments don't send "opened" notifications — the sender sees the reactions feed instead
+      if (!gift.isGroup) {
+        if (gift.senderPhone) {
+          smsSender(
+            gift.senderPhone,
+            `gifted. 🎁\n${gift.recipientName} just opened your gift! Head to your dashboard to see their reaction.\n\nReply STOP to opt out.`
+          );
+        }
+        if (gift.senderEmail) {
+          sendGiftOpenedNotice({
+            to: gift.senderEmail,
+            senderName: gift.senderName,
+            recipientName: gift.recipientName,
+            giftId: gift.id,
+          }).catch(() => {});
+        }
       }
     }
     return res.json({ ok: true });
   } catch (err) {
     console.error("Error marking opened:", err);
     return res.status(500).json({ error: "Failed to mark opened" });
+  }
+});
+
+// POST /api/gifted/gifts/:id/reactions — leave a reaction on a group moment
+router.post("/gifted/gifts/:id/reactions", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reactorName, message } = req.body as { reactorName?: string; message?: string };
+
+    if (!reactorName || typeof reactorName !== "string" || reactorName.trim().length === 0) {
+      res.status(400).json({ error: "reactorName is required" });
+      return;
+    }
+    if (reactorName.trim().length > 80) {
+      res.status(400).json({ error: "Name is too long" });
+      return;
+    }
+    if (message && typeof message === "string" && message.length > 500) {
+      res.status(400).json({ error: "Message is too long" });
+      return;
+    }
+
+    const [gift] = await db
+      .select({ id: gifts.id, isGroup: gifts.isGroup })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    if (!gift.isGroup) {
+      res.status(403).json({ error: "Reactions are only available on group moments" });
+      return;
+    }
+
+    const reactorUserId = (req as any).user?.id ?? null;
+
+    await db.insert(giftReactions).values({
+      giftId: id,
+      reactorName: reactorName.trim(),
+      message: message?.trim() || null,
+      reactorUserId,
+    });
+
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error("Error posting reaction:", err);
+    res.status(500).json({ error: "Failed to save reaction" });
+  }
+});
+
+// GET /api/gifted/gifts/:id/reactions — fetch all reactions for a group moment
+router.get("/gifted/gifts/:id/reactions", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [gift] = await db
+      .select({ id: gifts.id, isGroup: gifts.isGroup })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) {
+      res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    if (!gift.isGroup) {
+      res.status(403).json({ error: "Reactions are only available on group moments" });
+      return;
+    }
+
+    const reactions = await db
+      .select({
+        id: giftReactions.id,
+        reactorName: giftReactions.reactorName,
+        message: giftReactions.message,
+        createdAt: giftReactions.createdAt,
+      })
+      .from(giftReactions)
+      .where(eq(giftReactions.giftId, id))
+      .orderBy(desc(giftReactions.createdAt));
+
+    res.json({ reactions });
+  } catch (err) {
+    console.error("Error fetching reactions:", err);
+    res.status(500).json({ error: "Failed to fetch reactions" });
   }
 });
 
@@ -899,6 +995,20 @@ router.get("/gifted/my-gifts", async (req, res) => {
     }
     deduplicatedRows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+    // Batch-fetch reaction counts for group gifts
+    const groupGiftIds = deduplicatedRows.filter(g => g.isGroup).map(g => g.id);
+    const reactionCountMap = new Map<string, number>();
+    if (groupGiftIds.length > 0) {
+      const counts = await db
+        .select({ giftId: giftReactions.giftId, cnt: count() })
+        .from(giftReactions)
+        .where(inArray(giftReactions.giftId, groupGiftIds))
+        .groupBy(giftReactions.giftId);
+      for (const row of counts) {
+        reactionCountMap.set(row.giftId, Number(row.cnt));
+      }
+    }
+
     res.json(
       deduplicatedRows.map((g) => ({
         id: g.id,
@@ -920,7 +1030,9 @@ router.get("/gifted/my-gifts", async (req, res) => {
         senderUserId: g.senderUserId,
         thankYouNote: g.thankYouNote ?? null,
         thankYouSentAt: g.thankYouSentAt ?? null,
-        isTest: (g as any).isTest ?? false,
+        isTest: g.isTest ?? false,
+        isGroup: g.isGroup ?? false,
+        reactionCount: g.isGroup ? (reactionCountMap.get(g.id) ?? 0) : undefined,
       }))
     );
   } catch (err) {
@@ -1092,13 +1204,18 @@ router.patch("/gifted/gifts/:id/save-received", async (req, res) => {
     const { id } = req.params;
 
     const [exists] = await db
-      .select({ id: gifts.id, recipientUserId: gifts.recipientUserId, senderUserId: gifts.senderUserId, senderEmail: gifts.senderEmail })
+      .select({ id: gifts.id, recipientUserId: gifts.recipientUserId, senderUserId: gifts.senderUserId, senderEmail: gifts.senderEmail, isGroup: gifts.isGroup })
       .from(gifts)
       .where(eq(gifts.id, id))
       .limit(1);
 
     if (!exists) {
       res.status(404).json({ error: "Gift not found" });
+      return;
+    }
+
+    if (exists.isGroup) {
+      res.status(409).json({ error: "Group moments cannot be saved to an individual account" });
       return;
     }
 

@@ -45,6 +45,8 @@ interface GiftSummary {
   thankYouNote: string | null;
   thankYouSentAt: string | null;
   isTest?: boolean;
+  isGroup?: boolean;
+  reactionCount?: number;
 }
 
 interface ReceivedGiftSummary {
@@ -418,8 +420,22 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
         {" "}<span className="font-medium" style={{ color: statusMeta.color }}>{statusMeta.label}</span>
       </p>
 
+      {/* Group badge */}
+      {gift.isGroup && (
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800/40 px-2 py-0.5 rounded-full">
+            👥 Group Moment
+          </span>
+          {(gift.reactionCount ?? 0) > 0 && (
+            <span className="text-[10px] text-muted-foreground">
+              {gift.reactionCount} {gift.reactionCount === 1 ? "reaction" : "reactions"}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Reaction */}
-      {gift.reaction && (
+      {!gift.isGroup && gift.reaction && (
         <p className="text-xs text-muted-foreground mb-2.5">
           {gift.reaction} {gift.recipientName} reacted{gift.reactionAt ? ` ${formatDistanceToNow(new Date(gift.reactionAt), { addSuffix: true })}` : ""}
         </p>
