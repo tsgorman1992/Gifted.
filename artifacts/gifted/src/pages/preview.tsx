@@ -1184,7 +1184,7 @@ export default function PreviewPage() {
                   {paymentStatus === "confirming"
                     ? "Just a moment while we confirm everything…"
                     : (scheduledFor && !scheduleDelivered)
-                      ? <>On {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} at {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ET we'll send you the link to forward to {recipientName}.</>
+                      ? <>On {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} at {new Date(`${scheduledFor}T${scheduledTime}:00`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} ET we'll send you a link to copy and send to {recipientName}.</>
                       : "The experience begins the moment they tap the link — share it now."}
                 </p>
               </>
@@ -1214,7 +1214,7 @@ export default function PreviewPage() {
                 <ol className="text-xs text-muted-foreground space-y-0.5 list-none pl-1">
                   <li><span className="font-semibold text-foreground">1.</span> Copy the gift link using the button below.</li>
                   <li><span className="font-semibold text-foreground">2.</span> Paste it into a text or message to {recipientName} — from your own number or account.</li>
-                  <li><span className="font-semibold text-foreground">3.</span> Don't forward this email — {recipientName} needs the gift link, not your sender view.</li>
+                  <li><span className="font-semibold text-foreground">3.</span> Don't share this notification — {recipientName} needs the gift link, not your sender view.</li>
                 </ol>
               </div>
             )}

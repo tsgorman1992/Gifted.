@@ -87,7 +87,7 @@ async function sendScheduledGifts() {
 
         // SMS body — single link so iMessage/Android Messages unfurl the rich gift preview card
         const smsBody = [
-          `gifted. ✨ Your moment for ${gift.recipientName} is ready — tap to open and share:`,
+          `gifted. ✨ Your moment for ${gift.recipientName} is ready — tap to open → copy the share link → text it to ${gift.recipientName} directly:`,
           readyUrl,
           ``,
           `Reply STOP to opt out.`,

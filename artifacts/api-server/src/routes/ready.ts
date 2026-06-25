@@ -35,7 +35,7 @@ router.get("/ready/:id", async (req, res) => {
   const ogImage      = `${baseUrl}/api/og/gift/${id}`;
   const ogTitle      = `A moment for ${recipientName} ✨`;
   const ogDesc       = `${senderName} put something together just for ${recipientName}. Tap to open and share it.`;
-  const redirectUrl  = `/preview?gift_id=${id}`;
+  const redirectUrl  = `/send/${id}`;
   const canonicalUrl = `${baseUrl}/api/ready/${id}`;
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
