@@ -794,19 +794,13 @@ export async function sendDripEmail1({
   const createUrl = utmUrl(`${BASE_URL}/create`, "drip1");
   const unsub = unsubscribeUrl(userId);
 
-  const senderLabel = senderName ? senderName.split(" ")[0] : "Someone";
-  const occasionLabel = occasion
-    ? occasion.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())
-    : "a special occasion";
-  const hasBalance = amount && parseFloat(amount) > 0;
-
   const body = `
     <p style="margin:0 0 24px;font-size:18px;line-height:1.6;color:#1a1310;font-family:Georgia,serif;font-style:italic;">
-      ${senderLabel} built you something for your ${occasionLabel}.
+      Someone made something just for you.
     </p>
-    ${p(`Someone took the time to find the photos, write the words, record something just for you.${hasBalance ? ` They even added something to spend.` : ``}`)}
+    ${p(`They found the photos. Wrote the words. Added something to spend. Made it feel real.`)}
     ${p(`Someone in your life deserves exactly that.`)}
-    ${p(`You can do the same — photos, a personal message, and even money, all in one place. Ten minutes.`)}
+    ${p(`You can do the same. Photos, a personal message, and money to spend, all in one place. Ten minutes.`)}
     ${p(`You already know who needs it.`, true)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
@@ -819,7 +813,7 @@ export async function sendDripEmail1({
       from: FROM,
       to,
       replyTo: REPLY_TO,
-      subject: `${senderLabel} built you something. You could do that for someone too.`,
+      subject: `Someone made something for you. You could do that for someone too.`,
       html: layout("Build a moment — gifted.", body, unsub),
     });
     if (error) { console.error("[email] sendDripEmail1 error:", error); return false; }
@@ -852,8 +846,8 @@ export async function sendDripEmail2({
 
   const body = `
     ${p(`You know what it felt like when you opened yours.`)}
-    ${p(`Someone took the time. Found the photos. Wrote something real. Maybe left you something to spend.`)}
-    ${p(`Someone in your life deserves that same care — a birthday, a hard week, a moment you've been meaning to acknowledge.`)}
+    ${p(`Someone took the time. Found the photos. Wrote something real. Left you something to spend.`)}
+    ${p(`Someone in your life deserves that same care. A birthday. A hard week. A moment you've been meaning to acknowledge.`)}
     ${p(`You already know exactly who.`, true)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
