@@ -2944,7 +2944,7 @@ export default function CreatePage() {
                     {amount && parseFloat(amount) >= 10 && (
                     <div className="space-y-2 pt-4 border-t border-border mt-2">
                       <Label htmlFor="recipientPhone">
-                        Their phone number{" "}
+                        Recipient's mobile number{" "}
                         <span className="text-destructive text-xs font-normal">— required</span>
                       </Label>
                       <Input
@@ -2965,7 +2965,7 @@ export default function CreatePage() {
                       )}
                       {!phoneError && (
                         <p className="text-xs text-muted-foreground">
-                          Used to verify their identity when they redeem the balance. Never used for marketing.
+                          We'll text a 6-digit code to <strong>their</strong> number when they go to redeem — enter theirs, not yours.
                         </p>
                       )}
                     </div>

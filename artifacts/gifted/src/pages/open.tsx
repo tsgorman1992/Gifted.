@@ -278,6 +278,7 @@ export default function OpenPage() {
   }
 
   const isEmbed = new URLSearchParams(window.location.search).get("embed") === "true";
+  const isPreview = new URLSearchParams(window.location.search).get("preview") === "true";
 
   const displayName = user?.firstName || user?.email?.split("@")[0] || "Account";
   const initials = user?.firstName
@@ -414,7 +415,7 @@ export default function OpenPage() {
           When the sender previews their own group gift after reveal, show
           the reactions they've received instead of the reaction form. */}
       {status === "ready" && isGroup && isSender && revealed && !isEmbed && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+        <div className={`fixed ${isPreview ? "bottom-20 sm:bottom-6" : "bottom-6"} left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4`}>
           <div className="bg-card border border-border rounded-2xl shadow-xl p-4 space-y-3 max-h-72 flex flex-col">
             <div className="flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">

@@ -3950,21 +3950,29 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 1, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-0 left-0 right-0 z-[60] flex justify-center pb-4 px-4 pointer-events-none"
+          className="fixed bottom-0 left-0 right-0 z-[60] flex justify-center pb-safe-or-4 pb-4 px-3 sm:px-4 pointer-events-none"
+          style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
         >
           <div
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl pointer-events-auto max-w-full"
+            className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl shadow-2xl pointer-events-auto w-full max-w-sm sm:max-w-none sm:w-auto"
             style={{
-              background: "rgba(10, 10, 14, 0.88)",
+              background: "rgba(10, 10, 14, 0.92)",
               backdropFilter: "blur(20px) saturate(1.4)",
               border: "1px solid rgba(255,255,255,0.12)",
             }}
           >
             <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-            <span className="text-xs font-medium text-white/70 whitespace-nowrap">
-              Previewing as <span className="text-white font-semibold">{recipientName}</span> will see it
+
+            {/* Label — full on desktop, compact on mobile */}
+            <span className="text-xs font-medium text-white/70 min-w-0 flex-1 sm:flex-none truncate">
+              <span className="hidden sm:inline">Previewing as </span>
+              <span className="text-white font-semibold">{recipientName}</span>
+              <span className="hidden sm:inline"> will see it</span>
             </span>
+
             <div className="w-px h-4 bg-white/15 shrink-0" />
+
+            {/* Copy — icon only on mobile, icon + label on desktop */}
             <button
               type="button"
               onClick={async () => {
@@ -3974,15 +3982,21 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                 setPreviewBarCopied(true);
                 setTimeout(() => setPreviewBarCopied(false), 2000);
               }}
-              className="flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              className="flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white transition-colors shrink-0"
             >
-              {previewBarCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {previewBarCopied ? "Copied!" : "Copy link"}
+              {previewBarCopied
+                ? <Check className="w-3.5 h-3.5 text-green-400" />
+                : <Copy className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">
+                {previewBarCopied ? "Copied!" : "Copy link"}
+              </span>
             </button>
+
             <div className="w-px h-4 bg-white/15 shrink-0" />
+
             <Link
               href="/my-gifts"
-              className="text-xs font-semibold text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              className="text-xs font-semibold text-white/80 hover:text-white transition-colors shrink-0 whitespace-nowrap"
             >
               Dashboard
             </Link>
