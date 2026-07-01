@@ -103,6 +103,42 @@ interface TrendsData {
   occasionBreakdown:   { name: string; count: number }[];
 }
 
+interface EmailDripUser {
+  id: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  dripStep: number;
+  dripLastSentAt: string | null;
+  createdAt: string;
+  emailBounced: boolean;
+  emailComplained: boolean;
+  unsubscribedMarketing: boolean;
+  firstSentAt: string | null;
+  firstSentSource: string | null;
+}
+
+interface EmailLogEntry {
+  type: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  sentAt: string;
+  status: string;
+}
+
+interface EmailCampaignData {
+  pipeline: {
+    step0Eligible: number;
+    step1: number;
+    step2: number;
+    step3: number;
+    converted: number;
+  };
+  users: EmailDripUser[];
+  logs: EmailLogEntry[];
+}
+
 const METHOD_LABELS: Record<string, string> = {
   venmo: "Venmo", cashapp: "Cash App", paypal: "PayPal", zelle: "Zelle",
 };
@@ -547,7 +583,7 @@ export default function AdminPage() {
   const [giftRows, setGiftRows] = useState<GiftRow[]>([]);
   const [userRows, setUserRows] = useState<UserRow[]>([]);
   const [loading, setLoading]   = useState(false);
-  const [tab, setTab]           = useState<"cashouts" | "all" | "users" | "trends">("cashouts");
+  const [tab, setTab]           = useState<"cashouts" | "all" | "users" | "trends" | "email">("cashouts");
   const [copied, setCopied]     = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [showPaidHistory, setShowPaidHistory] = useState(false);
@@ -562,6 +598,12 @@ export default function AdminPage() {
   const [trendsLoading, setTrendsLoading] = useState(false);
   const [trendsLoaded, setTrendsLoaded]   = useState(false);
   const [trendsError, setTrendsError]     = useState<string | null>(null);
+
+  // Email campaign tab — lazy loaded
+  const [emailData, setEmailData]       = useState<EmailCampaignData | null>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailLoaded, setEmailLoaded]   = useState(false);
+  const [emailError, setEmailError]     = useState<string | null>(null);
 
   const [showWipe, setShowWipe]   = useState(false);
   const [wipeInput, setWipeInput] = useState("");
@@ -604,6 +646,23 @@ export default function AdminPage() {
       setTrendsLoading(false);
     }
   }, [key, trendsLoaded]);
+
+  const loadEmailData = useCallback(async (force = false) => {
+    if (emailLoaded && !force) return;
+    setEmailLoading(true);
+    setEmailError(null);
+    try {
+      const r = await fetch(`${API}/api/internal/email-campaign`, { headers });
+      if (!r.ok) { setEmailError("Failed to load email data. Try refreshing."); return; }
+      const data = await r.json() as EmailCampaignData;
+      setEmailData(data);
+      setEmailLoaded(true);
+    } catch {
+      setEmailError("Could not connect. Try refreshing.");
+    } finally {
+      setEmailLoading(false);
+    }
+  }, [key, emailLoaded]);
 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -1017,12 +1076,14 @@ export default function AdminPage() {
               ["all",      "All Gifts", String(giftRows.length), "muted"],
               ["users",    "Accounts",  String(userRows.length), "violet"],
               ["trends",   "Trends",    null,                    "none"],
+              ["email",    "Email",     null,                    "none"],
             ] as const).map(([t, label, badge, badgeColor]) => (
               <button
                 key={t}
                 onClick={() => {
                   setTab(t as typeof tab);
                   if (t === "trends") loadTrends();
+                  if (t === "email") loadEmailData();
                 }}
                 className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap flex items-center gap-2 ${
                   tab === t
@@ -1333,6 +1394,161 @@ export default function AdminPage() {
         {/* ── Trends tab ────────────────────────────────────────────────── */}
         {tab === "trends" && (
           <TrendsPanel trends={trends} loading={trendsLoading} error={trendsError} expLabels={EXP_LABELS} />
+        )}
+
+        {/* ── Email campaign tab ────────────────────────────────────────── */}
+        {tab === "email" && (
+          <div className="space-y-8">
+            {emailLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+                <RefreshCw className="w-6 h-6 animate-spin" />
+                <p className="text-sm">Loading email data…</p>
+              </div>
+            ) : emailError ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-2 text-destructive/70">
+                <AlertTriangle className="w-5 h-5" />
+                <p className="text-sm">{emailError}</p>
+              </div>
+            ) : emailData ? (
+              <>
+                {/* Pipeline funnel */}
+                <div>
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Drip sequence pipeline</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    {([
+                      { label: "Eligible for Email 1", value: emailData.pipeline.step0Eligible, sub: "account 3+ days, no gift sent", color: "text-muted-foreground" },
+                      { label: "Email 1 sent",          value: emailData.pipeline.step1,         sub: '"Someone built you something"',   color: "text-blue-600" },
+                      { label: "Email 2 sent",          value: emailData.pipeline.step2,         sub: '"You already know who."',          color: "text-violet-600" },
+                      { label: "Email 3 sent",          value: emailData.pipeline.step3,         sub: "Occasions nudge",                 color: "text-green-600" },
+                      { label: "Converted",             value: emailData.pipeline.converted,     sub: "sent a paid gift",                color: "text-primary" },
+                    ] as const).map(({ label, value, sub, color }) => (
+                      <div key={label} className="bg-card border border-border rounded-2xl p-4">
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-tight mb-2">{label}</p>
+                        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 leading-tight italic">{sub}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* User drip state table */}
+                <div>
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">User drip state ({emailData.users.length})</p>
+                  <div className="overflow-x-auto rounded-2xl border border-border -mx-4 sm:mx-0">
+                    <table className="w-full text-sm min-w-[640px]">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/40">
+                          {["Name", "Email", "Step", "Last email", "Joined", "Status"].map(h => (
+                            <th key={h} className="px-3 sm:px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emailData.users.map((u, i) => {
+                          const name = [u.firstName, u.lastName].filter(Boolean).join(" ") || "—";
+                          const isConverted   = !!u.firstSentAt;
+                          const isBounced     = u.emailBounced || u.emailComplained;
+                          const isUnsub       = u.unsubscribedMarketing;
+                          const stepMeta: Record<number, { label: string; cls: string }> = {
+                            0: { label: "Eligible",   cls: "bg-muted text-muted-foreground" },
+                            1: { label: "Email 1 ✓",  cls: "bg-blue-100 text-blue-700" },
+                            2: { label: "Email 2 ✓",  cls: "bg-violet-100 text-violet-700" },
+                            3: { label: "Email 3 ✓",  cls: "bg-green-100 text-green-700" },
+                          };
+                          const step = stepMeta[u.dripStep] ?? { label: `Step ${u.dripStep}`, cls: "bg-muted text-muted-foreground" };
+                          return (
+                            <tr key={u.id} className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${i % 2 !== 0 ? "bg-muted/10" : ""}`}>
+                              <td className="px-3 sm:px-4 py-3 font-medium whitespace-nowrap">{name}</td>
+                              <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{u.email ?? "—"}</td>
+                              <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${step.cls}`}>{step.label}</span>
+                              </td>
+                              <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{u.dripLastSentAt ? fmt(u.dripLastSentAt) : "—"}</td>
+                              <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{fmt(u.createdAt)}</td>
+                              <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                                {isConverted
+                                  ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">Converted 🎉</span>
+                                  : isBounced
+                                  ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Bounced</span>
+                                  : isUnsub
+                                  ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">Unsubscribed</span>
+                                  : <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Active</span>
+                                }
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {emailData.users.length === 0 && (
+                          <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground text-sm">No users yet</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Send log */}
+                <div>
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Send log ({emailData.logs.length} most recent)</p>
+                  <div className="overflow-x-auto rounded-2xl border border-border -mx-4 sm:mx-0">
+                    <table className="w-full text-sm min-w-[500px]">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/40">
+                          {["Type", "Recipient", "Sent", "Status"].map(h => (
+                            <th key={h} className="px-3 sm:px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emailData.logs.map((l, i) => {
+                          const name = [l.firstName, l.lastName].filter(Boolean).join(" ");
+                          const typeColors: Record<string, string> = {
+                            drip1: "bg-blue-100 text-blue-700",
+                            drip2: "bg-violet-100 text-violet-700",
+                            drip3: "bg-green-100 text-green-700",
+                            digest: "bg-amber-100 text-amber-700",
+                            abandoned_nudge: "bg-orange-100 text-orange-700",
+                          };
+                          const typeColor = typeColors[l.type] ?? "bg-muted text-muted-foreground";
+                          return (
+                            <tr key={i} className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${i % 2 !== 0 ? "bg-muted/10" : ""}`}>
+                              <td className="px-3 sm:px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${typeColor}`}>{l.type}</span>
+                              </td>
+                              <td className="px-3 sm:px-4 py-3">
+                                {name && <div className="font-medium text-sm">{name}</div>}
+                                <div className="text-xs text-muted-foreground">{l.email}</div>
+                              </td>
+                              <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{fmt(l.sentAt)}</td>
+                              <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                  l.status === "delivered"  ? "bg-green-100 text-green-700"
+                                  : l.status === "bounced"  ? "bg-red-100 text-red-700"
+                                  : l.status === "complained" ? "bg-orange-100 text-orange-700"
+                                  : "bg-muted text-muted-foreground"
+                                }`}>{l.status}</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {emailData.logs.length === 0 && (
+                          <tr><td colSpan={4} className="px-4 py-12 text-center text-muted-foreground text-sm">No emails sent yet</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pb-4">
+                  <button
+                    onClick={() => loadEmailData(true)}
+                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Refresh
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
         )}
 
       </main>

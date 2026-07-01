@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { gifts, contactOccasions, contacts, usersTable } from "@workspace/db/schema";
+import { gifts, contactOccasions, contacts, usersTable, emailLogs } from "@workspace/db/schema";
 import { and, isNotNull, isNull, lte, eq, sql, or, inArray } from "drizzle-orm";
 import twilio from "twilio";
 import Stripe from "stripe";
@@ -762,7 +762,10 @@ async function sendDripEmails() {
     // ── Step 0 → 1: account >3 days old, never sent a paid gift ──
     // Personalise with the first gift they ever received (the one that drove signup).
     const step0Candidates = await db
-      .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName })
+      .select({
+        id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName,
+        emailBounced: usersTable.emailBounced, emailComplained: usersTable.emailComplained,
+      })
       .from(usersTable)
       .where(and(
         isNotNull(usersTable.email),
@@ -813,8 +816,27 @@ async function sendDripEmails() {
         }
       }
 
+      // Dedupe: batch-check who already received drip1 (prevents double-send on scheduler overlap)
+      const alreadySentDrip1Rows = eligibleIds.length
+        ? await db.select({ userId: emailLogs.userId }).from(emailLogs)
+            .where(and(eq(emailLogs.type, "drip1"), inArray(emailLogs.userId, eligibleIds)))
+        : [];
+      const alreadySentDrip1 = new Set(alreadySentDrip1Rows.map(r => r.userId).filter(Boolean) as string[]);
+
       for (const user of eligible) {
         try {
+          // Already sent — just advance step to stay in sync
+          if (alreadySentDrip1.has(user.id)) {
+            await db.update(usersTable).set({ dripStep: 1, dripLastSentAt: new Date() }).where(eq(usersTable.id, user.id));
+            console.log(`[drip] Email 1 already logged for ${user.email} — advancing step`);
+            continue;
+          }
+          // Bounced/complained — advance step to exit queue without sending
+          if (user.emailBounced || user.emailComplained) {
+            await db.update(usersTable).set({ dripStep: 1, dripLastSentAt: new Date() }).where(eq(usersTable.id, user.id));
+            console.log(`[drip] Skipping email 1 for ${user.email} (suppressed) — advancing step`);
+            continue;
+          }
           const received = firstReceivedMap.get(user.id);
           const sent = await sendDripEmail1({
             to:         user.email!,
@@ -838,7 +860,10 @@ async function sendDripEmails() {
 
     // ── Step 1 → 2: Email 1 sent >7 days ago (~day 10 post-signup), still no gift sent ──
     const step1Candidates = await db
-      .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName })
+      .select({
+        id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName,
+        emailBounced: usersTable.emailBounced, emailComplained: usersTable.emailComplained,
+      })
       .from(usersTable)
       .where(and(
         isNotNull(usersTable.email),
@@ -857,8 +882,25 @@ async function sendDripEmails() {
       const hasSent = new Set(hasSentRows.map(r => r.senderUserId));
       const eligible = step1Candidates.filter(u => !hasSent.has(u.id));
 
+      const eligibleIds2 = eligible.map(u => u.id);
+      const alreadySentDrip2Rows = eligibleIds2.length
+        ? await db.select({ userId: emailLogs.userId }).from(emailLogs)
+            .where(and(eq(emailLogs.type, "drip2"), inArray(emailLogs.userId, eligibleIds2)))
+        : [];
+      const alreadySentDrip2 = new Set(alreadySentDrip2Rows.map(r => r.userId).filter(Boolean) as string[]);
+
       for (const user of eligible) {
         try {
+          if (alreadySentDrip2.has(user.id)) {
+            await db.update(usersTable).set({ dripStep: 2, dripLastSentAt: new Date() }).where(eq(usersTable.id, user.id));
+            console.log(`[drip] Email 2 already logged for ${user.email} — advancing step`);
+            continue;
+          }
+          if (user.emailBounced || user.emailComplained) {
+            await db.update(usersTable).set({ dripStep: 2, dripLastSentAt: new Date() }).where(eq(usersTable.id, user.id));
+            console.log(`[drip] Skipping email 2 for ${user.email} (suppressed) — advancing step`);
+            continue;
+          }
           const sent = await sendDripEmail2({ to: user.email!, firstName: user.firstName, userId: user.id });
           if (sent) {
             await db.update(usersTable)
@@ -874,7 +916,10 @@ async function sendDripEmails() {
 
     // ── Step 2 → 3: Email 2 sent >30 days ago, still no gift sent ──
     const step2Candidates = await db
-      .select({ id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName })
+      .select({
+        id: usersTable.id, email: usersTable.email, firstName: usersTable.firstName,
+        emailBounced: usersTable.emailBounced, emailComplained: usersTable.emailComplained,
+      })
       .from(usersTable)
       .where(and(
         isNotNull(usersTable.email),
@@ -929,8 +974,25 @@ async function sendDripEmails() {
         }
         for (const list of occasionMap.values()) list.sort((a, b) => a.daysAway - b.daysAway);
 
+        const eligibleIds3 = eligible.map(u => u.id);
+        const alreadySentDrip3Rows = eligibleIds3.length
+          ? await db.select({ userId: emailLogs.userId }).from(emailLogs)
+              .where(and(eq(emailLogs.type, "drip3"), inArray(emailLogs.userId, eligibleIds3)))
+          : [];
+        const alreadySentDrip3 = new Set(alreadySentDrip3Rows.map(r => r.userId).filter(Boolean) as string[]);
+
         for (const user of eligible) {
           try {
+            if (alreadySentDrip3.has(user.id)) {
+              await db.update(usersTable).set({ dripStep: 3, dripLastSentAt: new Date() }).where(eq(usersTable.id, user.id));
+              console.log(`[drip] Email 3 already logged for ${user.email} — advancing step`);
+              continue;
+            }
+            if (user.emailBounced || user.emailComplained) {
+              await db.update(usersTable).set({ dripStep: 3, dripLastSentAt: new Date() }).where(eq(usersTable.id, user.id));
+              console.log(`[drip] Skipping email 3 for ${user.email} (suppressed) — advancing step`);
+              continue;
+            }
             const upcomingOccasions = occasionMap.get(user.id) ?? [];
             const sent = await sendDripEmail3({
               to:               user.email!,

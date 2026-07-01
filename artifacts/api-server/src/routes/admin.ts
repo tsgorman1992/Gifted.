@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, gifts, usersTable } from "@workspace/db";
+import { db, gifts, usersTable, emailLogs } from "@workspace/db";
 import { desc, isNotNull, isNull, eq, ilike, count, gte, lte, ne, and, sql } from "drizzle-orm";
 import { physicalGifts, conversations, messages } from "@workspace/db";
 import rateLimit from "express-rate-limit";
@@ -867,6 +867,65 @@ router.get("/internal/email-metrics", async (req, res) => {
   } catch (err) {
     console.error("[admin] email-metrics error:", err);
     res.status(500).json({ error: "Failed to fetch email metrics" });
+  }
+});
+
+// ── Email campaign dashboard ──────────────────────────────────────────────────
+router.get("/internal/email-campaign", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+    const [step0Rows, step1Rows, step2Rows, step3Rows, convertedRows, users, logs] = await Promise.all([
+      db.select({ id: usersTable.id }).from(usersTable).where(
+        and(isNotNull(usersTable.email), eq(usersTable.dripStep, 0),
+          eq(usersTable.unsubscribedMarketing, false), lte(usersTable.createdAt, threeDaysAgo))
+      ),
+      db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.dripStep, 1)),
+      db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.dripStep, 2)),
+      db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.dripStep, 3)),
+      db.select({ id: usersTable.id }).from(usersTable).where(isNotNull(usersTable.firstSentAt)),
+      db.select({
+        id: usersTable.id,
+        email: usersTable.email,
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+        dripStep: usersTable.dripStep,
+        dripLastSentAt: usersTable.dripLastSentAt,
+        createdAt: usersTable.createdAt,
+        emailBounced: usersTable.emailBounced,
+        emailComplained: usersTable.emailComplained,
+        unsubscribedMarketing: usersTable.unsubscribedMarketing,
+        firstSentAt: usersTable.firstSentAt,
+        firstSentSource: usersTable.firstSentSource,
+      }).from(usersTable).where(isNotNull(usersTable.email)).orderBy(desc(usersTable.createdAt)),
+      db.select({
+        type: emailLogs.type,
+        email: emailLogs.email,
+        sentAt: emailLogs.sentAt,
+        status: emailLogs.status,
+        firstName: usersTable.firstName,
+        lastName: usersTable.lastName,
+      }).from(emailLogs)
+        .leftJoin(usersTable, eq(emailLogs.userId, usersTable.id))
+        .orderBy(desc(emailLogs.sentAt))
+        .limit(300),
+    ]);
+
+    res.json({
+      pipeline: {
+        step0Eligible: step0Rows.length,
+        step1: step1Rows.length,
+        step2: step2Rows.length,
+        step3: step3Rows.length,
+        converted: convertedRows.length,
+      },
+      users,
+      logs,
+    });
+  } catch (err) {
+    console.error("[admin] email-campaign error:", err);
+    res.status(500).json({ error: "Failed to fetch email campaign data" });
   }
 });
 

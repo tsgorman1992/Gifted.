@@ -804,10 +804,10 @@ export async function sendDripEmail1({
     <p style="margin:0 0 24px;font-size:18px;line-height:1.6;color:#1a1310;font-family:Georgia,serif;font-style:italic;">
       ${senderLabel} built you something for your ${occasionLabel}.
     </p>
-    ${p(`Someone took the time to find the photos, write the words, record something just for you.`)}
-    ${hasBalance ? p(`They even made sure you had something to spend.`) : ""}
-    ${p(`Someone in your life deserves that same feeling.`)}
-    ${p(`You already know how to give it to them.`)}
+    ${p(`Someone took the time to find the photos, write the words, record something just for you.${hasBalance ? ` They even added something to spend.` : ``}`)}
+    ${p(`Someone in your life deserves exactly that.`)}
+    ${p(`You can do the same — photos, a personal message, and even money, all in one place. Ten minutes.`)}
+    ${p(`You already know who needs it.`, true)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
       ${btn("Build a moment", createUrl)}
@@ -853,8 +853,8 @@ export async function sendDripEmail2({
   const body = `
     ${p(`You know what it felt like when you opened yours.`)}
     ${p(`Someone took the time. Found the photos. Wrote something real. Maybe left you something to spend.`)}
-    ${p(`Someone in your life is waiting for that same feeling — they just don't know it yet.`)}
-    ${p(`You already know exactly how to give it to them.`, true)}
+    ${p(`Someone in your life deserves that same care — a birthday, a hard week, a moment you've been meaning to acknowledge.`)}
+    ${p(`You already know exactly who.`, true)}
     ${divider()}
     <div style="text-align:center;padding:8px 0 4px;">
       ${btn("Build a moment", createUrl)}
@@ -1000,8 +1000,9 @@ export async function sendDripEmail3({
       </div>
     `
     : `
-      ${p(`Add one person and their birthday.`)}
-      ${p(`We'll remind you before it arrives — 3 days before and the morning of. You'll never send a lazy last-minute gift again.`)}
+      ${p(`You received something made just for you — photos, words, something real.`)}
+      ${p(`Now add one person. Their name, their birthday. We'll remind you before it arrives every year — 3 days before and the morning of.`)}
+      ${p(`You'll never need to scramble again.`, true)}
       ${divider()}
       <div style="text-align:center;padding:8px 0 4px;">
         ${btn("Add a birthday", addOccasionUrl)}
@@ -1010,7 +1011,7 @@ export async function sendDripEmail3({
 
   const subject = hasOccasions
     ? "A few dates worth knowing about."
-    : "You'll thank yourself for this in about 3 weeks.";
+    : "Someone's birthday is coming. You just don't know when yet.";
 
   try {
     const { data, error } = await client.emails.send({
