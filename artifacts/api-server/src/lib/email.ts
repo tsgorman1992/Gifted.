@@ -800,12 +800,7 @@ export async function sendDripEmail1({
     </p>
     ${p(`They found the photos. Wrote the words. Added something to spend. Made it feel real.`)}
     ${p(`Someone in your life deserves exactly that.`)}
-    ${p(`You can do the same. Photos, a personal message, and money to spend, all in one place. Ten minutes.`)}
-    ${p(`You already know who needs it.`, true)}
-    ${divider()}
-    <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("Build a moment", createUrl)}
-    </div>
+    ${p(`You already know who.`, true)}
   `;
 
   try {
@@ -849,10 +844,9 @@ export async function sendDripEmail2({
     ${p(`Someone took the time. Found the photos. Wrote something real. Left you something to spend.`)}
     ${p(`Someone in your life deserves that same care. A birthday. A hard week. A moment you've been meaning to acknowledge.`)}
     ${p(`You already know exactly who.`, true)}
-    ${divider()}
-    <div style="text-align:center;padding:8px 0 4px;">
-      ${btn("Build a moment", createUrl)}
-    </div>
+    <p style="margin:32px 0 0;font-size:14px;line-height:1.6;color:#8c7b6e;">
+      <a href="${createUrl}" style="color:#8c7b6e;text-decoration:none;">gifted.com</a>
+    </p>
   `;
 
   try {
