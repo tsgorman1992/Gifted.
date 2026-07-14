@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb, boolean, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean, uuid, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -64,7 +64,19 @@ export const gifts = pgTable("gifts", {
   abandonedNudgeSentAt: timestamp("abandoned_nudge_sent_at", { withTimezone: true }),
   isTest: boolean("is_test").notNull().default(false),
   isGroup: boolean("is_group").notNull().default(false),
-});
+
+  // Set only when this gift was materialized from a Chip In campaign at send
+  // time. Plain text (no FK, same convention as physicalGifts.giftId below)
+  // to avoid a circular schema-file dependency with groupGifts.ts. The
+  // partial unique index is the real safety net: it makes it impossible for
+  // two gift rows to ever claim the same campaign, even if application-level
+  // locking in the send transaction were somehow bypassed.
+  groupCampaignId: text("group_campaign_id"),
+}, (table) => [
+  uniqueIndex("gifts_group_campaign_id_unique")
+    .on(table.groupCampaignId)
+    .where(sql`${table.groupCampaignId} IS NOT NULL`),
+]);
 
 export const insertGiftSchema = createInsertSchema(gifts).omit({
   createdAt: true,

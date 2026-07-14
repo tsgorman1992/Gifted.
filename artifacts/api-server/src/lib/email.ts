@@ -770,6 +770,131 @@ export async function sendSenderThankYouNotice({
   }
 }
 
+// ─── Chip In: contribution receipt ────────────────────────────────────────────
+
+interface ContributionReceiptParams {
+  to: string;
+  contributorName: string;
+  recipientName: string;
+  occasion: string;
+  amountCents: number;
+  statusToken: string;
+}
+
+export async function sendContributionReceipt(params: ContributionReceiptParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
+
+  const { to, contributorName, recipientName, occasion, amountCents, statusToken } = params;
+  const amountStr = `$${(amountCents / 100).toFixed(2)}`;
+  const statusUrl = `${BASE_URL}/chip-in/status/${statusToken}`;
+  const firstName = contributorName.split(" ")[0];
+
+  const body = `
+    ${h1(`You're in, ${firstName}!`)}
+    ${p(`Your ${amountStr} contribution toward ${recipientName}'s ${occasion.replace(/-/g, " ")} moment is confirmed. The organizer will send it once everyone's chipped in.`)}
+    ${divider()}
+    <div style="text-align:center;padding:8px 0 4px;">
+      ${btn("Check the campaign status", statusUrl)}
+      <p style="margin:16px 0 0;font-size:13px;color:#6b6059;">No account needed — this link is yours to check back anytime, and to be notified when it's delivered.</p>
+    </div>
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `You're in — ${amountStr} toward ${recipientName}'s moment`,
+      html: layout(`Contribution confirmed — gifted.`, body),
+    });
+    if (error) console.error("[email] sendContributionReceipt error:", error);
+    else console.log(`[email] Contribution receipt sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendContributionReceipt exception:", err);
+  }
+}
+
+// ─── Chip In: campaign sent notice (to each contributor) ─────────────────────
+
+interface CampaignSentParams {
+  to: string;
+  contributorName: string;
+  recipientName: string;
+}
+
+export async function sendCampaignSentNotice(params: CampaignSentParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
+
+  const { to, contributorName, recipientName } = params;
+  const firstName = contributorName.split(" ")[0];
+
+  const body = `
+    ${h1(`It's on its way!`)}
+    ${p(`Hi ${firstName}, the moment you chipped in for ${recipientName} was just sent. Thanks for being part of it — we'll let you know if you asked to hear when it's opened.`)}
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `Your moment for ${recipientName} is on its way`,
+      html: layout(`Gift sent — gifted.`, body),
+    });
+    if (error) console.error("[email] sendCampaignSentNotice error:", error);
+    else console.log(`[email] Campaign sent notice sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendCampaignSentNotice exception:", err);
+  }
+}
+
+// ─── Chip In: contribution refund notice ──────────────────────────────────────
+
+interface ContributionRefundParams {
+  to: string;
+  contributorName: string;
+  recipientName: string;
+  amountCents: number;
+  reason: "campaign_canceled" | "campaign_expired" | "duplicate_payment";
+}
+
+export async function sendContributionRefundNotice(params: ContributionRefundParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
+
+  const { to, contributorName, recipientName, amountCents, reason } = params;
+  const amountStr = `$${(amountCents / 100).toFixed(2)}`;
+  const firstName = contributorName.split(" ")[0];
+  const reasonText = reason === "duplicate_payment"
+    ? "This looked like a duplicate payment, so we refunded the extra charge."
+    : "This moment didn't end up being sent, so we've refunded everyone who chipped in.";
+
+  const body = `
+    ${h1(`Your ${amountStr} has been refunded`)}
+    ${p(`Hi ${firstName}, ${reasonText} You'll see ${amountStr} back on your card within a few business days — that's a full refund, including any fees.`)}
+    ${p(`Questions? Just reply to this email or reach us at help@gifted.page.`, true)}
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `You've been refunded ${amountStr}`,
+      html: layout(`Refund confirmed — gifted.`, body),
+    });
+    if (error) console.error("[email] sendContributionRefundNotice error:", error);
+    else console.log(`[email] Refund notice sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendContributionRefundNotice exception:", err);
+  }
+}
+
 // ─── 13. Drip email 1 — personalised recipient-to-sender nudge (day 3) ────────
 
 export async function sendDripEmail1({

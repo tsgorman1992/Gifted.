@@ -4,4 +4,5 @@ export * from "./gifts";
 export * from "./auth";
 export * from "./contacts";
 export * from "./emailLogs";
+export * from "./groupGifts";
 

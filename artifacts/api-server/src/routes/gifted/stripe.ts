@@ -1,8 +1,8 @@
 import { Router } from "express";
 import Stripe from "stripe";
 import twilio from "twilio";
-import { db, gifts, usersTable } from "@workspace/db";
-import { eq, and, ne, isNotNull, isNull } from "drizzle-orm";
+import { db, gifts, usersTable, groupContributions } from "@workspace/db";
+import { eq, and, ne, isNotNull, isNull, or, sql } from "drizzle-orm";
 import {
   sendSenderReceipt,
   sendSenderRedemptionNotice,
@@ -10,6 +10,7 @@ import {
   sendRecipientPayoutConfirmation,
   sendGiftOpenedNotice,
 } from "../../lib/email";
+import { markContributionPaid } from "./group-gifts";
 
 function getTwilioClient() {
   const sid   = process.env.TWILIO_ACCOUNT_SID;
@@ -331,6 +332,29 @@ router.post("/gifted/redeem", async (req, res) => {
         res.status(403).json({ error: "Senders cannot redeem their own gift." });
         return;
       }
+
+      // Chip In gifts have many payers, not one — the single-sender check
+      // above only catches the organizer. Widen it to every contributor on
+      // the campaign this gift was materialized from, so a contributor can't
+      // redeem money they themselves paid in.
+      if (gift.groupCampaignId && (callerUserId || callerEmail)) {
+        const contributorMatch = await db
+          .select({ id: groupContributions.id })
+          .from(groupContributions)
+          .where(and(
+            eq(groupContributions.campaignId, gift.groupCampaignId),
+            eq(groupContributions.status, "paid"),
+            or(
+              callerUserId ? eq(groupContributions.contributorUserId, callerUserId) : sql`false`,
+              callerEmail ? eq(groupContributions.contributorEmail, callerEmail) : sql`false`,
+            ),
+          ))
+          .limit(1);
+        if (contributorMatch.length > 0) {
+          res.status(403).json({ error: "Contributors cannot redeem a gift they chipped in on." });
+          return;
+        }
+      }
     }
 
     if (gift.recipientUserId && callerUserId && callerUserId !== gift.recipientUserId) {
@@ -537,6 +561,23 @@ router.post("/stripe/webhook", async (req, res) => {
           console.warn(`[stripe/webhook] Sibling propagation failed:`, sibErr);
         }
       }
+    }
+
+    // Chip In contributions use the same event type, distinguished by
+    // metadata.contributionId instead of metadata.giftId. This is the durable
+    // source of truth for marking a contribution paid — markContributionPaid
+    // is idempotent (conditional on status still being 'pending'), so it's
+    // safe even if the browser-side confirm call already handled it.
+    const contributionId = session.metadata?.contributionId;
+    if (contributionId && session.payment_status === "paid") {
+      await markContributionPaid({
+        contributionId,
+        paymentIntentId:
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : (session.payment_intent?.id ?? null),
+      });
+      console.log(`[stripe/webhook] checkout.session.completed contributionId=${contributionId}`);
     }
   }
 
