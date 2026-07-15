@@ -1,0 +1,725 @@
+Apply the following changes exactly as written. Do not rewrite, simplify, reinterpret, or "improve" any of the logic. This is Phase 2 of the "Chip In" (group gifting) feature — three new frontend pages plus routing, built on top of the Phase 1 backend (schema + API routes) that should already be applied.
+There are three brand-new files to create, and one edit to make to an existing file (App.tsx). If the "find this" anchor for App.tsx doesn't match what's actually there, STOP and show me the mismatch instead of guessing — the file may have moved since this was written.
+IMPORTANT: this phase assumes Phase 1 (the group_campaigns / group_contributions tables and the /api/gifted/group-gifts/* routes) is already applied and pnpm --filter db push has already been run. If it hasn't, apply Phase 1 first.
+After applying everything, restart the frontend dev server and confirm these routes load without errors: /chip-in/:shareToken (will 404 until a real campaign exists — that's expected, there's no creation UI yet), /chip-in/status/:token, /chip-in/dashboard/:id.
+NOT included in this phase: the organizer's campaign-creation form, and the "Send a Moment" vs "Chip In" entry fork. Both depend on the video/photo upload UI already in create.tsx and need their own pass — there is currently no UI to actually create a campaign yet, only to pay into, check status on, and manage an existing one (e.g. one created directly via the API for testing).
+=====================================================================
+NEW FILE 1 of 3: artifacts/gifted/src/pages/chip-in.tsx
+Create this file with exactly this content:
+```typescript
+import React, { useState, useEffect } from "react";
+import { useParams } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, Check, Users, Video, Image as ImageIcon, FileText, Music } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
+
+interface CampaignPublicData {
+  recipientName: string;
+  occasion: string;
+  giftTitle: string;
+  experience: string;
+  organizerName: string;
+  pitchMessage: string;
+  contentManifest: {
+    hasVideo: boolean;
+    photoCount: number;
+    hasNote: boolean;
+    hasPlaylist: boolean;
+    extraLinkCount: number;
+  };
+  fixedAmountCents: number;
+  maxContributors: number;
+  paidCount: number;
+  paidTotalCents: number;
+  status: string;
+  full: boolean;
+}
+
+function formatOccasion(o: string): string {
+  return o.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+export default function ChipInPage() {
+  const { shareToken } = useParams<{ shareToken: string }>();
+
+  const [status, setStatus] = useState<"loading" | "ready" | "not-found" | "error">("loading");
+  const [campaign, setCampaign] = useState<CampaignPublicData | null>(null);
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [notifyOnOpen, setNotifyOnOpen] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Post-payment confirmation state — set when we land back here from Stripe
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [statusUrl, setStatusUrl] = useState<string | null>(null);
+
+  function fetchCampaign() {
+    fetch(`${BASE}/api/gifted/group-gifts/public/${shareToken}`)
+      .then(async r => {
+        if (r.status === 404) { setStatus("not-found"); return; }
+        if (!r.ok) { setStatus("error"); return; }
+        const data = await r.json();
+        setCampaign(data);
+        setStatus("ready");
+      })
+      .catch(() => setStatus("error"));
+  }
+
+  useEffect(() => {
+    if (!shareToken) return;
+    fetchCampaign();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareToken]);
+
+  // Handle the redirect back from Stripe Checkout.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paid = params.get("paid");
+    const contributionId = params.get("contribution_id");
+    const sessionId = params.get("session_id");
+    if (paid !== "true" || !contributionId || !sessionId) return;
+
+    setConfirming(true);
+    fetch(`${BASE}/api/gifted/group-gifts/contributions/${contributionId}/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ sessionId }),
+    })
+      .then(async r => {
+        if (!r.ok) throw new Error("confirm failed");
+        // The status token was stashed in localStorage right before we
+        // redirected to Stripe — retrieve it so we can link to the
+        // no-account status page.
+        const token = localStorage.getItem(`gifted_chipin_status_${contributionId}`);
+        if (token) setStatusUrl(`${BASE}/chip-in/status/${token}`);
+        setConfirmed(true);
+        fetchCampaign();
+      })
+      .catch(() => setFormError("We couldn't confirm your payment — if you were charged, contact help@gifted.page and we'll sort it out."))
+      .finally(() => setConfirming(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+
+    if (!name.trim()) { setFormError("Your name is required."); return; }
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setFormError("A valid email is required.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const returnUrl = window.location.origin + window.location.pathname;
+      const res = await fetch(`${BASE}/api/gifted/group-gifts/public/${shareToken}/contribute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          contributorName: name.trim(),
+          contributorEmail: email.trim(),
+          message: message.trim() || undefined,
+          notifyOnOpen,
+          returnUrl,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFormError(data.error || "Something went wrong. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+      // Stash the status token before leaving for Stripe so we can show it
+      // again once the user is redirected back here.
+      localStorage.setItem(`gifted_chipin_status_${data.contributionId}`, data.statusToken);
+      window.location.href = data.url;
+    } catch {
+      setFormError("Unable to connect. Please check your connection and try again.");
+      setSubmitting(false);
+    }
+  }
+
+  if (status === "loading" || confirming) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (status === "not-found") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center">
+        <div>
+          <h1 className="font-serif text-2xl font-medium mb-2">We couldn't find this campaign</h1>
+          <p className="text-muted-foreground text-sm">The link may be incomplete, or the campaign may have been removed.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "error" || !campaign) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center">
+        <p className="text-muted-foreground text-sm">Something went wrong loading this campaign. Please try again.</p>
+      </div>
+    );
+  }
+
+  if (confirmed) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center px-6 pb-24">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md text-center">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+            <Check className="w-7 h-7 text-primary" />
+          </div>
+          <h1 className="font-serif text-3xl font-medium mb-3">You're in!</h1>
+          <p className="text-muted-foreground text-base leading-relaxed mb-8">
+            Your contribution toward {campaign.recipientName}'s moment is confirmed. The organizer will send it once everyone's chipped in.
+          </p>
+          {statusUrl && (
+            <Button asChild size="lg" className="rounded-full">
+              <a href={statusUrl}>Check the campaign status</a>
+            </Button>
+          )}
+        </motion.div>
+      </div>
+    );
+  }
+
+  const amountStr = `$${(campaign.fixedAmountCents / 100).toFixed(2)}`;
+  const raisedStr = `$${(campaign.paidTotalCents / 100).toFixed(2)}`;
+  const canContribute = campaign.status === "open" && !campaign.full;
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center px-6 py-16">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <p className="text-xs font-semibold tracking-widest uppercase text-primary mb-3">Chip In</p>
+          <h1 className="font-serif text-3xl md:text-4xl font-medium mb-3 leading-tight">
+            A moment for {campaign.recipientName}
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Organized by {campaign.organizerName} &middot; {formatOccasion(campaign.occasion)}
+          </p>
+        </div>
+
+        <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+          {/* Organizer's pitch — never the recipient's private note */}
+          <div className="bg-secondary/50 rounded-2xl p-5">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{campaign.pitchMessage}</p>
+          </div>
+
+          {/* Content manifest — what's inside, not the content itself */}
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            {campaign.contentManifest.hasVideo && (
+              <span className="inline-flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Video message</span>
+            )}
+            {campaign.contentManifest.photoCount > 0 && (
+              <span className="inline-flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5" /> {campaign.contentManifest.photoCount} photo{campaign.contentManifest.photoCount !== 1 ? "s" : ""}</span>
+            )}
+            {campaign.contentManifest.hasNote && (
+              <span className="inline-flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Personal note</span>
+            )}
+            {campaign.contentManifest.hasPlaylist && (
+              <span className="inline-flex items-center gap-1.5"><Music className="w-3.5 h-3.5" /> Song</span>
+            )}
+          </div>
+
+          {/* Progress */}
+          <div className="flex items-center justify-between text-sm border-t border-border pt-5">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Users className="w-4 h-4" />
+              <span>{campaign.paidCount} of {campaign.maxContributors} chipped in</span>
+            </div>
+            <span className="font-semibold">{raisedStr} raised</span>
+          </div>
+
+          {!canContribute && (
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground">
+                {campaign.status === "sent"
+                  ? "This moment has already been sent."
+                  : campaign.full
+                  ? "This moment is fully funded — thank you!"
+                  : "This campaign is no longer accepting contributions."}
+              </p>
+            </div>
+          )}
+
+          {canContribute && (
+            <form onSubmit={handleSubmit} className="space-y-4 border-t border-border pt-5">
+              <div className="flex items-center justify-between bg-secondary/40 rounded-xl px-4 py-3">
+                <span className="text-sm text-muted-foreground">Your contribution</span>
+                <span className="text-lg font-semibold">{amountStr}</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your name</label>
+                <input
+                  type="text" value={name} onChange={e => setName(e.target.value)}
+                  placeholder="Jordan Lee" maxLength={80}
+                  className="w-full h-11 px-4 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                />
+                <p className="text-xs text-muted-foreground mt-1">So {campaign.recipientName} knows exactly who this is from.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your email</label>
+                <input
+                  type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full h-11 px-4 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                />
+                <p className="text-xs text-muted-foreground mt-1">For your receipt and a link to check status — no account needed.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Message (optional)</label>
+                <textarea
+                  value={message} onChange={e => setMessage(e.target.value)}
+                  placeholder="Add a note for the recipient..." maxLength={500} rows={2}
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition resize-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input type="checkbox" checked={notifyOnOpen} onChange={e => setNotifyOnOpen(e.target.checked)} className="rounded border-border" />
+                Notify me when {campaign.recipientName} opens it
+              </label>
+
+              <AnimatePresence>
+                {formError && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-sm text-destructive">
+                    {formError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              <Button type="submit" size="lg" className="w-full rounded-full" disabled={submitting}>
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Chip in ${amountStr}`}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">Plus an 8% platform fee and card processing, shown at checkout — same as every gifted. moment.</p>
+            </form>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+```
+=====================================================================
+NEW FILE 2 of 3: artifacts/gifted/src/pages/chip-in-status.tsx
+Create this file with exactly this content:
+```typescript
+import React, { useState, useEffect } from "react";
+import { useParams } from "wouter";
+import { motion } from "framer-motion";
+import { Loader2, Check, Clock, XCircle } from "lucide-react";
+
+const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
+
+interface StatusData {
+  yourAmountCents: number;
+  yourStatus: "pending" | "paid" | "refunded" | "failed";
+  notifyOnOpen: boolean;
+  recipientName: string;
+  occasion: string;
+  campaignStatus: string;
+  sentAt: string | null;
+  paidCount: number;
+  paidTotalCents: number;
+}
+
+function formatOccasion(o: string): string {
+  return o.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+export default function ChipInStatusPage() {
+  const { token } = useParams<{ token: string }>();
+  const [status, setStatus] = useState<"loading" | "ready" | "not-found" | "error">("loading");
+  const [data, setData] = useState<StatusData | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${BASE}/api/gifted/group-gifts/contributions/status/${token}`)
+      .then(async r => {
+        if (r.status === 404) { setStatus("not-found"); return; }
+        if (!r.ok) { setStatus("error"); return; }
+        setData(await r.json());
+        setStatus("ready");
+      })
+      .catch(() => setStatus("error"));
+  }, [token]);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (status === "not-found") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center">
+        <div>
+          <h1 className="font-serif text-2xl font-medium mb-2">We couldn't find that contribution</h1>
+          <p className="text-muted-foreground text-sm">Double-check the link from your confirmation email.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "error" || !data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center">
+        <p className="text-muted-foreground text-sm">Something went wrong loading this status. Please try again.</p>
+      </div>
+    );
+  }
+
+  const amountStr = `$${(data.yourAmountCents / 100).toFixed(2)}`;
+
+  const statusDisplay: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+    open: { icon: <Clock className="w-6 h-6" />, label: "Still collecting contributions", color: "text-muted-foreground" },
+    sending: { icon: <Loader2 className="w-6 h-6 animate-spin" />, label: "Being sent right now", color: "text-primary" },
+    sent: { icon: <Check className="w-6 h-6" />, label: "Delivered", color: "text-primary" },
+    canceled: { icon: <XCircle className="w-6 h-6" />, label: "Cancelled — you've been refunded", color: "text-muted-foreground" },
+    refunding: { icon: <Loader2 className="w-6 h-6 animate-spin" />, label: "Refund in progress", color: "text-muted-foreground" },
+    refunded: { icon: <XCircle className="w-6 h-6" />, label: "Cancelled — you've been refunded", color: "text-muted-foreground" },
+  };
+
+  const display = statusDisplay[data.campaignStatus] ?? statusDisplay.open;
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center px-6 py-16">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <p className="text-xs font-semibold tracking-widest uppercase text-primary mb-3">Your Chip In</p>
+          <h1 className="font-serif text-3xl font-medium mb-2">
+            {data.recipientName}'s {formatOccasion(data.occasion)}
+          </h1>
+        </div>
+
+        <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+          <div className={`flex items-center gap-3 ${display.color}`}>
+            {display.icon}
+            <span className="text-base font-medium">{display.label}</span>
+          </div>
+
+          <div className="border-t border-border pt-5 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Your contribution</span>
+              <span className="font-semibold">{amountStr}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Status</span>
+              <span className="font-medium capitalize">{data.yourStatus}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Raised so far</span>
+              <span className="font-medium">${(data.paidTotalCents / 100).toFixed(2)} &middot; {data.paidCount} contributor{data.paidCount !== 1 ? "s" : ""}</span>
+            </div>
+          </div>
+
+          {data.campaignStatus === "sent" && (
+            <p className="text-xs text-center text-muted-foreground border-t border-border pt-5">
+              This moment has been delivered.{data.notifyOnOpen ? " We'll email you when it's opened." : ""}
+            </p>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+```
+=====================================================================
+NEW FILE 3 of 3: artifacts/gifted/src/pages/chip-in-dashboard.tsx
+Create this file with exactly this content:
+```typescript
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useLocation } from "wouter";
+import { motion } from "framer-motion";
+import { Loader2, Copy, Check, Send, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
+
+const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
+
+interface Contribution {
+  id: string;
+  contributorName: string;
+  amountCents: number;
+  status: string;
+  message: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+interface Campaign {
+  id: string;
+  shareToken: string;
+  recipientName: string;
+  occasion: string;
+  status: string;
+  fixedAmountCents: number;
+  maxContributors: number;
+  sentGiftId: string | null;
+}
+
+interface DashboardData {
+  campaign: Campaign;
+  contributions: Contribution[];
+  paidCount: number;
+  paidTotalCents: number;
+}
+
+function formatOccasion(o: string): string {
+  return o.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+export default function ChipInDashboardPage() {
+  const { id } = useParams<{ id: string }>();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const [status, setStatus] = useState<"loading" | "ready" | "forbidden" | "not-found" | "error">("loading");
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  const load = useCallback(() => {
+    if (!id) return;
+    fetch(`${BASE}/api/gifted/group-gifts/${id}`, { credentials: "include" })
+      .then(async r => {
+        if (r.status === 403) { setStatus("forbidden"); return; }
+        if (r.status === 404) { setStatus("not-found"); return; }
+        if (!r.ok) { setStatus("error"); return; }
+        setData(await r.json());
+        setStatus("ready");
+      })
+      .catch(() => setStatus("error"));
+  }, [id]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) { setLocation(`/sign-in?returnTo=${encodeURIComponent(window.location.pathname)}`); return; }
+    load();
+  }, [authLoading, isAuthenticated, load, setLocation]);
+
+  function shareUrl(shareToken: string) {
+    return `${window.location.origin}${BASE}/chip-in/${shareToken}`;
+  }
+
+  async function handleCopy() {
+    if (!data) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl(data.campaign.shareToken));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch { /* clipboard unavailable — silently ignore */ }
+  }
+
+  async function handleSend() {
+    if (!id) return;
+    setActionError(null);
+    setSending(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/group-gifts/${id}/send`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const result = await res.json();
+      if (!res.ok) { setActionError(result.error || "Failed to send."); return; }
+      setLocation(`/open/${result.giftId}?preview=true`);
+    } catch {
+      setActionError("Unable to connect. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleCancel() {
+    if (!id) return;
+    setActionError(null);
+    setCancelling(true);
+    try {
+      const res = await fetch(`${BASE}/api/gifted/group-gifts/${id}/cancel`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const result = await res.json();
+      if (!res.ok) { setActionError(result.error || "Failed to cancel."); return; }
+      setShowCancelConfirm(false);
+      load();
+    } catch {
+      setActionError("Unable to connect. Please try again.");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  if (authLoading || status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (status === "forbidden") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center">
+        <p className="text-muted-foreground text-sm">Only the organizer can view this dashboard.</p>
+      </div>
+    );
+  }
+
+  if (status === "not-found" || status === "error" || !data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 text-center">
+        <p className="text-muted-foreground text-sm">
+          {status === "not-found" ? "This campaign couldn't be found." : "Something went wrong. Please try again."}
+        </p>
+      </div>
+    );
+  }
+
+  const { campaign, contributions, paidCount, paidTotalCents } = data;
+  const amountStr = `$${(campaign.fixedAmountCents / 100).toFixed(2)}`;
+  const raisedStr = `$${(paidTotalCents / 100).toFixed(2)}`;
+  const isOpen = campaign.status === "open";
+  const isSent = campaign.status === "sent";
+  const isCancelled = campaign.status === "canceled" || campaign.status === "refunding" || campaign.status === "refunded";
+
+  return (
+    <div className="min-h-screen w-full px-6 py-16">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-lg mx-auto">
+        <div className="mb-8">
+          <p className="text-xs font-semibold tracking-widest uppercase text-primary mb-3">Chip In Dashboard</p>
+          <h1 className="font-serif text-3xl font-medium mb-2">{campaign.recipientName}'s {formatOccasion(campaign.occasion)}</h1>
+          <p className="text-muted-foreground text-sm">
+            {isSent ? "Sent" : isCancelled ? "Cancelled" : "Collecting contributions"}
+          </p>
+        </div>
+
+        <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-semibold">{raisedStr}</p>
+              <p className="text-xs text-muted-foreground">{paidCount} of {campaign.maxContributors} chipped in &middot; {amountStr} each</p>
+            </div>
+          </div>
+
+          {isOpen && (
+            <div className="flex items-center gap-2 bg-secondary/50 rounded-xl px-4 py-3">
+              <span className="flex-1 text-xs text-muted-foreground truncate">{shareUrl(campaign.shareToken)}</span>
+              <Button type="button" size="sm" variant="outline" className="rounded-full shrink-0" onClick={handleCopy}>
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? "Copied" : "Copy link"}
+              </Button>
+            </div>
+          )}
+
+          <div className="border-t border-border pt-5">
+            <p className="text-xs font-medium text-muted-foreground mb-3">Contributors</p>
+            {contributions.filter(c => c.status === "paid").length === 0 ? (
+              <p className="text-sm text-muted-foreground">No confirmed contributions yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {contributions.filter(c => c.status === "paid").map(c => (
+                  <div key={c.id} className="flex items-start justify-between text-sm">
+                    <div>
+                      <p className="font-medium">{c.contributorName}</p>
+                      {c.message && <p className="text-xs text-muted-foreground mt-0.5">"{c.message}"</p>}
+                    </div>
+                    <span className="font-medium shrink-0 ml-3">${(c.amountCents / 100).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {actionError && <p className="text-sm text-destructive">{actionError}</p>}
+
+          {isOpen && (
+            <div className="border-t border-border pt-5 space-y-3">
+              <Button type="button" size="lg" className="w-full rounded-full" onClick={handleSend} disabled={sending || paidCount === 0}>
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Send {raisedStr} to {campaign.recipientName}
+              </Button>
+              {paidCount === 0 && <p className="text-xs text-center text-muted-foreground">Waiting on at least one confirmed contribution before you can send.</p>}
+
+              {!showCancelConfirm ? (
+                <button type="button" onClick={() => setShowCancelConfirm(true)} className="w-full text-center text-xs text-muted-foreground hover:text-destructive transition-colors">
+                  Cancel this campaign
+                </button>
+              ) : (
+                <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 space-y-3">
+                  <p className="text-xs text-center">
+                    This refunds every confirmed contributor in full, including fees. This can't be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" className="flex-1 rounded-full" onClick={() => setShowCancelConfirm(false)}>
+                      Never mind
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" className="flex-1 rounded-full" onClick={handleCancel} disabled={cancelling}>
+                      {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                      Cancel & refund
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isSent && campaign.sentGiftId && (
+            <div className="border-t border-border pt-5">
+              <Button asChild size="lg" className="w-full rounded-full">
+                <a href={`${BASE}/open/${campaign.sentGiftId}?preview=true`}>View the sent moment</a>
+              </Button>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+```
+=====================================================================
+EDIT 1 of 1: artifacts/gifted/src/App.tsx
+Find:
+```typescript
+import SendPage        from "@/pages/send";
+```
+Add immediately after it:
+```typescript
+import ChipInPage          from "@/pages/chip-in";
+import ChipInStatusPage    from "@/pages/chip-in-status";
+import ChipInDashboardPage from "@/pages/chip-in-dashboard";
+```
+Find:
+```typescript
+        <Route path="/send/:id"     component={SendPage}        />
+```
+Add immediately after it:
+```typescript
+        <Route path="/chip-in/status/:token"    component={ChipInStatusPage}    />
+        <Route path="/chip-in/dashboard/:id"    component={ChipInDashboardPage} />
+        <Route path="/chip-in/:shareToken"      component={ChipInPage}          />
+```
+=====================================================================
+END OF CHANGES

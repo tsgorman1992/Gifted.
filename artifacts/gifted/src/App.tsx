@@ -50,6 +50,9 @@ import AccountPage    from "@/pages/account";
 import FeaturesPage    from "@/pages/features";
 import AddOccasionPage from "@/pages/add-occasion";
 import SendPage        from "@/pages/send";
+import ChipInPage          from "@/pages/chip-in";
+import ChipInStatusPage    from "@/pages/chip-in-status";
+import ChipInDashboardPage from "@/pages/chip-in-dashboard";
 
 const queryClient = new QueryClient();
 
@@ -112,6 +115,9 @@ function Router() {
         <Route path="/features"      component={FeaturesPage}    />
         <Route path="/add-occasion" component={AddOccasionPage} />
         <Route path="/send/:id"     component={SendPage}        />
+        <Route path="/chip-in/status/:token"    component={ChipInStatusPage}    />
+        <Route path="/chip-in/dashboard/:id"    component={ChipInDashboardPage} />
+        <Route path="/chip-in/:shareToken"      component={ChipInPage}          />
         <Route component={NotFound} />
       </Switch>
     </Layout>
