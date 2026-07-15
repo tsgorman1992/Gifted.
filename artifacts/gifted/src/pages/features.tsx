@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Bell, Calendar, Gift, Heart, Play, Image as ImageIcon, Link2, CreditCard,
   ArrowRight, Check, Cake, Users, Sparkles, Clock, Zap, MessageSquare,
-  ChevronRight, PartyPopper, Smile, ChevronDown,
+  ChevronRight, PartyPopper, Smile, ChevronDown, HandCoins,
 } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
 
@@ -26,6 +26,18 @@ const fadeUp = (delay = 0) => ({
   viewport: { once: true },
   transition: { duration: 0.55, delay, ease: [0.16, 1, 0.3, 1] },
 });
+
+// ─── Supplementary feature tiles — single source, used on mobile AND desktop
+// so the two can't silently drift apart the way Tracking/Occasion content had. ──
+const SUPPLEMENTARY_FEATURES = [
+  { icon: Play,      title: "Video message",  desc: "Record or upload a video they can replay forever." },
+  { icon: ImageIcon, title: "Up to 6 photos", desc: "Shared memories that put the gift in context." },
+  { icon: Link2,     title: "Any link",        desc: "Tickets, a song, a reservation — anything with a URL." },
+  { icon: Users,     title: "Gifting circle",  desc: "Everyone you gift, their history, and occasions — organized." },
+  { icon: HandCoins, title: "Chip In",         desc: "Pool money with a group for one gift — everyone pays the same amount, one link to share." },
+  { icon: Bell,      title: "Live tracking",   desc: "Know when they open it, redeem it, or react." },
+  { icon: Sparkles,  title: "Free to try",     desc: "No account needed to build your first gift." },
+];
 
 // ─── Mock UI primitives ───────────────────────────────────────────────────────
 function PhoneFrame({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -477,7 +489,7 @@ function TrackingSection() {
               { icon: Gift, title: "Opened", desc: "You'll know when they tap to reveal — not just delivered, but actually seen and felt." },
               { icon: PartyPopper, title: "Redeemed", desc: "Confirmed when they claim the cash. You know it worked." },
               { icon: Smile, title: "Reactions", desc: "Recipients can leave an emoji reaction so you feel the moment they did." },
-              { icon: Cake, title: "Occasion reminders", desc: "3 days before and day-of, upcoming birthdays and occasions surface right in your feed." },
+              { icon: Cake, title: "Occasion reminders", desc: "Add birthdays and anniversaries to your contacts — reminders surface 3 days before and day-of, with a one-tap shortcut to build the gift." },
             ].map((f, i) => (
               <motion.div key={f.title} {...fadeUp(0.1 + i * 0.07)} className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
@@ -491,108 +503,6 @@ function TrackingSection() {
             ))}
           </div>
         </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Section: Occasion & Birthday Tracking ────────────────────────────────────
-function OccasionSection() {
-  return (
-    <section className="w-full py-20 md:py-28 px-6 bg-background">
-      <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-        {/* copy */}
-        <div className="flex flex-col gap-6">
-          <motion.div {...fadeUp(0)}>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
-              <Cake className="w-3 h-3" /> Occasion tracking
-            </div>
-            <h2 className="font-serif text-3xl md:text-5xl font-medium leading-tight mb-4">
-              Never miss a <span className="text-primary italic">meaningful date</span> again.
-            </h2>
-            <p className="text-base text-muted-foreground leading-relaxed">
-              Add birthdays, anniversaries, and special occasions to your contacts. gifted. reminds you 3 days before and the morning of — right in your notification feed, with a one-tap shortcut to build the gift.
-            </p>
-          </motion.div>
-
-          <div className="flex flex-col gap-3">
-            {[
-              "Birthdays, anniversaries, Mother's Day, Father's Day, Thanksgiving — any occasion",
-              "Reminders appear 3 days before and again the day-of",
-              "One tap from the reminder to start building their gift",
-              "Floating holidays auto-calculate every year — set it once, forget it",
-            ].map((t, i) => (
-              <motion.div key={i} {...fadeUp(0.08 + i * 0.06)} className="flex items-start gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0 mt-0.5">
-                  <Check className="w-3 h-3 text-white" />
-                </div>
-                <p className="text-sm text-muted-foreground">{t}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* contacts mockup */}
-        <motion.div {...fadeUp(0.1)}>
-          <div className="relative mx-auto space-y-3" style={{ maxWidth: 340 }}>
-            <div className="absolute -inset-4 bg-primary/8 rounded-3xl blur-xl pointer-events-none" />
-
-            {/* amber reminder banner */}
-            <div className="relative flex items-center gap-3 px-4 py-3 rounded-2xl border border-amber-200 bg-amber-50">
-              <Bell className="w-4 h-4 text-amber-600 shrink-0" />
-              <div>
-                <p className="text-xs font-semibold text-amber-900">Sarah's Birthday is today 🎂</p>
-                <p className="text-[10px] text-amber-700">Dec 28 · Don't forget to build a moment</p>
-              </div>
-            </div>
-
-            {/* contact cards */}
-            {[
-              {
-                name: "Sarah Chen", initial: "S",
-                occasions: [
-                  { label: "Birthday", date: "Dec 28", hot: true },
-                  { label: "Christmas", date: "Dec 25" },
-                ],
-              },
-              {
-                name: "Mike Torres", initial: "M",
-                occasions: [
-                  { label: "Anniversary", date: "Jan 14" },
-                  { label: "Birthday", date: "Mar 5" },
-                ],
-              },
-              {
-                name: "Emma Walsh", initial: "E",
-                occasions: [
-                  { label: "Mother's Day", date: "May 11" },
-                  { label: "Birthday", date: "Jul 22" },
-                ],
-              },
-            ].map(c => (
-              <div key={c.name} className="relative bg-card border border-border rounded-2xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-sm font-bold">{c.initial}</span>
-                    </div>
-                    <p className="font-semibold text-sm">{c.name}</p>
-                  </div>
-                  <button className="text-[10px] px-2.5 py-1 rounded-full border border-primary/30 text-primary bg-primary/5 font-medium">Gift them</button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {c.occasions.map(o => (
-                    <div key={o.label} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium ${o.hot ? "bg-amber-50 border border-amber-200 text-amber-800" : "bg-secondary text-muted-foreground"}`}>
-                      <Cake className="w-2.5 h-2.5" />
-                      {o.label} · {o.date}
-                      {o.hot && <span className="text-amber-600 font-semibold">Today</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
       </div>
     </section>
   );
@@ -1037,20 +947,42 @@ function MobileFeaturesScroll() {
       <div className="px-5 py-10">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">Also included</p>
         <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: Play,      title: "Video message",  desc: "Record or upload a video they can replay forever." },
-            { icon: ImageIcon, title: "Up to 6 photos", desc: "Shared memories that put the gift in context." },
-            { icon: Link2,     title: "Any link",        desc: "Tickets, a song, a reservation — anything with a URL." },
-            { icon: Users,     title: "Gifting circle",  desc: "Everyone you gift, their history, and occasions — organized." },
-            { icon: Bell,      title: "Live tracking",   desc: "Know when they open it, redeem it, or react." },
-            { icon: Sparkles,  title: "Free to try",     desc: "No account needed to build your first gift." },
-          ].map((f, i) => (
+          {SUPPLEMENTARY_FEATURES.map((f, i) => (
             <motion.div key={f.title} {...fadeUp(i * 0.04)} className="p-3.5 rounded-2xl border border-border bg-card">
               <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center mb-2.5">
                 <f.icon className="w-4 h-4 text-primary" />
               </div>
               <p className="text-xs font-semibold mb-1 leading-snug">{f.title}</p>
               <p className="text-[10px] text-muted-foreground leading-snug">{f.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Section: Also included (compact grid — shared with mobile) ──────────────
+function SupplementaryFeaturesSection() {
+  return (
+    <section className="w-full py-20 md:py-28 px-6 bg-background">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-12">
+          <motion.div {...fadeUp(0)}>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Also included</p>
+            <h2 className="font-serif text-3xl md:text-4xl font-medium leading-tight">
+              Everything else, at a glance.
+            </h2>
+          </motion.div>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          {SUPPLEMENTARY_FEATURES.map((f, i) => (
+            <motion.div key={f.title} {...fadeUp(i * 0.05)} className="p-5 rounded-2xl border border-border bg-card">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                <f.icon className="w-5 h-5 text-primary" />
+              </div>
+              <p className="text-sm font-semibold mb-1">{f.title}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -1107,9 +1039,9 @@ export default function FeaturesPage() {
         <GiftMomentSection />
         <ScheduledSection />
         <TrackingSection />
-        <OccasionSection />
         <GiftingCircleSection />
         <PayoutSection />
+        <SupplementaryFeaturesSection />
       </div>
       <CtaSection onStart={handleStart} />
     </div>
