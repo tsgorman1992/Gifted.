@@ -678,4 +678,41 @@ router.post("/gifted/group-gifts/:id/cancel", async (req, res) => {
   }
 });
 
+// GET /by-gift/:giftId — contributor credit lookup for the reveal page.
+// Returns { isGroupGift: false } for every regular gift so the reveal can
+// call this unconditionally without branching on gift type up front.
+router.get("/by-gift/:giftId", async (req, res) => {
+  try {
+    const { giftId } = req.params;
+    const [campaign] = await db
+      .select()
+      .from(groupCampaigns)
+      .where(eq(groupCampaigns.sentGiftId, giftId))
+      .limit(1);
+
+    if (!campaign) {
+      res.json({ isGroupGift: false });
+      return;
+    }
+
+    const contribs = await db
+      .select({
+        name: groupContributions.contributorName,
+        message: groupContributions.message,
+      })
+      .from(groupContributions)
+      .where(
+        and(
+          eq(groupContributions.campaignId, campaign.id),
+          eq(groupContributions.status, "paid")
+        )
+      );
+
+    res.json({ isGroupGift: true, contributors: contribs });
+  } catch (err) {
+    console.error("[group-gifts] by-gift error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

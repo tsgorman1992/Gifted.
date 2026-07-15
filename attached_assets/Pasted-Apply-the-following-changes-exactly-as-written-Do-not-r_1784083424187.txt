@@ -1,0 +1,249 @@
+Apply the following changes exactly as written. Do not rewrite, simplify, reinterpret, or "improve" any of the logic. This is Phase 4 of the "Chip In" (group gifting) feature — the reveal-page contributor credit, plus nav placement (a desktop secondary button next to "Build a moment" and a mobile dropdown menu item). Phases 1-3 (backend, contributor/status/dashboard pages, organizer creation form) should already be applied.
+There are nine edits total: one to group-gifts.ts (a new endpoint), five to reveal.tsx, and three to layout.tsx (the nav bar). Each "find this" block below was extracted directly from the real files with a few lines of surrounding context, verified byte-for-byte unique before this was written. If any anchor doesn't match what's actually there, STOP and show me the mismatch instead of guessing — reveal.tsx especially may have moved since this was written, since it's a large, actively-touched file.
+Design intent, so you don't "helpfully" change it: the note eyebrow reuses the EXISTING "A note from {senderName}" line rather than adding new UI — for a Chip In gift it just lists contributors there instead. The new "From the group" section reuses the exact same theme-aware card wrapper styling as the note card immediately above it (same border-radius, same background/border/shadow driven by cfg.cardStyle, same dark/light handling) so it renders correctly across all 12 experience themes instead of looking like a bolted-on generic component. Do not swap in a simpler/generic-looking card — the whole point is that it blends in.
+Nav placement design intent, so you don't "helpfully" change it: "Build a moment" is the one nav button with no responsive hiding — it's visible at every screen size, including mobile. Every other secondary destination (Home, My Gifts, Contacts, Features) already collapses into the account dropdown on mobile instead of getting its own button. Chip In follows that exact same split: a real, visible outline-style secondary button next to "Build a moment" on desktop (sm breakpoint and up), and a menu item inside that same mobile dropdown — not hidden as a demotion, just consistent with how every other secondary nav destination already works on small screens.
+=====================================================================
+EDIT 1 of 9: artifacts/api-server/src/routes/gifted/group-gifts.ts
+Find (this should be the very end of the file):
+```typescript
+export default router;
+```
+Replace with:
+```typescript
+export default router;
+```
+=====================================================================
+EDIT 2 of 9: artifacts/gifted/src/pages/reveal.tsx — add the contributor-name formatting helper, right before the Section component
+Find:
+```typescript
+
+// ─── Section wrapper ─────────────────────────────────────────────────────────
+
+function Section({
+  cfg: _cfg,
+  idx: _idx,
+```
+Replace with:
+```typescript
+
+// ─── Section wrapper ─────────────────────────────────────────────────────────
+
+// First-name-only, natural-language contributor list — "Maria", "Maria and
+// Tom", "Maria, Tom and Jake", "Maria, Tom, Jake and 2 others". Matches the
+// casual first-name tone used everywhere else in the reveal and emails.
+function formatContributorNames(names: string[]): string {
+  const firstNames = names.map(n => n.trim().split(" ")[0]).filter(Boolean);
+  if (firstNames.length === 0) return "";
+  if (firstNames.length === 1) return firstNames[0];
+  if (firstNames.length === 2) return `${firstNames[0]} and ${firstNames[1]}`;
+  if (firstNames.length === 3) return `${firstNames[0]}, ${firstNames[1]} and ${firstNames[2]}`;
+  const shown = firstNames.slice(0, 3);
+  const remaining = firstNames.length - 3;
+  return `${shown.join(", ")} and ${remaining} other${remaining !== 1 ? "s" : ""}`;
+}
+
+function Section({
+  cfg: _cfg,
+  idx: _idx,
+```
+=====================================================================
+EDIT 3 of 9: artifacts/gifted/src/pages/reveal.tsx — add contributor/isGroupGift state
+Find:
+```typescript
+  const [linkFailures, setLinkFailures]   = useState<Record<number, boolean>>({});
+  const [linkCopied, setLinkCopied]       = useState<Record<number, boolean>>({});
+  const [personalNote, setPersonalNote]   = useState<string | null>(null);
+  const [extraLinks, setExtraLinks]       = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
+  const [recipientName, setRecipientName] = useState(() => localStorage.getItem("gifted_recipient_name") || "");
+  const [senderName, setSenderName]       = useState(() => localStorage.getItem("gifted_sender_name") || "");
+```
+Replace with:
+```typescript
+  const [linkFailures, setLinkFailures]   = useState<Record<number, boolean>>({});
+  const [linkCopied, setLinkCopied]       = useState<Record<number, boolean>>({});
+  const [personalNote, setPersonalNote]   = useState<string | null>(null);
+  const [contributors, setContributors]   = useState<Array<{ name: string; message: string | null }>>([]);
+  const [isGroupGift, setIsGroupGift]     = useState(false);
+  const [extraLinks, setExtraLinks]       = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
+  const [recipientName, setRecipientName] = useState(() => localStorage.getItem("gifted_recipient_name") || "");
+  const [senderName, setSenderName]       = useState(() => localStorage.getItem("gifted_sender_name") || "");
+```
+=====================================================================
+EDIT 4 of 9: artifacts/gifted/src/pages/reveal.tsx — add the by-gift fetch call, right after the tracking fetch
+Find:
+```typescript
+          }
+        })
+        .catch(() => {});
+
+      return;
+    }
+```
+Replace with:
+```typescript
+          }
+        })
+        .catch(() => {});
+
+      // Chip In credit — cheap, always-safe lookup; resolves to isGroupGift:
+      // false for every regular gift, so this is a no-op everywhere else.
+      fetch(`${base}/api/gifted/group-gifts/by-gift/${encodeURIComponent(resolvedGiftId)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.isGroupGift) {
+            setIsGroupGift(true);
+            setContributors(Array.isArray(data.contributors) ? data.contributors : []);
+          }
+        })
+        .catch(() => { /* silent — the reveal still works fine without the credit line */ });
+
+      return;
+    }
+```
+=====================================================================
+EDIT 5 of 9: artifacts/gifted/src/pages/reveal.tsx — credit the group in the note eyebrow
+Find:
+```typescript
+              {personalNote?.trim() && (
+                <Section cfg={cfg} idx={1}>
+                  <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                    {senderName ? `A note from ${senderName}` : "A personal note"}
+                  </p>
+                  <div
+                    className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border relative overflow-hidden"
+```
+Replace with:
+```typescript
+              {personalNote?.trim() && (
+                <Section cfg={cfg} idx={1}>
+                  <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                    {isGroupGift && contributors.length > 0
+                      ? `A note from ${formatContributorNames(contributors.map(c => c.name))}`
+                      : senderName ? `A note from ${senderName}` : "A personal note"}
+                  </p>
+                  <div
+                    className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border relative overflow-hidden"
+```
+=====================================================================
+EDIT 6 of 9: artifacts/gifted/src/pages/reveal.tsx — add the new "From the group" section right after the note card closes
+Find:
+```typescript
+                    {experience !== "garden-bloom" && experience !== "rose-petal" && (
+                      <div style={{ height: 1, background: cfg.cardStyle.border, marginTop: "1.25rem", width: "100%", opacity: 0.5 }} />
+                    )}
+                  </div>
+                </Section>
+              )}
+```
+Replace with:
+```typescript
+                    {experience !== "garden-bloom" && experience !== "rose-petal" && (
+                      <div style={{ height: 1, background: cfg.cardStyle.border, marginTop: "1.25rem", width: "100%", opacity: 0.5 }} />
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              {/* From the group — contributor messages, only when someone left one */}
+              {isGroupGift && contributors.some(c => c.message?.trim()) && (
+                <Section cfg={cfg} idx={1}>
+                  <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                    From the group
+                  </p>
+                  <div
+                    className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 border relative overflow-hidden space-y-4"
+                    style={isDark
+                      ? {
+                          background: cfg.cardStyle.bg ?? "rgba(255,248,240,0.09)",
+                          borderColor: cfg.cardStyle.border,
+                          boxShadow: cfg.cardStyle.shadow,
+                        }
+                      : {
+                          background: cfg.cardStyle.bg ?? "hsl(30,38%,98%)",
+                          backdropFilter: "blur(20px)",
+                          borderColor: cfg.cardStyle.border,
+                          boxShadow: cfg.cardStyle.shadow,
+                        }
+                    }
+                  >
+                    {contributors.filter(c => c.message?.trim()).map((c, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${isDark ? "bg-white/10 text-white/80" : "bg-primary/10 text-primary"}`}>
+                          {c.name[0]?.toUpperCase() ?? "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold ${isDark ? "text-white/90" : "text-foreground"}`}>{c.name.split(" ")[0]}</p>
+                          <p className={`text-sm leading-relaxed mt-0.5 ${isDark ? "text-white/60" : "text-muted-foreground"}`}>{c.message}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+```
+=====================================================================
+EDIT 7 of 9: artifacts/gifted/src/components/layout.tsx — add the HandCoins icon import
+Find:
+```typescript
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles, House, ShieldCheck } from "lucide-react";
+import { clearGiftSession } from "@/lib/session";
+import { NotificationBell } from "@/components/notification-bell";
+```
+Replace with:
+```typescript
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles, House, ShieldCheck, HandCoins } from "lucide-react";
+import { clearGiftSession } from "@/lib/session";
+import { NotificationBell } from "@/components/notification-bell";
+```
+=====================================================================
+EDIT 8 of 9: artifacts/gifted/src/components/layout.tsx — add Chip In to the mobile dropdown menu (right after Features)
+Find:
+```typescript
+                        </Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator className="sm:hidden" />
+```
+Replace with:
+```typescript
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/chip-in/create" className="flex items-center gap-2 cursor-pointer sm:hidden">
+                          <HandCoins className="w-4 h-4" />
+                          Chip In
+                        </Link>
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator className="sm:hidden" />
+```
+=====================================================================
+EDIT 9 of 9: artifacts/gifted/src/components/layout.tsx — add the desktop secondary Chip In button, right before the primary "Build a moment" button
+Find:
+```typescript
+              )
+            )}
+
+            <Button onClick={handleSendGift} className="rounded-full px-4 text-sm shadow-md hover:-translate-y-0.5 transition-transform duration-300 whitespace-nowrap">
+```
+Replace with:
+```typescript
+              )
+            )}
+
+            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex rounded-full px-4 text-sm whitespace-nowrap">
+              <Link href="/chip-in/create" className="flex items-center gap-1.5">
+                <HandCoins className="w-3.5 h-3.5" />
+                Chip In
+              </Link>
+            </Button>
+
+            <Button onClick={handleSendGift} className="rounded-full px-4 text-sm shadow-md hover:-translate-y-0.5 transition-transform duration-300 whitespace-nowrap">
+```
+=====================================================================
+After applying: restart the server. Open any existing Chip In gift's reveal link — regular (non-group) gifts should render identically to before, since the new fetch call resolves to isGroupGift:false for them and changes nothing visually. Also check the nav bar on both a desktop-width and mobile-width view: desktop should show a "Chip In" outline button next to "Build a moment"; mobile should show it as an item inside the account dropdown menu, not as a second button in the header.
+END OF CHANGES

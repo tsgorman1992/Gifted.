@@ -1591,6 +1591,20 @@ const CONVERGE_PARTICLES: Array<{ x: number; y: number }> = [
 
 // ─── Section wrapper ─────────────────────────────────────────────────────────
 
+// First-name-only, natural-language contributor list — "Maria", "Maria and
+// Tom", "Maria, Tom and Jake", "Maria, Tom, Jake and 2 others". Matches the
+// casual first-name tone used everywhere else in the reveal and emails.
+function formatContributorNames(names: string[]): string {
+  const firstNames = names.map(n => n.trim().split(" ")[0]).filter(Boolean);
+  if (firstNames.length === 0) return "";
+  if (firstNames.length === 1) return firstNames[0];
+  if (firstNames.length === 2) return `${firstNames[0]} and ${firstNames[1]}`;
+  if (firstNames.length === 3) return `${firstNames[0]}, ${firstNames[1]} and ${firstNames[2]}`;
+  const shown = firstNames.slice(0, 3);
+  const remaining = firstNames.length - 3;
+  return `${shown.join(", ")} and ${remaining} other${remaining !== 1 ? "s" : ""}`;
+}
+
 function Section({
   cfg: _cfg,
   idx: _idx,
@@ -2128,6 +2142,8 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [linkFailures, setLinkFailures]   = useState<Record<number, boolean>>({});
   const [linkCopied, setLinkCopied]       = useState<Record<number, boolean>>({});
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
+  const [contributors, setContributors]   = useState<Array<{ name: string; message: string | null }>>([]);
+  const [isGroupGift, setIsGroupGift]     = useState(false);
   const [extraLinks, setExtraLinks]       = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
   const [recipientName, setRecipientName] = useState(() => localStorage.getItem("gifted_recipient_name") || "");
   const [senderName, setSenderName]       = useState(() => localStorage.getItem("gifted_sender_name") || "");
@@ -2390,6 +2406,18 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
           }
         })
         .catch(() => {});
+
+      // Chip In credit — cheap, always-safe lookup; resolves to isGroupGift:
+      // false for every regular gift, so this is a no-op everywhere else.
+      fetch(`${base}/api/gifted/group-gifts/by-gift/${encodeURIComponent(resolvedGiftId)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.isGroupGift) {
+            setIsGroupGift(true);
+            setContributors(Array.isArray(data.contributors) ? data.contributors : []);
+          }
+        })
+        .catch(() => { /* silent — the reveal still works fine without the credit line */ });
 
       return;
     }
@@ -3080,7 +3108,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
               {personalNote?.trim() && (
                 <Section cfg={cfg} idx={1}>
                   <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
-                    {senderName ? `A note from ${senderName}` : "A personal note"}
+                    {isGroupGift && contributors.length > 0
+                      ? `A note from ${formatContributorNames(contributors.map(c => c.name))}`
+                      : senderName ? `A note from ${senderName}` : "A personal note"}
                   </p>
                   <div
                     className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border relative overflow-hidden"
@@ -3148,6 +3178,43 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                     {experience !== "garden-bloom" && experience !== "rose-petal" && (
                       <div style={{ height: 1, background: cfg.cardStyle.border, marginTop: "1.25rem", width: "100%", opacity: 0.5 }} />
                     )}
+                  </div>
+                </Section>
+              )}
+
+              {/* From the group — contributor messages, only when someone left one */}
+              {isGroupGift && contributors.some(c => c.message?.trim()) && (
+                <Section cfg={cfg} idx={1}>
+                  <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                    From the group
+                  </p>
+                  <div
+                    className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 border relative overflow-hidden space-y-4"
+                    style={isDark
+                      ? {
+                          background: cfg.cardStyle.bg ?? "rgba(255,248,240,0.09)",
+                          borderColor: cfg.cardStyle.border,
+                          boxShadow: cfg.cardStyle.shadow,
+                        }
+                      : {
+                          background: cfg.cardStyle.bg ?? "hsl(30,38%,98%)",
+                          backdropFilter: "blur(20px)",
+                          borderColor: cfg.cardStyle.border,
+                          boxShadow: cfg.cardStyle.shadow,
+                        }
+                    }
+                  >
+                    {contributors.filter(c => c.message?.trim()).map((c, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${isDark ? "bg-white/10 text-white/80" : "bg-primary/10 text-primary"}`}>
+                          {c.name[0]?.toUpperCase() ?? "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold ${isDark ? "text-white/90" : "text-foreground"}`}>{c.name.split(" ")[0]}</p>
+                          <p className={`text-sm leading-relaxed mt-0.5 ${isDark ? "text-white/60" : "text-muted-foreground"}`}>{c.message}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </Section>
               )}

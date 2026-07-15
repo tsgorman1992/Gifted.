@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles, House, ShieldCheck } from "lucide-react";
+import { Gift, LogOut, ChevronDown, Settings, Users, Camera, Check, Loader2, Sparkles, House, ShieldCheck, HandCoins } from "lucide-react";
 import { clearGiftSession } from "@/lib/session";
 import { NotificationBell } from "@/components/notification-bell";
 
@@ -253,6 +253,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                           Features
                         </Link>
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/chip-in/create" className="flex items-center gap-2 cursor-pointer sm:hidden">
+                          <HandCoins className="w-4 h-4" />
+                          Chip In
+                        </Link>
+                      </DropdownMenuItem>
 
                       <DropdownMenuSeparator className="sm:hidden" />
 
@@ -292,6 +298,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
               )
             )}
+
+            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex rounded-full px-4 text-sm whitespace-nowrap">
+              <Link href="/chip-in/create" className="flex items-center gap-1.5">
+                <HandCoins className="w-3.5 h-3.5" />
+                Chip In
+              </Link>
+            </Button>
 
             <Button onClick={handleSendGift} className="rounded-full px-4 text-sm shadow-md hover:-translate-y-0.5 transition-transform duration-300 whitespace-nowrap">
               Build a moment
