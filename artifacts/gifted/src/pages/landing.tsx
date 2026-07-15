@@ -138,6 +138,18 @@ export default function LandingPage() {
           >
             No account needed&nbsp;&nbsp;·&nbsp;&nbsp;Sent as a text from your number&nbsp;&nbsp;·&nbsp;&nbsp;Same-day payouts
           </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="text-sm text-muted-foreground mt-4"
+          >
+            Pooling money with a group instead?{" "}
+            <Link href="/chip-in/create" className="text-primary font-medium underline underline-offset-2 hover:opacity-80 transition-opacity">
+              Chip In →
+            </Link>
+          </motion.p>
           </div>{/* end left col */}
 
           {/* Right column: interactive demo */}
