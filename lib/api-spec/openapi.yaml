@@ -17,6 +17,53 @@ tags:
   - name: Auth
     description: Browser and mobile authentication endpoints.
 paths:
+  /gifted/gifts/{id}/thank-you-video:
+    post:
+      operationId: saveThankYouVideo
+      tags: [gifted]
+      summary: Recipient attaches a video reply to their thank-you
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [objectPath]
+              properties:
+                objectPath:
+                  type: string
+                  description: Object storage path returned from the presigned upload flow
+      responses:
+        "200":
+          description: Video path saved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                  alreadySent:
+                    type: boolean
+        "400":
+          description: Missing objectPath or gift not opened yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Gift not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /gifted/rewrite-note:
     post:
       operationId: rewriteGiftNote

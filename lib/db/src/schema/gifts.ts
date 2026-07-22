@@ -61,6 +61,7 @@ export const gifts = pgTable("gifts", {
   idempotencyKey: text("idempotency_key").unique(),
   thankYouNote: text("thank_you_note"),
   thankYouSentAt: timestamp("thank_you_sent_at", { withTimezone: true }),
+  thankYouVideoPath: text("thank_you_video_path"),
   abandonedNudgeSentAt: timestamp("abandoned_nudge_sent_at", { withTimezone: true }),
   isTest: boolean("is_test").notNull().default(false),
   isGroup: boolean("is_group").notNull().default(false),

@@ -2174,6 +2174,14 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [thankYouSkipped,    setThankYouSkipped]    = useState(false);
   const [thankYouSubmitting, setThankYouSubmitting] = useState(false);
   const [thankYouAlreadySent, setThankYouAlreadySent] = useState(false);
+  const [thankYouVideoSent,   setThankYouVideoSent]   = useState(false);
+  const [thankYouVideoAlreadySent, setThankYouVideoAlreadySent] = useState(false);
+  const [thankYouVideoUploading, setThankYouVideoUploading] = useState(false);
+  const [thankYouVideoProgress, setThankYouVideoProgress] = useState(0);
+  const [thankYouVideoPreviewUrl, setThankYouVideoPreviewUrl] = useState<string | null>(null);
+  const [thankYouVideoError, setThankYouVideoError] = useState<string | null>(null);
+  const [senderPreviewThankYouNote, setSenderPreviewThankYouNote] = useState<string | null>(null);
+  const [senderPreviewThankYouVideoUrl, setSenderPreviewThankYouVideoUrl] = useState<string | null>(null);
   const [, navigate] = useLocation();
   const [balanceRevealPhase, setBalanceRevealPhase] = useState<"hidden" | "building" | "revealed">("hidden");
   const [stickyRedeemDismissed, setStickyRedeemDismissed] = useState(false);
@@ -2391,6 +2399,15 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
           if (gift.thankYouNote) {
             setThankYouAlreadySent(true);
             setThankYouSent(true);
+            if (isPreviewMode) setSenderPreviewThankYouNote(gift.thankYouNote);
+          }
+          if (gift.thankYouVideoUrl) {
+            if (isPreviewMode) {
+              setSenderPreviewThankYouVideoUrl(gift.thankYouVideoUrl);
+            } else {
+              setThankYouVideoAlreadySent(true);
+              setThankYouVideoSent(true);
+            }
           }
         })
         .catch(() => { /* ignore fetch error — gift fields remain at defaults */ });
@@ -3775,9 +3792,178 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                       )}
                     </div>
                   )}
+
+                  {/* Video reply section — appears after the text note is sent */}
+                  {!isPreview && giftId && openPhase >= 4 && thankYouSent && !thankYouSkipped && (
+                    <AnimatePresence>
+                      {!thankYouVideoSent ? (
+                        <motion.div
+                          key="video-upload"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.3, delay: 0.1 }}
+                          className={`mt-5 pt-5 ${isDark ? "border-t border-white/10" : "border-t border-border"}`}
+                        >
+                          {thankYouVideoUploading ? (
+                            <div className="flex flex-col items-center gap-3 text-center">
+                              <p className={`text-sm font-medium ${isDark ? "text-white/70" : "text-foreground"}`}>Uploading video…</p>
+                              <div className={`w-full max-w-xs rounded-full h-1.5 ${isDark ? "bg-white/10" : "bg-muted"}`}>
+                                <div
+                                  className={`h-1.5 rounded-full transition-all duration-300 ${isDark ? "bg-white/50" : "bg-primary"}`}
+                                  style={{ width: `${thankYouVideoProgress}%` }}
+                                />
+                              </div>
+                              <p className={`text-xs ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>{thankYouVideoProgress}%</p>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <p className={`text-sm font-medium mb-1 ${isDark ? "text-white/80" : "text-foreground"}`}>
+                                Add a video reply?
+                              </p>
+                              <p className={`text-xs mb-4 ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+                                Record one with your phone or upload from your camera roll.
+                              </p>
+                              {thankYouVideoError && (
+                                <p className="text-xs text-red-400 mb-3">{thankYouVideoError}</p>
+                              )}
+                              <div className="flex items-center justify-center gap-3">
+                                <label
+                                  className={`cursor-pointer px-5 py-2 rounded-full text-sm font-medium border transition-all ${
+                                    isDark
+                                      ? "border-white/20 text-white/70 hover:bg-white/8"
+                                      : "border-border text-foreground hover:bg-secondary"
+                                  }`}
+                                >
+                                  📹 Attach video
+                                  <input
+                                    type="file"
+                                    accept="video/*"
+                                    className="sr-only"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file || !giftId) return;
+                                      if (file.size > 200 * 1024 * 1024) {
+                                        setThankYouVideoError("Video is too large. Please keep it under 200 MB.");
+                                        return;
+                                      }
+                                      setThankYouVideoError(null);
+                                      setThankYouVideoUploading(true);
+                                      setThankYouVideoProgress(0);
+                                      try {
+                                        const urlRes = await fetch(`${base}/api/storage/uploads/request-url`, {
+                                          method: "POST",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type || "video/mp4" }),
+                                        });
+                                        if (!urlRes.ok) throw new Error("Failed to get upload URL");
+                                        const { uploadURL, objectPath } = await urlRes.json();
+                                        setThankYouVideoProgress(15);
+                                        await new Promise<void>((resolve, reject) => {
+                                          const xhr = new XMLHttpRequest();
+                                          xhr.open("PUT", uploadURL, true);
+                                          xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+                                          xhr.upload.onprogress = (ev) => {
+                                            if (ev.lengthComputable) setThankYouVideoProgress(15 + Math.round((ev.loaded / ev.total) * 80));
+                                          };
+                                          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error("Upload failed"));
+                                          xhr.onerror = () => reject(new Error("Upload failed"));
+                                          xhr.send(file);
+                                        });
+                                        setThankYouVideoProgress(100);
+                                        await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/thank-you-video`, {
+                                          method: "POST",
+                                          headers: { "Content-Type": "application/json" },
+                                          credentials: "include",
+                                          body: JSON.stringify({ objectPath }),
+                                        });
+                                        setThankYouVideoPreviewUrl(URL.createObjectURL(file));
+                                        setThankYouVideoSent(true);
+                                      } catch {
+                                        setThankYouVideoError("Upload failed. Please try again.");
+                                      } finally {
+                                        setThankYouVideoUploading(false);
+                                      }
+                                    }}
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => setThankYouVideoSent(true)}
+                                  className={`text-xs underline underline-offset-2 ${isDark ? "text-white/30 hover:text-white/50" : "text-muted-foreground/50 hover:text-muted-foreground"} transition-colors`}
+                                >
+                                  Skip
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="video-sent"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.3 }}
+                          className={`mt-5 pt-5 text-center ${isDark ? "border-t border-white/10" : "border-t border-border"}`}
+                        >
+                          {thankYouVideoPreviewUrl ? (
+                            <div className="space-y-2">
+                              <video
+                                src={thankYouVideoPreviewUrl}
+                                controls
+                                playsInline
+                                className="w-full max-w-sm mx-auto rounded-xl"
+                                style={{ maxHeight: "220px" }}
+                              />
+                              <p className={`text-xs ${isDark ? "text-white/40" : "text-muted-foreground/60"}`}>
+                                Video reply sent to {senderName} 📹
+                              </p>
+                            </div>
+                          ) : (
+                            <p className={`text-sm ${isDark ? "text-white/50" : "text-muted-foreground/70"}`}>
+                              📹 Video reply sent to {senderName}
+                            </p>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  )}
                 </motion.div>
               </div>
             ) : null}
+
+            {/* Sender preview: recipient's thank-you note + video reply */}
+            {isPreview && (senderPreviewThankYouNote || senderPreviewThankYouVideoUrl) && (
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-8">
+                <Section cfg={cfg} idx={98}>
+                  <div
+                    className="rounded-3xl border p-6 sm:p-8"
+                    style={{
+                      background: isDark ? "rgba(255,255,255,0.04)" : "hsl(var(--card))",
+                      borderColor: isDark ? "rgba(255,255,255,0.08)" : "hsl(var(--border))",
+                    }}
+                  >
+                    <p className={`text-xs font-semibold tracking-widest uppercase mb-4 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
+                      From {recipientName}
+                    </p>
+                    {senderPreviewThankYouNote && (
+                      <blockquote className={`text-sm italic leading-relaxed mb-4 ${isDark ? "text-white/70" : "text-foreground/80"}`}>
+                        "{senderPreviewThankYouNote}"
+                      </blockquote>
+                    )}
+                    {senderPreviewThankYouVideoUrl && (
+                      <video
+                        src={senderPreviewThankYouVideoUrl}
+                        controls
+                        playsInline
+                        className="w-full rounded-2xl"
+                        style={{ maxHeight: "360px" }}
+                      />
+                    )}
+                  </div>
+                </Section>
+              </div>
+            )}
 
             {/* Package tracking timeline — only shown when tracking info exists */}
             {trackingData && (

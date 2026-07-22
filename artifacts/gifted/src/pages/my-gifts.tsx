@@ -44,6 +44,7 @@ interface GiftSummary {
   senderUserId: string | null;
   thankYouNote: string | null;
   thankYouSentAt: string | null;
+  hasThankYouVideo?: boolean;
   isTest?: boolean;
   isGroup?: boolean;
   reactionCount?: number;
@@ -438,6 +439,13 @@ function GiftCard({ gift, idx }: { gift: GiftSummary; idx: number }) {
       {!gift.isGroup && gift.reaction && (
         <p className="text-xs text-muted-foreground mb-2.5">
           {gift.reaction} {gift.recipientName} reacted{gift.reactionAt ? ` ${formatDistanceToNow(new Date(gift.reactionAt), { addSuffix: true })}` : ""}
+        </p>
+      )}
+
+      {/* Video reply indicator */}
+      {gift.hasThankYouVideo && (
+        <p className="text-xs text-muted-foreground mb-2.5">
+          📹 {gift.recipientName} sent a video reply — tap to watch
         </p>
       )}
 

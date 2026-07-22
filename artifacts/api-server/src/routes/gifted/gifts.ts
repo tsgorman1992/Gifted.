@@ -78,6 +78,7 @@ function normalizePhone(raw: string): string {
 }
 
 const router = Router();
+const _objectStorageService = new ObjectStorageService();
 
 // In-memory cache: prevents hammering Stripe sessions.list for unpaid gifts that
 // were already checked within the last 60 seconds and found nothing.
@@ -583,6 +584,15 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       }
     }
 
+    let thankYouVideoUrl: string | null = null;
+    if (gift.thankYouVideoPath) {
+      try {
+        thankYouVideoUrl = await _objectStorageService.getObjectEntitySignedUrl(gift.thankYouVideoPath, 3600);
+      } catch {
+        thankYouVideoUrl = null;
+      }
+    }
+
     res.json({
       id: gift.id,
       senderUserId: gift.senderUserId,
@@ -609,6 +619,7 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       redemptionVerified: gift.redemptionVerified ?? false,
       thankYouNote: gift.thankYouNote ?? null,
       thankYouSentAt: gift.thankYouSentAt ?? null,
+      thankYouVideoUrl,
       isGroup: gift.isGroup ?? false,
       hasPersonalTouch: gift.hasPersonalTouch ?? false,
     });
@@ -940,6 +951,42 @@ router.post("/gifted/gifts/:id/thank-you", async (req, res) => {
   }
 });
 
+// POST /gifted/gifts/:id/thank-you-video — recipient attaches a video reply to their thank-you
+router.post("/gifted/gifts/:id/thank-you-video", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { objectPath } = req.body as { objectPath?: string };
+
+    if (!objectPath || typeof objectPath !== "string" || !objectPath.trim()) {
+      res.status(400).json({ error: "objectPath is required" });
+      return;
+    }
+    const trimmedPath = objectPath.trim();
+
+    const [gift] = await db
+      .select({
+        id: gifts.id,
+        openedAt: gifts.openedAt,
+        thankYouVideoPath: gifts.thankYouVideoPath,
+        recipientName: gifts.recipientName,
+      })
+      .from(gifts)
+      .where(eq(gifts.id, id))
+      .limit(1);
+
+    if (!gift) { res.status(404).json({ error: "Gift not found" }); return; }
+    if (!gift.openedAt) { res.status(400).json({ error: "Gift has not been opened yet" }); return; }
+    if (gift.thankYouVideoPath) { res.json({ ok: true, alreadySent: true }); return; }
+
+    await db.update(gifts).set({ thankYouVideoPath: trimmedPath }).where(eq(gifts.id, id));
+    console.log(`[thank-you-video] Gift ${id}: ${gift.recipientName} attached a video reply`);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error saving thank-you video:", err);
+    res.status(500).json({ error: "Failed to save video reply" });
+  }
+});
+
 router.get("/gifted/my-gifts", async (req, res) => {
   const userId = (req as any).user?.id;
   if (!userId) {
@@ -1033,6 +1080,7 @@ router.get("/gifted/my-gifts", async (req, res) => {
         senderUserId: g.senderUserId,
         thankYouNote: g.thankYouNote ?? null,
         thankYouSentAt: g.thankYouSentAt ?? null,
+        hasThankYouVideo: !!g.thankYouVideoPath,
         isTest: g.isTest ?? false,
         isGroup: g.isGroup ?? false,
         reactionCount: g.isGroup ? (reactionCountMap.get(g.id) ?? 0) : undefined,
@@ -1475,7 +1523,6 @@ router.patch("/gifted/gifts/:id/hide", async (req, res) => {
 // GET /api/gifted/gifts/:id/video/download — proxies the gift video through the server
 // so mobile browsers can save it locally (Content-Disposition: attachment).
 // Public endpoint — gated only by knowing the gift ID.
-const _objectStorageService = new ObjectStorageService();
 router.get("/gifted/gifts/:id/video/download", async (req, res) => {
   try {
     const { id } = req.params;
