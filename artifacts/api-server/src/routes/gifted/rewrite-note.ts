@@ -11,7 +11,7 @@ router.post("/gifted/rewrite-note", async (req, res) => {
     return;
   }
 
-  const { currentNote, occasion, recipientName, senderName, intent, giftTitle, mode } = parsed.data;
+  const { currentNote, occasion, recipientName, senderName, intent, giftTitle, mode, personalDetail } = parsed.data;
 
   const systemPrompt = `You are a thoughtful, warm, emotionally intelligent copywriter for gifted. — a premium digital gifting platform.
 Your job is to write personal notes from a gift sender to a recipient.
@@ -56,6 +56,7 @@ Context:
 - This gift is from ${senderName} to ${recipientName}
 ${intent ? `- The intention behind this gift is: ${intent}` : ""}
 ${giftTitle ? `- Gift title/headline: ${giftTitle}` : ""}
+${personalDetail ? `- The sender wants to mention this specific detail: "${personalDetail}" — weave it naturally into the note.` : ""}
 
 The note should feel genuine and personal — as if ${senderName} wrote it themselves.
 Write the note text only, no explanation.`;

@@ -252,6 +252,9 @@ components:
           type: string
           enum: [rewrite, regenerate]
           description: "rewrite = improve existing note, regenerate = write a fresh one"
+        personalDetail:
+          type: string
+          description: An optional specific detail the sender tapped or typed to personalise the note (e.g. "their laugh", "a memory")
       required:
         - occasion
         - recipientName

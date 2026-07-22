@@ -37,6 +37,12 @@ export const RewriteGiftNoteBody = zod.object({
     .describe(
       "rewrite = improve existing note, regenerate = write a fresh one",
     ),
+  personalDetail: zod
+    .string()
+    .optional()
+    .describe(
+      'An optional specific detail the sender tapped or typed to personalise the note (e.g. \"their laugh\", \"a memory\")',
+    ),
 });
 
 /**

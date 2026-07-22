@@ -1,0 +1,28 @@
+I want to add a "Personal Touch" system to Gifted that encourages personalization without forcing or gating it. Here's the strategy and what I need built:
+
+Core concept: Every gift can carry personalization through three channels: an uploaded photo, an uploaded video, or a note containing a specific detail (not just a generic occasion-based message). A gift should be considered to have "personal touch" if at least one of these is present. This is never required to send a gift, it's just surfaced to the sender as helpful, optional feedback.
+
+Changes needed:
+
+Personal Touch indicator on the gift creation flow (create.tsx)
+Add a small, non-blocking UI indicator (a subtle badge or icon, not a warning) that lights up once any of the following is true:
+A real photo has been uploaded
+A real video has been uploaded
+The note field contains sender-added specific content (see detection logic below)
+This should update live as the sender fills out the gift, and never block the send button. It's purely informational.
+Soft nudge after AI note generation, not a gate
+In the regenerate flow (rewrite-note.ts / handleAI()), after the AI generates a note, show a small, dismissible suggestion below the draft like: "Mention something specific and this'll feel more like you," with 1-2 tappable example prompts (e.g. "their laugh," "a memory," "something they're into"). If tapped, feed that detail into a re-generation call. If ignored, the sender can send the AI draft as-is with no friction.
+"Specific detail" detection logic
+For the Personal Touch indicator to light up based on the note, I need a lightweight way to distinguish a generic AI note (built only from occasion/sender/recipient/intent, with no personal input) from a note that includes a specific detail added by the sender. Simplest approach: track whether the sender-provided fields going into the regenerate or rewrite call included anything beyond occasion/sender/recipient/intent (i.e. did they type or tap in an actual detail). If yes, flag the resulting note as containing personal touch. If the note was fully auto-generated from categorical fields only, it does not count, even if it reads well.
+Tone calibration on generic gifts
+For gifts that end up with no personal touch flagged (fully categorical note, no photo, no video), soften any heavily sentimental UI copy or animations on the reveal side so the experience doesn't oversell a generic gift as deeply personal. This can be a simple conditional on the reveal page based on the personal touch flag.
+Subtle reveal enhancement for personalized gifts
+On the recipient reveal page, when a gift has personal touch flagged, allow slightly richer presentation (more prominent photo/video display, warmer framing) compared to a plain occasion-only gift. Keep this subtle, not a visible "AI vs human" label, just a natural difference in how the reveal feels.
+
+What I don't want:
+
+No hard requirement or blocking gate before AI-generated content can be used
+No visible "this was AI generated" labeling that could embarrass the sender or feel accusatory
+No added steps for senders who want a fast, low-effort send
+
+Please review the existing files (create.tsx, rewrite-note.ts, the reveal page) and propose an implementation plan for the personal touch detection, the indicator UI, the nudge flow, and the reveal-side tone conditional, before writing code.

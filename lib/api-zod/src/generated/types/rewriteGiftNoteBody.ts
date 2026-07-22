@@ -22,4 +22,6 @@ export interface RewriteGiftNoteBody {
   giftTitle?: string;
   /** rewrite = improve existing note, regenerate = write a fresh one */
   mode: RewriteGiftNoteBodyMode;
+  /** An optional specific detail the sender tapped or typed to personalise the note (e.g. "their laugh", "a memory") */
+  personalDetail?: string;
 }

@@ -170,6 +170,7 @@ async function streamAINote(
     intent?: string;
     giftTitle?: string;
     mode: "rewrite" | "regenerate";
+    personalDetail?: string;
   },
   onChunk: (text: string) => void,
   onDone: () => void,
@@ -1000,6 +1001,8 @@ export default function CreatePage() {
   const [aiLoading, setAiLoading] = useState<"rewrite" | "regenerate" | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiGlow, setShowAiGlow] = useState(false);
+  const [showNudge, setShowNudge] = useState(false);
+  const [noteWasUserAuthored, setNoteWasUserAuthored] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const submittingRef = useRef(false);
 
@@ -1716,6 +1719,7 @@ export default function CreatePage() {
       }
       if (isTestMode) payload.isTest = true;
       if (isGroup) payload.isGroup = true;
+      payload.hasPersonalTouch = noteWasUserAuthored || !!videoObjectPath || photos.length > 0;
 
       const res = await fetch(`${base}/api/gifted/gifts`, {
         method: "POST",
@@ -1740,7 +1744,7 @@ export default function CreatePage() {
     }
   };
 
-  const handleAI = async (mode: "rewrite" | "regenerate") => {
+  const handleAI = async (mode: "rewrite" | "regenerate", personalDetail?: string) => {
     if (!recipientName || !senderName || !occasion) {
       setAiError("Please fill in the recipient and sender names on the previous step first.");
       setTimeout(() => setAiError(null), 4000);
@@ -1750,13 +1754,22 @@ export default function CreatePage() {
     setAiLoading(mode);
     setAiError(null);
     setShowAiGlow(false);
+    setShowNudge(false);
     let generated = "";
     setPersonalNote("");
     try {
       await streamAINote(
-        { currentNote: mode === "rewrite" ? noteToRewrite : undefined, occasion, recipientName, senderName, intent: intent || undefined, giftTitle: giftTitle || undefined, mode },
+        { currentNote: mode === "rewrite" ? noteToRewrite : undefined, occasion, recipientName, senderName, intent: intent || undefined, giftTitle: giftTitle || undefined, mode, personalDetail },
         (chunk) => { generated += chunk; setPersonalNote(generated); },
-        () => { setAiLoading(null); setShowAiGlow(true); setTimeout(() => setShowAiGlow(false), 2000); },
+        () => {
+          setAiLoading(null);
+          setShowAiGlow(true);
+          setTimeout(() => setShowAiGlow(false), 2000);
+          // Only show the nudge after a pure regenerate with no user input
+          if (mode === "regenerate" && !personalDetail && !noteWasUserAuthored) {
+            setShowNudge(true);
+          }
+        },
         (err) => { setAiError(err); setAiLoading(null); if (!generated) setPersonalNote(noteToRewrite); }
       );
     } catch {
@@ -2408,7 +2421,10 @@ export default function CreatePage() {
                       })()}
                       className="min-h-[160px] rounded-xl text-base resize-none relative z-10"
                       value={personalNote}
-                      onChange={(e) => setPersonalNote(e.target.value)}
+                      onChange={(e) => {
+                        setPersonalNote(e.target.value);
+                        if (!noteWasUserAuthored && e.target.value.trim()) setNoteWasUserAuthored(true);
+                      }}
                     />
                     {aiLoading !== null && (
                       <div className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
@@ -2428,6 +2444,48 @@ export default function CreatePage() {
                       >
                         {aiError}
                       </motion.p>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Nudge strip — appears after pure AI generation, dismissed on chip tap or × */}
+                  <AnimatePresence>
+                    {showNudge && aiLoading === null && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="flex items-start gap-3 px-4 py-3 rounded-xl border border-primary/20 bg-primary/5"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground leading-snug mb-2">
+                            Mention something specific and this'll feel more like you.
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {["their laugh", "a memory you share", "something they're into"].map((chip) => (
+                              <button
+                                key={chip}
+                                type="button"
+                                onClick={() => {
+                                  setNoteWasUserAuthored(true);
+                                  setShowNudge(false);
+                                  handleAI("regenerate", chip);
+                                }}
+                                className="px-3 py-1 rounded-full text-xs font-medium border border-primary/30 bg-background text-primary hover:bg-primary/10 transition-colors"
+                              >
+                                {chip}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowNudge(false)}
+                          className="text-muted-foreground hover:text-foreground transition-colors mt-0.5 shrink-0 text-xs"
+                          aria-label="Dismiss"
+                        >
+                          ✕
+                        </button>
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </div>

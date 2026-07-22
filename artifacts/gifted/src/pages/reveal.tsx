@@ -2144,6 +2144,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [personalNote, setPersonalNote]   = useState<string | null>(null);
   const [contributors, setContributors]   = useState<Array<{ name: string; message: string | null }>>([]);
   const [isGroupGift, setIsGroupGift]     = useState(false);
+  const [hasPersonalTouch, setHasPersonalTouch] = useState(false);
   const [extraLinks, setExtraLinks]       = useState<Array<{url: string; label: string; subtitle?: string}>>([]);
   const [recipientName, setRecipientName] = useState(() => localStorage.getItem("gifted_recipient_name") || "");
   const [senderName, setSenderName]       = useState(() => localStorage.getItem("gifted_sender_name") || "");
@@ -2386,6 +2387,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
             ).then(urls => setPhotoUrls(urls));
           }
 
+          if (typeof gift.hasPersonalTouch === "boolean") setHasPersonalTouch(gift.hasPersonalTouch);
           if (gift.thankYouNote) {
             setThankYouAlreadySent(true);
             setThankYouSent(true);
@@ -3110,7 +3112,9 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                   <p className={`text-xs font-semibold tracking-widest uppercase mb-3 ${isDark ? "text-white/35" : "text-muted-foreground/60"}`}>
                     {isGroupGift && contributors.length > 0
                       ? `A note from ${formatContributorNames(contributors.map(c => c.name))}`
-                      : senderName ? `A note from ${senderName}` : "A personal note"}
+                      : senderName
+                        ? (hasPersonalTouch ? `A note from ${senderName}` : `From ${senderName}`)
+                        : "A note"}
                   </p>
                   <div
                     className="rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 md:p-12 border relative overflow-hidden"

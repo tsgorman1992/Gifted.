@@ -64,6 +64,7 @@ export const gifts = pgTable("gifts", {
   abandonedNudgeSentAt: timestamp("abandoned_nudge_sent_at", { withTimezone: true }),
   isTest: boolean("is_test").notNull().default(false),
   isGroup: boolean("is_group").notNull().default(false),
+  hasPersonalTouch: boolean("has_personal_touch").notNull().default(false),
 
   // Set only when this gift was materialized from a Chip In campaign at send
   // time. Plain text (no FK, same convention as physicalGifts.giftId below)

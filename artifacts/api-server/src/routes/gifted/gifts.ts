@@ -265,6 +265,7 @@ router.post("/gifted/gifts", async (req, res) => {
       trackingNumber,
       idempotencyKey,
       isGroup,
+      hasPersonalTouch,
     } = req.body;
 
     if (!recipientName || !senderName || !experience || !occasion || !giftTitle) {
@@ -353,6 +354,7 @@ router.post("/gifted/gifts", async (req, res) => {
       idempotencyKey: iKey,
       isTest: req.body.isTest === true,
       isGroup: isGroup === true,
+      hasPersonalTouch: hasPersonalTouch === true,
     }).onConflictDoNothing().returning({ id: gifts.id });
 
     // Idempotency: if conflict suppressed the insert (same key from concurrent request),
@@ -608,6 +610,7 @@ router.get("/gifted/gifts/:id", async (req, res) => {
       thankYouNote: gift.thankYouNote ?? null,
       thankYouSentAt: gift.thankYouSentAt ?? null,
       isGroup: gift.isGroup ?? false,
+      hasPersonalTouch: gift.hasPersonalTouch ?? false,
     });
   } catch (err) {
     console.error("Error fetching gift:", err);
