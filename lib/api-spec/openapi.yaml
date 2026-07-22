@@ -17,6 +17,35 @@ tags:
   - name: Auth
     description: Browser and mobile authentication endpoints.
 paths:
+  /gifted/gifts/{id}:
+    get:
+      operationId: getGift
+      tags: [gifted]
+      summary: Get a gift by ID
+      description: |
+        Returns full gift detail. Generates a short-lived (1 h) signed URL for
+        the sender's personal video (videoUrl) and for any thank-you video reply
+        the recipient has uploaded (thankYouVideoUrl). Always fetch with
+        cache: "no-store" to receive a fresh signed URL.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Gift detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftDetail"
+        "404":
+          description: Gift not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /gifted/gifts/{id}/thank-you-video:
     post:
       operationId: saveThankYouVideo
@@ -274,6 +303,49 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    GiftDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        recipientName:
+          type: [string, 'null']
+        senderName:
+          type: [string, 'null']
+        amount:
+          type: [string, 'null']
+        paid:
+          type: boolean
+        openedAt:
+          type: [string, 'null']
+          format: date-time
+        redeemedAt:
+          type: [string, 'null']
+          format: date-time
+        experience:
+          type: [string, 'null']
+        giftTitle:
+          type: [string, 'null']
+        personalNote:
+          type: [string, 'null']
+        intent:
+          type: [string, 'null']
+        videoUrl:
+          type: [string, 'null']
+          format: uri
+          description: Short-lived signed URL for the sender's personal video (1 h TTL). Always fetch fresh.
+        thankYouNote:
+          type: [string, 'null']
+          description: Text thank-you note left by the recipient
+        thankYouSentAt:
+          type: [string, 'null']
+          format: date-time
+        thankYouVideoUrl:
+          type: [string, 'null']
+          format: uri
+          description: Short-lived signed URL for the recipient's video reply (1 h TTL). Always fetch fresh.
+        hasPersonalTouch:
+          type: boolean
     RewriteGiftNoteBody:
       type: object
       properties:

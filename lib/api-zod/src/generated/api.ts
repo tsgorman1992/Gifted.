@@ -8,6 +8,70 @@
 import * as zod from "zod";
 
 /**
+ * Returns full gift detail. Generates a short-lived (1 h) signed URL for
+the sender's personal video (videoUrl) and for any thank-you video reply
+the recipient has uploaded (thankYouVideoUrl). Always fetch with
+cache: "no-store" to receive a fresh signed URL.
+
+ * @summary Get a gift by ID
+ */
+export const GetGiftParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetGiftResponse = zod.object({
+  id: zod.string().optional(),
+  recipientName: zod.string().nullish(),
+  senderName: zod.string().nullish(),
+  amount: zod.string().nullish(),
+  paid: zod.boolean().optional(),
+  openedAt: zod.date().nullish(),
+  redeemedAt: zod.date().nullish(),
+  experience: zod.string().nullish(),
+  giftTitle: zod.string().nullish(),
+  personalNote: zod.string().nullish(),
+  intent: zod.string().nullish(),
+  videoUrl: zod
+    .string()
+    .url()
+    .nullish()
+    .describe(
+      "Short-lived signed URL for the sender's personal video (1 h TTL). Always fetch fresh.",
+    ),
+  thankYouNote: zod
+    .string()
+    .nullish()
+    .describe("Text thank-you note left by the recipient"),
+  thankYouSentAt: zod.date().nullish(),
+  thankYouVideoUrl: zod
+    .string()
+    .url()
+    .nullish()
+    .describe(
+      "Short-lived signed URL for the recipient's video reply (1 h TTL). Always fetch fresh.",
+    ),
+  hasPersonalTouch: zod.boolean().optional(),
+});
+
+/**
+ * @summary Recipient attaches a video reply to their thank-you
+ */
+export const SaveThankYouVideoParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const SaveThankYouVideoBody = zod.object({
+  objectPath: zod
+    .string()
+    .describe("Object storage path returned from the presigned upload flow"),
+});
+
+export const SaveThankYouVideoResponse = zod.object({
+  ok: zod.boolean(),
+  alreadySent: zod.boolean().optional(),
+});
+
+/**
  * Streams back an AI-generated personal note based on context about the gift.
 Returns an SSE stream of text chunks.
 

@@ -2352,7 +2352,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
           credentials: "include",
         }).then(() => trackEvent("gift_opened", { gift_id: resolvedGiftId })).catch(() => { /* fire and forget */ });
       }
-      fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}`, { credentials: "include" })
+      fetch(`${base}/api/gifted/gifts/${encodeURIComponent(resolvedGiftId)}`, { credentials: "include", cache: "no-store" })
         .then(r => r.ok ? r.json() : null)
         .then(async (gift) => {
           if (!gift) return;
@@ -3871,12 +3871,13 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                           xhr.send(file);
                                         });
                                         setThankYouVideoProgress(100);
-                                        await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/thank-you-video`, {
+                                        const saveRes = await fetch(`${base}/api/gifted/gifts/${encodeURIComponent(giftId)}/thank-you-video`, {
                                           method: "POST",
                                           headers: { "Content-Type": "application/json" },
                                           credentials: "include",
                                           body: JSON.stringify({ objectPath }),
                                         });
+                                        if (!saveRes.ok) throw new Error("Failed to save video reply");
                                         setThankYouVideoPreviewUrl(URL.createObjectURL(file));
                                         setThankYouVideoSent(true);
                                       } catch {

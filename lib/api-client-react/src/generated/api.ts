@@ -20,12 +20,15 @@ import type {
   AuthUserEnvelope,
   BeginBrowserLoginParams,
   ErrorEnvelope,
+  GiftDetail,
   HandleBrowserLoginCallbackParams,
   HealthStatus,
   LogoutSuccess,
   MobileTokenExchangeRequest,
   MobileTokenExchangeSuccess,
   RewriteGiftNoteBody,
+  SaveThankYouVideo200,
+  SaveThankYouVideoBody,
   UploadUrlRequest,
   UploadUrlResponse,
 } from "./api.schemas";
@@ -38,6 +41,175 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * Returns full gift detail. Generates a short-lived (1 h) signed URL for
+the sender's personal video (videoUrl) and for any thank-you video reply
+the recipient has uploaded (thankYouVideoUrl). Always fetch with
+cache: "no-store" to receive a fresh signed URL.
+
+ * @summary Get a gift by ID
+ */
+export const getGetGiftUrl = (id: string) => {
+  return `/api/gifted/gifts/${id}`;
+};
+
+export const getGift = async (
+  id: string,
+  options?: RequestInit,
+): Promise<GiftDetail> => {
+  return customFetch<GiftDetail>(getGetGiftUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGiftQueryKey = (id: string) => {
+  return [`/api/gifted/gifts/${id}`] as const;
+};
+
+export const getGetGiftQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGift>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getGift>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGiftQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGift>>> = ({
+    signal,
+  }) => getGift(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getGift>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetGiftQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGift>>
+>;
+export type GetGiftQueryError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Get a gift by ID
+ */
+
+export function useGetGift<
+  TData = Awaited<ReturnType<typeof getGift>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getGift>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGiftQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Recipient attaches a video reply to their thank-you
+ */
+export const getSaveThankYouVideoUrl = (id: string) => {
+  return `/api/gifted/gifts/${id}/thank-you-video`;
+};
+
+export const saveThankYouVideo = async (
+  id: string,
+  saveThankYouVideoBody: SaveThankYouVideoBody,
+  options?: RequestInit,
+): Promise<SaveThankYouVideo200> => {
+  return customFetch<SaveThankYouVideo200>(getSaveThankYouVideoUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(saveThankYouVideoBody),
+  });
+};
+
+export const getSaveThankYouVideoMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveThankYouVideo>>,
+    TError,
+    { id: string; data: BodyType<SaveThankYouVideoBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveThankYouVideo>>,
+  TError,
+  { id: string; data: BodyType<SaveThankYouVideoBody> },
+  TContext
+> => {
+  const mutationKey = ["saveThankYouVideo"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveThankYouVideo>>,
+    { id: string; data: BodyType<SaveThankYouVideoBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return saveThankYouVideo(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveThankYouVideoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveThankYouVideo>>
+>;
+export type SaveThankYouVideoMutationBody = BodyType<SaveThankYouVideoBody>;
+export type SaveThankYouVideoMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Recipient attaches a video reply to their thank-you
+ */
+export const useSaveThankYouVideo = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveThankYouVideo>>,
+    TError,
+    { id: string; data: BodyType<SaveThankYouVideoBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveThankYouVideo>>,
+  TError,
+  { id: string; data: BodyType<SaveThankYouVideoBody> },
+  TContext
+> => {
+  return useMutation(getSaveThankYouVideoMutationOptions(options));
+};
 
 /**
  * Streams back an AI-generated personal note based on context about the gift.

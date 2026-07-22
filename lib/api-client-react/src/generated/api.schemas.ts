@@ -5,6 +5,47 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface GiftDetail {
+  id?: string;
+  /** @nullable */
+  recipientName?: string | null;
+  /** @nullable */
+  senderName?: string | null;
+  /** @nullable */
+  amount?: string | null;
+  paid?: boolean;
+  /** @nullable */
+  openedAt?: string | null;
+  /** @nullable */
+  redeemedAt?: string | null;
+  /** @nullable */
+  experience?: string | null;
+  /** @nullable */
+  giftTitle?: string | null;
+  /** @nullable */
+  personalNote?: string | null;
+  /** @nullable */
+  intent?: string | null;
+  /**
+   * Short-lived signed URL for the sender's personal video (1 h TTL). Always fetch fresh.
+   * @nullable
+   */
+  videoUrl?: string | null;
+  /**
+   * Text thank-you note left by the recipient
+   * @nullable
+   */
+  thankYouNote?: string | null;
+  /** @nullable */
+  thankYouSentAt?: string | null;
+  /**
+   * Short-lived signed URL for the recipient's video reply (1 h TTL). Always fetch fresh.
+   * @nullable
+   */
+  thankYouVideoUrl?: string | null;
+  hasPersonalTouch?: boolean;
+}
+
 /**
  * rewrite = improve existing note, regenerate = write a fresh one
  */
@@ -107,6 +148,16 @@ export interface LogoutSuccess {
 }
 
 export type AuthorizationSessionHeaderParameter = string;
+
+export type SaveThankYouVideoBody = {
+  /** Object storage path returned from the presigned upload flow */
+  objectPath: string;
+};
+
+export type SaveThankYouVideo200 = {
+  ok: boolean;
+  alreadySent?: boolean;
+};
 
 export type BeginBrowserLoginParams = {
   returnTo?: string;
