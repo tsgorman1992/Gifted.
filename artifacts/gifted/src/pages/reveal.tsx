@@ -2180,6 +2180,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
   const [thankYouVideoProgress, setThankYouVideoProgress] = useState(0);
   const [thankYouVideoPreviewUrl, setThankYouVideoPreviewUrl] = useState<string | null>(null);
   const [thankYouVideoError, setThankYouVideoError] = useState<string | null>(null);
+  const [thankYouVideoInputKey, setThankYouVideoInputKey] = useState(0);
   const [senderPreviewThankYouNote, setSenderPreviewThankYouNote] = useState<string | null>(null);
   const [senderPreviewThankYouVideoUrl, setSenderPreviewThankYouVideoUrl] = useState<string | null>(null);
   const [, navigate] = useLocation();
@@ -3837,6 +3838,7 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                 >
                                   📹 Attach video
                                   <input
+                                    key={thankYouVideoInputKey}
                                     type="file"
                                     accept="video/*"
                                     className="sr-only"
@@ -3845,29 +3847,33 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                       if (!file || !giftId) return;
                                       if (file.size > 200 * 1024 * 1024) {
                                         setThankYouVideoError("Video is too large. Please keep it under 200 MB.");
+                                        setThankYouVideoInputKey(k => k + 1);
                                         return;
                                       }
                                       setThankYouVideoError(null);
                                       setThankYouVideoUploading(true);
                                       setThankYouVideoProgress(0);
+                                      const XHR_TIMEOUT_MS = 5 * 60 * 1000;
                                       try {
                                         const urlRes = await fetch(`${base}/api/storage/uploads/request-url`, {
                                           method: "POST",
                                           headers: { "Content-Type": "application/json" },
                                           body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type || "video/mp4" }),
                                         });
-                                        if (!urlRes.ok) throw new Error("Failed to get upload URL");
+                                        if (!urlRes.ok) throw new Error("server");
                                         const { uploadURL, objectPath } = await urlRes.json();
                                         setThankYouVideoProgress(15);
                                         await new Promise<void>((resolve, reject) => {
                                           const xhr = new XMLHttpRequest();
                                           xhr.open("PUT", uploadURL, true);
+                                          xhr.timeout = XHR_TIMEOUT_MS;
                                           xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
                                           xhr.upload.onprogress = (ev) => {
                                             if (ev.lengthComputable) setThankYouVideoProgress(15 + Math.round((ev.loaded / ev.total) * 80));
                                           };
-                                          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error("Upload failed"));
-                                          xhr.onerror = () => reject(new Error("Upload failed"));
+                                          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error("server"));
+                                          xhr.onerror = () => reject(new Error("network"));
+                                          xhr.ontimeout = () => reject(new Error("timeout"));
                                           xhr.send(file);
                                         });
                                         setThankYouVideoProgress(100);
@@ -3877,11 +3883,19 @@ export default function RevealPage({ onRevealComplete, senderPreview = false }: 
                                           credentials: "include",
                                           body: JSON.stringify({ objectPath }),
                                         });
-                                        if (!saveRes.ok) throw new Error("Failed to save video reply");
+                                        if (!saveRes.ok) throw new Error("server");
                                         setThankYouVideoPreviewUrl(URL.createObjectURL(file));
                                         setThankYouVideoSent(true);
-                                      } catch {
-                                        setThankYouVideoError("Upload failed. Please try again.");
+                                      } catch (err: any) {
+                                        const msg = err?.message;
+                                        setThankYouVideoError(
+                                          msg === "timeout"
+                                            ? "Upload timed out — your connection may be slow. Please try again."
+                                            : msg === "network"
+                                              ? "Connection lost during upload. Please check your signal and try again."
+                                              : "Something went wrong. Please try again."
+                                        );
+                                        setThankYouVideoInputKey(k => k + 1);
                                       } finally {
                                         setThankYouVideoUploading(false);
                                       }

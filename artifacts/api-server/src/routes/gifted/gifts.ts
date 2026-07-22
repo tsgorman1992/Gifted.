@@ -969,6 +969,8 @@ router.post("/gifted/gifts/:id/thank-you-video", async (req, res) => {
         openedAt: gifts.openedAt,
         thankYouVideoPath: gifts.thankYouVideoPath,
         recipientName: gifts.recipientName,
+        senderName: gifts.senderName,
+        senderPhone: gifts.senderPhone,
       })
       .from(gifts)
       .where(eq(gifts.id, id))
@@ -980,6 +982,20 @@ router.post("/gifted/gifts/:id/thank-you-video", async (req, res) => {
 
     await db.update(gifts).set({ thankYouVideoPath: trimmedPath }).where(eq(gifts.id, id));
     console.log(`[thank-you-video] Gift ${id}: ${gift.recipientName} attached a video reply`);
+
+    // Notify the sender by SMS (fire-and-forget)
+    const appOrigin = process.env.APP_ORIGIN ?? "https://gifted.page";
+    const previewUrl = `${appOrigin}/open/${id}?preview=true`;
+    smsSender(
+      gift.senderPhone ?? null,
+      [
+        `gifted. 🎬 ${gift.recipientName} sent you a video reply to your gift!`,
+        `Watch it here: ${previewUrl}`,
+        ``,
+        `Reply STOP to opt out.`,
+      ].join("\n")
+    ).catch(() => {});
+
     res.json({ ok: true });
   } catch (err) {
     console.error("Error saving thank-you video:", err);
