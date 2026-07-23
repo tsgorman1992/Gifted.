@@ -227,6 +227,7 @@ router.get("/gifted/group-gifts/public/invite/:inviteToken", async (req, res) =>
         contributorName: groupContributions.contributorName,
         status: groupContributions.status,
         campaignId: groupContributions.campaignId,
+        invitedAt: groupContributions.invitedAt,
       })
       .from(groupContributions)
       .where(eq(groupContributions.inviteToken, inviteToken))
@@ -239,6 +240,15 @@ router.get("/gifted/group-gifts/public/invite/:inviteToken", async (req, res) =>
     if (contribution.status !== "invited") {
       res.status(410).json({ valid: false, reason: "used" });
       return;
+    }
+    // Check expiry (7 days from when the organizer sent the invite).
+    if (contribution.invitedAt) {
+      const expiresAt = new Date(contribution.invitedAt);
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      if (Date.now() > expiresAt.getTime()) {
+        res.status(410).json({ valid: false, reason: "expired" });
+        return;
+      }
     }
 
     const [campaign] = await db
@@ -312,14 +322,6 @@ router.post("/gifted/group-gifts/public/:shareToken/contribute", async (req, res
       return;
     }
 
-    // Re-check headcount fresh, server-side — never trust a client's view of
-    // how full the campaign already is.
-    const { paidCount } = await getCampaignTotals(campaign.id);
-    if (paidCount >= campaign.maxContributors) {
-      res.status(409).json({ error: "This moment is fully funded." });
-      return;
-    }
-
     // Amount is always re-derived from the campaign, never accepted from the
     // client — the fixed-amount rule is enforced here, not just in the UI.
     const amountCents = campaign.fixedAmountCents;
@@ -333,22 +335,11 @@ router.post("/gifted/group-gifts/public/:shareToken/contribute", async (req, res
     let statusToken: string;
 
     if (inviteToken) {
-      // Invite path: find and transition the pre-created "invited" row.
-      const [existing] = await db
-        .select()
-        .from(groupContributions)
-        .where(and(
-          eq(groupContributions.inviteToken, inviteToken),
-          eq(groupContributions.campaignId, campaign.id),
-        ))
-        .limit(1);
-
-      if (!existing || existing.status !== "invited") {
-        res.status(410).json({ error: "This invite link has already been used or is no longer valid." });
-        return;
-      }
-
-      await db
+      // Invite path: atomically claim the pre-reserved "invited" slot.
+      // A single conditional UPDATE (status='invited' + non-expired) is
+      // race-safe — only one concurrent request can flip the row to "pending".
+      // If 0 rows are updated the token was already used, expired, or invalid.
+      const [claimed] = await db
         .update(groupContributions)
         .set({
           status: "pending",
@@ -358,12 +349,39 @@ router.post("/gifted/group-gifts/public/:shareToken/contribute", async (req, res
           notifyOnOpen: notifyOnOpen === true,
           contributorUserId,
         })
-        .where(eq(groupContributions.id, existing.id));
+        .where(and(
+          eq(groupContributions.inviteToken, inviteToken),
+          eq(groupContributions.campaignId, campaign.id),
+          eq(groupContributions.status, "invited"),
+          sql`${groupContributions.invitedAt} > now() - interval '7 days'`,
+        ))
+        .returning({ id: groupContributions.id, statusToken: groupContributions.statusToken });
 
-      contributionId = existing.id;
-      statusToken = existing.statusToken;
+      if (!claimed) {
+        res.status(410).json({ error: "This invite link has already been used or has expired." });
+        return;
+      }
+
+      contributionId = claimed.id;
+      statusToken = claimed.statusToken;
     } else {
-      // Open-link path: create a fresh contribution row.
+      // Open-link path: count ALL active slots (paid + pending + invited) so
+      // that invited slots are treated as reserved capacity and open-link
+      // contributors cannot push past maxContributors.
+      const [slotRow] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(groupContributions)
+        .where(and(
+          eq(groupContributions.campaignId, campaign.id),
+          sql`${groupContributions.status} IN ('paid', 'pending', 'invited')`,
+        ));
+      const activeSlots = Number(slotRow?.count ?? 0);
+      if (activeSlots >= campaign.maxContributors) {
+        res.status(409).json({ error: "This moment is fully funded." });
+        return;
+      }
+
+      // Create a fresh contribution row.
       contributionId = nanoid(12);
       statusToken = nanoid(24);
 
