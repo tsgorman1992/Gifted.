@@ -177,7 +177,12 @@ interface ActiveCampaign {
   createdAt: string;
 }
 
-async function fetchActiveCampaigns(): Promise<ActiveCampaign[]> {
+interface MyCampaignsResponse {
+  campaigns: ActiveCampaign[];
+  lifetimeStats: { sentCount: number; totalContributors: number; totalRaisedCents: number };
+}
+
+async function fetchActiveCampaigns(): Promise<MyCampaignsResponse> {
   const res = await fetch(`${BASE}/api/gifted/group-gifts/my-campaigns`, { credentials: "include" });
   if (!res.ok) throw new Error("Failed to load campaigns");
   return res.json();
@@ -1949,13 +1954,15 @@ export default function MyGiftsPage() {
     staleTime: 30_000,
   });
 
-  const { data: activeCampaigns } = useQuery({
+  const { data: myCampaignsData } = useQuery({
     queryKey: ["active-campaigns"],
     queryFn: fetchActiveCampaigns,
     enabled: isAuthenticated,
     staleTime: 20_000,
     refetchInterval: 30_000,
   });
+  const activeCampaigns = myCampaignsData?.campaigns;
+  const groupLifetime   = myCampaignsData?.lifetimeStats;
 
   if (isLoading) {
     return (
@@ -2155,6 +2162,13 @@ export default function MyGiftsPage() {
                   👥 {activeCampaigns.length} active
                 </span>
               </div>
+              {groupLifetime && groupLifetime.sentCount > 0 && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  {groupLifetime.sentCount} moment{groupLifetime.sentCount !== 1 ? "s" : ""} sent
+                  {" · "}{groupLifetime.totalContributors} contributor{groupLifetime.totalContributors !== 1 ? "s" : ""}
+                  {groupLifetime.totalRaisedCents > 0 && ` · $${(groupLifetime.totalRaisedCents / 100).toFixed(0)} raised total`}
+                </p>
+              )}
               <div className="border border-border/60 rounded-xl bg-card overflow-hidden divide-y divide-border/40">
                 {activeCampaigns.map((c) => {
                   const progress = c.maxContributors > 0 ? Math.round((c.paidCount / c.maxContributors) * 100) : 0;

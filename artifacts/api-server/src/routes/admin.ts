@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, gifts, usersTable, emailLogs } from "@workspace/db";
+import { db, gifts, usersTable, emailLogs, groupCampaigns, groupContributions } from "@workspace/db";
 import { desc, isNotNull, isNull, eq, ilike, count, gte, lte, ne, and, sql } from "drizzle-orm";
 import { physicalGifts, conversations, messages } from "@workspace/db";
 import rateLimit from "express-rate-limit";
@@ -926,6 +926,160 @@ router.get("/internal/email-campaign", async (req, res) => {
   } catch (err) {
     console.error("[admin] email-campaign error:", err);
     res.status(500).json({ error: "Failed to fetch email campaign data" });
+  }
+});
+
+// GET /api/admin/group-stats — Group Moments service line analytics
+router.get("/admin/group-stats", async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  try {
+    const months: string[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - i);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    }
+
+    type Row = Record<string, unknown>;
+
+    const [statusRows, contribAggRaw, sentStatsRaw, monthlyCreatedRaw, monthlySentRaw, campaignsRaw] = await Promise.all([
+      // Campaign counts by status (non-test only)
+      db.select({ status: groupCampaigns.status, cnt: count() })
+        .from(groupCampaigns)
+        .where(eq(groupCampaigns.isTest, false))
+        .groupBy(groupCampaigns.status),
+
+      // Aggregate paid contributions across all non-test campaigns
+      db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE gc.status = 'paid')                                                         AS total_contribs,
+          COALESCE(SUM(gc.amount_cents) FILTER (WHERE gc.status = 'paid'), 0)                                AS total_raised_cents
+        FROM group_contributions gc
+        INNER JOIN group_campaigns gcp ON gc.campaign_id = gcp.id
+        WHERE gcp.is_test = false
+      `),
+
+      // Avg contributors per sent campaign + avg days from creation to send
+      db.execute(sql`
+        SELECT
+          AVG(sub.paid_count)                                                                                AS avg_contributors,
+          AVG(EXTRACT(EPOCH FROM (gcp.sent_at - gcp.created_at)) / 86400)                                   AS avg_days_to_send
+        FROM group_campaigns gcp
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) FILTER (WHERE status = 'paid') AS paid_count
+          FROM group_contributions
+          WHERE campaign_id = gcp.id
+        ) sub ON true
+        WHERE gcp.is_test = false AND gcp.status = 'sent' AND gcp.sent_at IS NOT NULL
+      `),
+
+      // Campaigns created per month (last 12 months)
+      db.execute(sql`
+        SELECT to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month, COUNT(*) AS cnt
+        FROM group_campaigns
+        WHERE is_test = false AND created_at >= NOW() - INTERVAL '12 months'
+        GROUP BY month ORDER BY month ASC
+      `),
+
+      // Campaigns sent per month (by sent_at, last 12 months)
+      db.execute(sql`
+        SELECT to_char(sent_at AT TIME ZONE 'UTC', 'YYYY-MM') AS month, COUNT(*) AS cnt
+        FROM group_campaigns
+        WHERE is_test = false AND status = 'sent' AND sent_at >= NOW() - INTERVAL '12 months'
+        GROUP BY month ORDER BY month ASC
+      `),
+
+      // All non-test campaigns with paid contribution counts (most recent first)
+      db.execute(sql`
+        SELECT
+          gcp.id,
+          gcp.organizer_name,
+          gcp.recipient_name,
+          gcp.occasion,
+          gcp.status,
+          gcp.fixed_amount_cents,
+          gcp.max_contributors,
+          gcp.created_at,
+          gcp.sent_at,
+          gcp.share_token,
+          COUNT(*) FILTER (WHERE gc.status = 'paid')                              AS paid_count,
+          COALESCE(SUM(gc.amount_cents) FILTER (WHERE gc.status = 'paid'), 0)     AS paid_total_cents
+        FROM group_campaigns gcp
+        LEFT JOIN group_contributions gc ON gc.campaign_id = gcp.id
+        WHERE gcp.is_test = false
+        GROUP BY gcp.id
+        ORDER BY gcp.created_at DESC
+        LIMIT 100
+      `),
+    ]);
+
+    // Status breakdown
+    const statusMap: Record<string, number> = {};
+    for (const r of statusRows) statusMap[r.status] = Number(r.cnt);
+    const totalCampaigns  = Object.values(statusMap).reduce((s, v) => s + v, 0);
+    const sentCount       = statusMap.sent ?? 0;
+    const activeCount     = (statusMap.open ?? 0) + (statusMap.refunding ?? 0);
+    const cancelledCount  = (statusMap.canceled ?? 0) + (statusMap.refunded ?? 0);
+
+    // Contributions aggregate
+    const cAgg          = (contribAggRaw.rows as Row[])[0] ?? {};
+    const totalContribs = Number(cAgg.total_contribs ?? 0);
+    const totalRaisedCents = Number(cAgg.total_raised_cents ?? 0);
+    const totalFeeRevenue  = Math.round(totalRaisedCents * 0.08) / 100;
+
+    // Sent-campaign stats
+    const sStats         = (sentStatsRaw.rows as Row[])[0] ?? {};
+    const avgContributors = Math.round(parseFloat(String(sStats.avg_contributors ?? "0")) * 10) / 10;
+    const avgDaysToSend   = Math.round(parseFloat(String(sStats.avg_days_to_send   ?? "0")) * 10) / 10;
+
+    // Monthly series
+    const monthlyCreatedMap: Record<string, number> = {};
+    const monthlySentMap:    Record<string, number> = {};
+    for (const r of (monthlyCreatedRaw.rows as Row[])) monthlyCreatedMap[r.month as string] = Number(r.cnt);
+    for (const r of (monthlySentRaw.rows   as Row[])) monthlySentMap   [r.month as string] = Number(r.cnt);
+
+    const monthly = months.map(m => {
+      const d = new Date(`${m}-01`);
+      const label = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      return { month: label, created: monthlyCreatedMap[m] ?? 0, sent: monthlySentMap[m] ?? 0 };
+    });
+
+    // Campaigns list
+    const campaigns = (campaignsRaw.rows as Row[]).map(r => ({
+      id:               r.id as string,
+      organizerName:    r.organizer_name as string,
+      recipientName:    r.recipient_name as string,
+      occasion:         r.occasion as string,
+      status:           r.status as string,
+      fixedAmountCents: Number(r.fixed_amount_cents),
+      maxContributors:  Number(r.max_contributors),
+      createdAt:        r.created_at as string,
+      sentAt:           r.sent_at as string | null,
+      shareToken:       r.share_token as string,
+      paidCount:        Number(r.paid_count),
+      paidTotalCents:   Number(r.paid_total_cents),
+    }));
+
+    res.json({
+      kpi: {
+        totalCampaigns,
+        sentCount,
+        activeCount,
+        cancelledCount,
+        totalContribs,
+        totalRaisedCents,
+        totalFeeRevenue,
+        sendRate: totalCampaigns > 0 ? Math.round((sentCount / totalCampaigns) * 100) : 0,
+        avgContributors,
+        avgDaysToSend,
+      },
+      monthly,
+      campaigns,
+    });
+  } catch (err) {
+    console.error("[admin] group-stats error:", err);
+    res.status(500).json({ error: "Failed to fetch group stats" });
   }
 });
 

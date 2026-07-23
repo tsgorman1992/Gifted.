@@ -139,6 +139,35 @@ interface EmailCampaignData {
   logs: EmailLogEntry[];
 }
 
+interface GroupKpi {
+  totalCampaigns: number;
+  sentCount: number;
+  activeCount: number;
+  cancelledCount: number;
+  totalContribs: number;
+  totalRaisedCents: number;
+  totalFeeRevenue: number;
+  sendRate: number;
+  avgContributors: number;
+  avgDaysToSend: number;
+}
+interface GroupMonthRow { month: string; created: number; sent: number; }
+interface GroupCampaignRow {
+  id: string;
+  organizerName: string;
+  recipientName: string;
+  occasion: string;
+  status: string;
+  fixedAmountCents: number;
+  maxContributors: number;
+  createdAt: string;
+  sentAt: string | null;
+  shareToken: string;
+  paidCount: number;
+  paidTotalCents: number;
+}
+interface GroupStats { kpi: GroupKpi; monthly: GroupMonthRow[]; campaigns: GroupCampaignRow[]; }
+
 const METHOD_LABELS: Record<string, string> = {
   venmo: "Venmo", cashapp: "Cash App", paypal: "PayPal", zelle: "Zelle",
 };
@@ -583,7 +612,7 @@ export default function AdminPage() {
   const [giftRows, setGiftRows] = useState<GiftRow[]>([]);
   const [userRows, setUserRows] = useState<UserRow[]>([]);
   const [loading, setLoading]   = useState(false);
-  const [tab, setTab]           = useState<"cashouts" | "all" | "users" | "trends" | "email">("cashouts");
+  const [tab, setTab]           = useState<"cashouts" | "all" | "users" | "trends" | "email" | "group">("cashouts");
   const [copied, setCopied]     = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [showPaidHistory, setShowPaidHistory] = useState(false);
@@ -604,6 +633,12 @@ export default function AdminPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailLoaded, setEmailLoaded]   = useState(false);
   const [emailError, setEmailError]     = useState<string | null>(null);
+
+  // Group Moments tab — lazy loaded
+  const [groupStats, setGroupStats]       = useState<GroupStats | null>(null);
+  const [groupLoading, setGroupLoading]   = useState(false);
+  const [groupLoaded, setGroupLoaded]     = useState(false);
+  const [groupError, setGroupError]       = useState<string | null>(null);
 
   const [showWipe, setShowWipe]   = useState(false);
   const [wipeInput, setWipeInput] = useState("");
@@ -663,6 +698,23 @@ export default function AdminPage() {
       setEmailLoading(false);
     }
   }, [key, emailLoaded]);
+
+  const loadGroupStats = useCallback(async (force = false) => {
+    if (groupLoaded && !force) return;
+    setGroupLoading(true);
+    setGroupError(null);
+    try {
+      const r = await fetch(`${API}/api/admin/group-stats`, { headers });
+      if (!r.ok) { setGroupError("Failed to load group stats. Try refreshing."); return; }
+      const data = await r.json() as GroupStats;
+      setGroupStats(data);
+      setGroupLoaded(true);
+    } catch {
+      setGroupError("Could not connect. Try refreshing.");
+    } finally {
+      setGroupLoading(false);
+    }
+  }, [key, groupLoaded]);
 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -949,7 +1001,7 @@ export default function AdminPage() {
               </span>
             )}
             <button
-              onClick={() => { load(); loadTrends(true); }}
+              onClick={() => { load(); loadTrends(true); if (groupLoaded) loadGroupStats(true); }}
               disabled={loading}
               title="Refresh"
               className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40"
@@ -1072,11 +1124,12 @@ export default function AdminPage() {
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <div className="flex gap-0 border-b border-border min-w-max px-4 sm:px-0 sm:min-w-0">
             {([
-              ["cashouts", "Cashouts",  pendingCashouts.length > 0 ? String(pendingCashouts.length) : null, "amber"],
-              ["all",      "All Gifts", String(giftRows.length), "muted"],
-              ["users",    "Accounts",  String(userRows.length), "violet"],
-              ["trends",   "Trends",    null,                    "none"],
-              ["email",    "Email",     null,                    "none"],
+              ["cashouts", "Cashouts",      pendingCashouts.length > 0 ? String(pendingCashouts.length) : null, "amber"],
+              ["all",      "All Gifts",     String(giftRows.length), "muted"],
+              ["users",    "Accounts",      String(userRows.length), "violet"],
+              ["trends",   "Trends",        null,                    "none"],
+              ["email",    "Email",         null,                    "none"],
+              ["group",    "Group Moments", null,                    "none"],
             ] as const).map(([t, label, badge, badgeColor]) => (
               <button
                 key={t}
@@ -1084,6 +1137,7 @@ export default function AdminPage() {
                   setTab(t as typeof tab);
                   if (t === "trends") loadTrends();
                   if (t === "email") loadEmailData();
+                  if (t === "group") loadGroupStats();
                 }}
                 className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap flex items-center gap-2 ${
                   tab === t
@@ -1752,6 +1806,138 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+        {/* ── Group Moments tab ────────────────────────────────────────────── */}
+        {tab === "group" && (
+          <div className="space-y-6">
+            {groupLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+                <RefreshCw className="w-6 h-6 animate-spin" />
+                <p className="text-sm">Loading group stats…</p>
+              </div>
+            ) : groupError ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-2 text-destructive/70">
+                <AlertTriangle className="w-5 h-5" />
+                <p className="text-sm">{groupError}</p>
+              </div>
+            ) : groupStats ? (
+              <>
+                {/* KPI row */}
+                <div>
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Service line overview</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {([
+                      { label: "Total campaigns", value: String(groupStats.kpi.totalCampaigns), sub: `${groupStats.kpi.activeCount} active`,   color: "text-foreground" },
+                      { label: "Sent",            value: String(groupStats.kpi.sentCount),      sub: `${groupStats.kpi.sendRate}% send rate`,   color: "text-green-600" },
+                      { label: "Total raised",    value: `$${(groupStats.kpi.totalRaisedCents / 100).toFixed(0)}`, sub: `${groupStats.kpi.totalContribs} contributions`, color: "text-primary" },
+                      { label: "Fee revenue",     value: `$${groupStats.kpi.totalFeeRevenue.toFixed(2)}`, sub: "8% of contributions",          color: "text-green-600" },
+                    ] as const).map(({ label, value, sub, color }) => (
+                      <div key={label} className="bg-card border border-border rounded-2xl p-4">
+                        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-tight mb-2">{label}</p>
+                        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Funnel row */}
+                <div className="grid grid-cols-3 gap-3">
+                  {([
+                    { label: "Send rate",        value: `${groupStats.kpi.sendRate}%`,           sub: "campaigns delivered",  color: "text-violet-600" },
+                    { label: "Avg contributors", value: String(groupStats.kpi.avgContributors),   sub: "per sent campaign",    color: "text-blue-600"   },
+                    { label: "Avg days to send", value: String(groupStats.kpi.avgDaysToSend),     sub: "creation to send",     color: "text-foreground" },
+                  ] as const).map(({ label, value, sub, color }) => (
+                    <div key={label} className="bg-card border border-border rounded-2xl p-4">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-tight mb-2">{label}</p>
+                      <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Monthly bar chart */}
+                {groupStats.monthly.some(m => m.created > 0 || m.sent > 0) && (
+                  <div className="bg-card border border-border rounded-2xl p-5">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-4">Monthly activity</p>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={groupStats.monthly} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                        <Tooltip />
+                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Bar dataKey="created" name="Created" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="sent"    name="Sent"    fill="#16a34a" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Campaigns table */}
+                <div>
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    Campaigns ({groupStats.campaigns.length})
+                  </p>
+                  <div className="overflow-x-auto rounded-2xl border border-border -mx-4 sm:mx-0">
+                    <table className="w-full text-sm min-w-[720px]">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/40">
+                          {["Organizer", "Recipient", "Occasion", "Status", "Contributors", "Raised", "Date", ""].map(h => (
+                            <th key={h} className="px-3 sm:px-4 py-3 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groupStats.campaigns.map((c, i) => (
+                          <tr key={c.id} className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${i % 2 !== 0 ? "bg-muted/10" : ""}`}>
+                            <td className="px-3 sm:px-4 py-3 font-medium whitespace-nowrap">{c.organizerName}</td>
+                            <td className="px-3 sm:px-4 py-3 whitespace-nowrap">{c.recipientName}</td>
+                            <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                              {c.occasion.replace(/-/g, " ").replace(/\b\w/g, ch => ch.toUpperCase())}
+                            </td>
+                            <td className="px-3 sm:px-4 py-3">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${
+                                c.status === "sent"     ? "bg-green-100 text-green-800" :
+                                c.status === "open"     ? "bg-violet-100 text-violet-700" :
+                                c.status === "refunding" || c.status === "refunded" ? "bg-amber-100 text-amber-800" :
+                                "bg-muted text-muted-foreground"
+                              }`}>{c.status}</span>
+                            </td>
+                            <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">{c.paidCount}</span>
+                              <span className="text-muted-foreground text-xs ml-1">/ {c.maxContributors}</span>
+                            </td>
+                            <td className="px-3 sm:px-4 py-3 font-semibold text-primary whitespace-nowrap">
+                              ${(c.paidTotalCents / 100).toFixed(0)}
+                            </td>
+                            <td className="px-3 sm:px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{fmtDate(c.createdAt)}</td>
+                            <td className="px-3 sm:px-4 py-3">
+                              <a
+                                href={`/chip-in/dashboard/${c.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-muted-foreground hover:text-primary transition-colors p-1 block"
+                                title="View campaign dashboard"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                        {groupStats.campaigns.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground text-sm">No campaigns yet</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
 
       {/* ── Drilldown modals ─────────────────────────────────────────────── */}
       {drilldown && (

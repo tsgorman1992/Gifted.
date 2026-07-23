@@ -12,7 +12,7 @@ import {
   CHIP_IN_MAX_CONTRIBUTION_CENTS,
   CHIP_IN_MAX_CONTRIBUTORS,
 } from "@workspace/db";
-import { eq, and, sql, isNull } from "drizzle-orm";
+import { eq, and, sql, isNull, count } from "drizzle-orm";
 import {
   sendContributionReceipt,
   sendCampaignSentNotice,
@@ -229,7 +229,39 @@ router.get("/gifted/group-gifts/my-campaigns", async (req, res) => {
     // Most recently created first
     results.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
 
-    res.json(results);
+    // Lifetime stats — sent campaigns only, for the user dashboard summary
+    const [lifetimeRow] = await db
+      .select({
+        sentCount:        sql<number>`count(*) filter (where ${groupCampaigns.status} = 'sent' and ${groupCampaigns.isTest} = false)`,
+        totalContributors: sql<number>`(
+          select coalesce(count(*), 0)
+          from group_contributions gc2
+          inner join group_campaigns gcp2 on gc2.campaign_id = gcp2.id
+          where gcp2.organizer_user_id = ${userId}
+            and gcp2.status = 'sent'
+            and gcp2.is_test = false
+            and gc2.status = 'paid'
+        )`,
+        totalRaisedCents: sql<number>`(
+          select coalesce(sum(gc2.amount_cents), 0)
+          from group_contributions gc2
+          inner join group_campaigns gcp2 on gc2.campaign_id = gcp2.id
+          where gcp2.organizer_user_id = ${userId}
+            and gcp2.status = 'sent'
+            and gcp2.is_test = false
+            and gc2.status = 'paid'
+        )`,
+      })
+      .from(groupCampaigns)
+      .where(eq(groupCampaigns.organizerUserId, userId));
+
+    const lifetimeStats = {
+      sentCount:         Number(lifetimeRow?.sentCount ?? 0),
+      totalContributors: Number(lifetimeRow?.totalContributors ?? 0),
+      totalRaisedCents:  Number(lifetimeRow?.totalRaisedCents ?? 0),
+    };
+
+    res.json({ campaigns: results, lifetimeStats });
   } catch (err) {
     console.error("[group-gifts] my-campaigns error:", err);
     res.status(500).json({ error: "Failed to load campaigns" });
