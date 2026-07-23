@@ -297,12 +297,14 @@ export default function PreviewPage() {
           localStorage.removeItem("gifted_acquisition_source");
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", giftParam);
-          const paidAmt = localStorage.getItem("gifted_amount");
-          trackEvent("gift_paid", {
-            currency: "USD",
-            value:    paidAmt ? parseFloat(paidAmt) : 0,
-            gift_id:  giftParam,
-          });
+          if (localStorage.getItem("gifted_is_group_moment") !== "true") {
+            const paidAmt = localStorage.getItem("gifted_amount");
+            trackEvent("gift_paid", {
+              currency: "USD",
+              value:    paidAmt ? parseFloat(paidAmt) : 0,
+              gift_id:  giftParam,
+            });
+          }
         })
         .catch((err) => {
           // Confirmation network call failed. The server self-heals when the
@@ -312,12 +314,14 @@ export default function PreviewPage() {
           console.error("[confirm-payment] failed:", err);
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", giftParam);
-          const paidAmt = localStorage.getItem("gifted_amount");
-          trackEvent("gift_paid", {
-            currency: "USD",
-            value:    paidAmt ? parseFloat(paidAmt) : 0,
-            gift_id:  giftParam,
-          });
+          if (localStorage.getItem("gifted_is_group_moment") !== "true") {
+            const paidAmt = localStorage.getItem("gifted_amount");
+            trackEvent("gift_paid", {
+              currency: "USD",
+              value:    paidAmt ? parseFloat(paidAmt) : 0,
+              gift_id:  giftParam,
+            });
+          }
         });
 
       window.history.replaceState({}, "", window.location.pathname);
@@ -363,6 +367,7 @@ export default function PreviewPage() {
         if (gift.intent) { localStorage.setItem("gifted_intent", gift.intent); setGiftIntent(gift.intent); }
         if (gift.experience) { localStorage.setItem("gifted_experience", gift.experience); setExperience(gift.experience); }
         if (gift.isGroup) { localStorage.setItem("gifted_is_group_moment", "true"); setIsGroupMoment(true); }
+        else { localStorage.removeItem("gifted_is_group_moment"); setIsGroupMoment(false); }
         if (typeof gift.paid === "boolean" && gift.paid) {
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", gift.id);
