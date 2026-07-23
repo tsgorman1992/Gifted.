@@ -45,6 +45,10 @@ export default function ChipInPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteNameLocked, setInviteNameLocked] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
   // Post-payment confirmation state — set when we land back here from Stripe
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -65,6 +69,31 @@ export default function ChipInPage() {
   useEffect(() => {
     if (!shareToken) return;
     fetchCampaign();
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("invite");
+    if (!token) return;
+
+    fetch(`${BASE}/api/gifted/group-gifts/public/invite/${token}`)
+      .then(async r => {
+        if (!r.ok) {
+          setInviteError("This invite link is no longer valid. Ask the organizer to send a new one.");
+          return;
+        }
+        const data = await r.json();
+        if (data.valid) {
+          setInviteToken(token);
+          setName(data.name ?? "");
+          setInviteNameLocked(true);
+        } else {
+          setInviteError(data.reason === "used"
+            ? "This invite link has already been used."
+            : "This invite link is no longer valid.");
+        }
+      })
+      .catch(() => {
+        setInviteError("Could not validate your invite link. Please try again.");
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareToken]);
 
@@ -121,6 +150,7 @@ export default function ChipInPage() {
           message: message.trim() || undefined,
           notifyOnOpen,
           returnUrl,
+          ...(inviteToken ? { inviteToken } : {}),
         }),
       });
       const data = await res.json();
@@ -254,12 +284,23 @@ export default function ChipInPage() {
                 <span className="text-lg font-semibold">{amountStr}</span>
               </div>
 
+              {inviteError && (
+                <div className="bg-destructive/5 border border-destructive/20 rounded-xl px-4 py-3">
+                  <p className="text-sm text-destructive">{inviteError}</p>
+                </div>
+              )}
+              {inviteNameLocked && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+                  <p className="text-xs text-primary/80">You've been personally invited. Your name is pre-filled.</p>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your name</label>
                 <input
-                  type="text" value={name} onChange={e => setName(e.target.value)}
+                  type="text" value={name} onChange={e => { if (!inviteNameLocked) setName(e.target.value); }}
                   placeholder="Jordan Lee" maxLength={80}
-                  className="w-full h-11 px-4 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                  readOnly={inviteNameLocked}
+                  className={`w-full h-11 px-4 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition ${inviteNameLocked ? "opacity-60 cursor-default" : ""}`}
                 />
                 <p className="text-xs text-muted-foreground mt-1">So {campaign.recipientName} knows exactly who this is from.</p>
               </div>

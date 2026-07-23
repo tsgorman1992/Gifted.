@@ -1238,3 +1238,48 @@ export async function sendOccasionReminderEmail({
     console.error("[email] sendOccasionReminderEmail exception:", err);
   }
 }
+
+// ─── 20. Group Chip In invite ─────────────────────────────────────────────────
+
+interface GroupInviteParams {
+  to: string;
+  inviteeName: string;
+  organizerName: string;
+  recipientName: string;
+  occasion: string;
+  amountCents: number;
+  inviteUrl: string;
+}
+
+export async function sendGroupInviteEmail(params: GroupInviteParams): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+  if (await isEmailSuppressed(params.to)) { console.log(`[email] Suppressed: ${params.to}`); return; }
+
+  const { to, inviteeName, organizerName, recipientName, occasion, amountCents, inviteUrl } = params;
+  const amountStr = `$${(amountCents / 100).toFixed(2)}`;
+  const firstName = inviteeName.split(" ")[0];
+  const occasionLabel = occasion.replace(/-/g, " ");
+
+  const body = `
+    ${h1(`${organizerName} invited you to chip in`)}
+    ${p(`Hi ${firstName}, ${organizerName} is putting together a gifted. moment for ${recipientName}'s ${occasionLabel} and would love you to be part of it.`)}
+    ${p(`Each contributor chips in ${amountStr} — that's it. You'll get a receipt and a link to track the campaign once you've paid in.`)}
+    ${btn("Chip in now", inviteUrl)}
+    ${p(`This invite is personal to you. Questions? Reach us at help@gifted.page.`, true)}
+  `;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to,
+      replyTo: REPLY_TO,
+      subject: `${organizerName} invited you to chip in for ${recipientName}`,
+      html: layout(`Chip in for ${recipientName} — gifted.`, body),
+    });
+    if (error) console.error("[email] sendGroupInviteEmail error:", error);
+    else console.log(`[email] Invite email sent to ${to}`);
+  } catch (err) {
+    console.error("[email] sendGroupInviteEmail exception:", err);
+  }
+}

@@ -88,11 +88,19 @@ export const groupContributions = pgTable("group_contributions", {
 
   amountCents: integer("amount_cents").notNull(),
 
-  // pending -> paid -> refunded
-  //        \-> failed
-  // Only ever flipped to "paid" by a server-side Stripe re-verification
-  // (webhook or confirm endpoint) — never trusted from the client directly.
+  // invited -> pending -> paid -> refunded
+  //                  \-> failed
+  // "invited" means the organizer pre-created this row before the contributor
+  // clicked through. "pending" means a Stripe checkout session has been opened
+  // but not yet confirmed. Only ever flipped to "paid" by a server-side Stripe
+  // re-verification — never trusted from the client directly.
   status: text("status").notNull().default("pending"),
+
+  // Single-use token for organizer-initiated invites. Null for open-link
+  // contributors. Once checkout starts the row transitions to "pending" and
+  // this token is invalidated (can't be reused).
+  inviteToken: text("invite_token").unique(),
+  invitedAt: timestamp("invited_at", { withTimezone: true }),
 
   stripeCheckoutSessionId: text("stripe_checkout_session_id").unique(),
   stripePaymentIntentId: text("stripe_payment_intent_id"),

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { nanoid } from "nanoid";
 import Stripe from "stripe";
+import twilio from "twilio";
 import {
   db,
   gifts,
@@ -16,7 +17,22 @@ import {
   sendContributionReceipt,
   sendCampaignSentNotice,
   sendContributionRefundNotice,
+  sendGroupInviteEmail,
 } from "../../lib/email";
+
+async function sendInviteSms(to: string | null, body: string) {
+  if (!to) return;
+  const from = process.env.TWILIO_PHONE_NUMBER;
+  const sid  = process.env.TWILIO_ACCOUNT_SID;
+  const tok  = process.env.TWILIO_AUTH_TOKEN;
+  if (!from || !sid || !tok) return;
+  try {
+    const client = twilio(sid, tok);
+    await client.messages.create({ from, to, body });
+  } catch (err) {
+    console.error("[group-gifts] invite SMS failed:", err);
+  }
+}
 
 const router = Router();
 
@@ -199,17 +215,69 @@ router.get("/gifted/group-gifts/public/:shareToken", async (req, res) => {
   }
 });
 
+// ─── GET /gifted/group-gifts/public/invite/:inviteToken — validate invite link ─
+// No auth. Lets the chip-in page verify a personal invite token before
+// showing the pre-filled form.
+router.get("/gifted/group-gifts/public/invite/:inviteToken", async (req, res) => {
+  try {
+    const { inviteToken } = req.params;
+    const [contribution] = await db
+      .select({
+        id: groupContributions.id,
+        contributorName: groupContributions.contributorName,
+        status: groupContributions.status,
+        campaignId: groupContributions.campaignId,
+      })
+      .from(groupContributions)
+      .where(eq(groupContributions.inviteToken, inviteToken))
+      .limit(1);
+
+    if (!contribution) {
+      res.status(404).json({ valid: false, reason: "not-found" });
+      return;
+    }
+    if (contribution.status !== "invited") {
+      res.status(410).json({ valid: false, reason: "used" });
+      return;
+    }
+
+    const [campaign] = await db
+      .select({ shareToken: groupCampaigns.shareToken, recipientName: groupCampaigns.recipientName, occasion: groupCampaigns.occasion })
+      .from(groupCampaigns)
+      .where(eq(groupCampaigns.id, contribution.campaignId))
+      .limit(1);
+
+    if (!campaign) {
+      res.status(404).json({ valid: false, reason: "not-found" });
+      return;
+    }
+
+    res.json({
+      valid: true,
+      name: contribution.contributorName,
+      shareToken: campaign.shareToken,
+      recipientName: campaign.recipientName,
+      occasion: campaign.occasion,
+    });
+  } catch (err) {
+    console.error("[group-gifts] invite validate error:", err);
+    res.status(500).json({ error: "Failed to validate invite" });
+  }
+});
+
 // ─── POST /gifted/group-gifts/public/:shareToken/contribute — pay in ─────────
 // No auth required — guest checkout by design. Name + email only.
+// Supports an optional inviteToken body field for organizer-invited contributors.
 router.post("/gifted/group-gifts/public/:shareToken/contribute", async (req, res) => {
   try {
     const { shareToken } = req.params;
-    const { contributorName, contributorEmail, message, notifyOnOpen, returnUrl } = req.body as {
+    const { contributorName, contributorEmail, message, notifyOnOpen, returnUrl, inviteToken } = req.body as {
       contributorName?: string;
       contributorEmail?: string;
       message?: string;
       notifyOnOpen?: boolean;
       returnUrl?: string;
+      inviteToken?: string;
     };
 
     if (!contributorName || contributorName.trim().length === 0 || contributorName.trim().length > 80) {
@@ -258,21 +326,60 @@ router.post("/gifted/group-gifts/public/:shareToken/contribute", async (req, res
     const amountDollars = amountCents / 100;
 
     const contributorUserId = (req as any).user?.id ?? null;
-    const id = nanoid(12);
-    const statusToken = nanoid(24);
 
-    await db.insert(groupContributions).values({
-      id,
-      campaignId: campaign.id,
-      statusToken,
-      contributorUserId,
-      contributorName: contributorName.trim(),
-      contributorEmail: contributorEmail.trim().toLowerCase(),
-      message: (message && message.trim()) ? message.trim() : null,
-      notifyOnOpen: notifyOnOpen === true,
-      amountCents,
-      status: "pending",
-    });
+    // Two paths: (1) organizer-invited contributor with a personal invite token,
+    // (2) open-link contributor (existing behaviour).
+    let contributionId: string;
+    let statusToken: string;
+
+    if (inviteToken) {
+      // Invite path: find and transition the pre-created "invited" row.
+      const [existing] = await db
+        .select()
+        .from(groupContributions)
+        .where(and(
+          eq(groupContributions.inviteToken, inviteToken),
+          eq(groupContributions.campaignId, campaign.id),
+        ))
+        .limit(1);
+
+      if (!existing || existing.status !== "invited") {
+        res.status(410).json({ error: "This invite link has already been used or is no longer valid." });
+        return;
+      }
+
+      await db
+        .update(groupContributions)
+        .set({
+          status: "pending",
+          contributorName: contributorName.trim(),
+          contributorEmail: contributorEmail.trim().toLowerCase(),
+          message: (message && message.trim()) ? message.trim() : null,
+          notifyOnOpen: notifyOnOpen === true,
+          contributorUserId,
+        })
+        .where(eq(groupContributions.id, existing.id));
+
+      contributionId = existing.id;
+      statusToken = existing.statusToken;
+    } else {
+      // Open-link path: create a fresh contribution row.
+      contributionId = nanoid(12);
+      statusToken = nanoid(24);
+
+      await db.insert(groupContributions).values({
+        id: contributionId,
+        campaignId: campaign.id,
+        statusToken,
+        contributorUserId,
+        contributorName: contributorName.trim(),
+        contributorEmail: contributorEmail.trim().toLowerCase(),
+        message: (message && message.trim()) ? message.trim() : null,
+        notifyOnOpen: notifyOnOpen === true,
+        amountCents,
+        status: "pending",
+      });
+    }
 
     const stripe = getStripe();
     const { amountCents: lineAmount, platformCents, processingCents } = computeCheckoutLineItems(amountDollars);
@@ -316,18 +423,18 @@ router.post("/gifted/group-gifts/public/:shareToken/contribute", async (req, res
           quantity: 1,
         },
       ],
-      metadata: { contributionId: id, campaignId: campaign.id },
-      payment_intent_data: { metadata: { contributionId: id, campaignId: campaign.id } },
-      success_url: `${returnUrl}?paid=true&contribution_id=${id}&session_id={CHECKOUT_SESSION_ID}`,
+      metadata: { contributionId, campaignId: campaign.id },
+      payment_intent_data: { metadata: { contributionId, campaignId: campaign.id } },
+      success_url: `${returnUrl}?paid=true&contribution_id=${contributionId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${returnUrl}?cancelled=true`,
     });
 
     await db
       .update(groupContributions)
       .set({ stripeCheckoutSessionId: session.id })
-      .where(eq(groupContributions.id, id));
+      .where(eq(groupContributions.id, contributionId));
 
-    res.status(201).json({ url: session.url, contributionId: id, statusToken });
+    res.status(201).json({ url: session.url, contributionId, statusToken });
   } catch (err) {
     console.error("[group-gifts] create contribution error:", err);
     res.status(500).json({ error: "Failed to start contribution" });
@@ -513,11 +620,13 @@ router.get("/gifted/group-gifts/:id", async (req, res) => {
       .select({
         id: groupContributions.id,
         contributorName: groupContributions.contributorName,
+        contributorEmail: groupContributions.contributorEmail,
         amountCents: groupContributions.amountCents,
         status: groupContributions.status,
         message: groupContributions.message,
         paidAt: groupContributions.paidAt,
         createdAt: groupContributions.createdAt,
+        invitedAt: groupContributions.invitedAt,
       })
       .from(groupContributions)
       .where(eq(groupContributions.campaignId, id))
@@ -675,6 +784,173 @@ router.post("/gifted/group-gifts/:id/cancel", async (req, res) => {
   } catch (err) {
     console.error("[group-gifts] cancel error:", err);
     res.status(500).json({ error: "Failed to cancel campaign" });
+  }
+});
+
+// ─── POST /gifted/group-gifts/:id/invite — organizer invites someone ─────────
+router.post("/gifted/group-gifts/:id/invite", async (req, res) => {
+  try {
+    const userId = (req as any).user?.id as string | undefined;
+    const { id } = req.params;
+    if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+    const { name, email, phone } = req.body as { name?: string; email?: string; phone?: string };
+    if (!name || name.trim().length === 0 || name.trim().length > 80) {
+      res.status(400).json({ error: "Name is required (max 80 characters)." }); return;
+    }
+    if (!email || !EMAIL_RE.test(email.trim())) {
+      res.status(400).json({ error: "A valid email address is required." }); return;
+    }
+
+    const [campaign] = await db.select().from(groupCampaigns).where(eq(groupCampaigns.id, id)).limit(1);
+    if (!campaign) { res.status(404).json({ error: "Campaign not found" }); return; }
+    if (userId !== campaign.organizerUserId) { res.status(403).json({ error: "Only the organizer can send invites." }); return; }
+    if (campaign.status !== "open") { res.status(409).json({ error: "This campaign is no longer accepting contributions." }); return; }
+
+    // Count all active slots: paid + pending + invited (not failed/refunded)
+    const [slotRow] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(groupContributions)
+      .where(and(
+        eq(groupContributions.campaignId, id),
+        sql`${groupContributions.status} IN ('paid', 'pending', 'invited')`,
+      ));
+    const activeSlots = Number(slotRow?.count ?? 0);
+
+    if (activeSlots >= campaign.maxContributors) {
+      res.status(409).json({ error: "All spots are taken. No room to invite anyone else." }); return;
+    }
+
+    const contributionId = nanoid(12);
+    const statusToken    = nanoid(24);
+    const inviteToken    = nanoid(32);
+
+    await db.insert(groupContributions).values({
+      id: contributionId,
+      campaignId: campaign.id,
+      statusToken,
+      contributorName: name.trim(),
+      contributorEmail: email.trim().toLowerCase(),
+      amountCents: campaign.fixedAmountCents,
+      status: "invited",
+      inviteToken,
+      invitedAt: new Date(),
+    });
+
+    const appOrigin = process.env.APP_ORIGIN ?? "";
+    const basePath  = process.env.BASE_PATH ?? "";
+    const inviteUrl = `${appOrigin}${basePath}/chip-in/${campaign.shareToken}?invite=${inviteToken}`;
+
+    sendGroupInviteEmail({
+      to: email.trim().toLowerCase(),
+      inviteeName: name.trim(),
+      organizerName: campaign.organizerName,
+      recipientName: campaign.recipientName,
+      occasion: campaign.occasion,
+      amountCents: campaign.fixedAmountCents,
+      inviteUrl,
+    }).catch(() => {});
+
+    if (typeof phone === "string" && phone.trim()) {
+      sendInviteSms(phone.trim(),
+        `${campaign.organizerName} invited you to chip in for ${campaign.recipientName}'s gift on gifted. Chip in here: ${inviteUrl}`,
+      ).catch(() => {});
+    }
+
+    res.status(201).json({
+      id: contributionId,
+      contributorName: name.trim(),
+      contributorEmail: email.trim().toLowerCase(),
+      status: "invited",
+      amountCents: campaign.fixedAmountCents,
+      invitedAt: new Date().toISOString(),
+      paidAt: null,
+      createdAt: new Date().toISOString(),
+      message: null,
+    });
+  } catch (err) {
+    console.error("[group-gifts] invite error:", err);
+    res.status(500).json({ error: "Failed to send invite" });
+  }
+});
+
+// ─── DELETE /gifted/group-gifts/:id/invites/:contributionId — cancel invite ──
+router.delete("/gifted/group-gifts/:id/invites/:contributionId", async (req, res) => {
+  try {
+    const userId = (req as any).user?.id as string | undefined;
+    const { id, contributionId } = req.params;
+    if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+    const [campaign] = await db.select().from(groupCampaigns).where(eq(groupCampaigns.id, id)).limit(1);
+    if (!campaign) { res.status(404).json({ error: "Campaign not found" }); return; }
+    if (userId !== campaign.organizerUserId) { res.status(403).json({ error: "Only the organizer can cancel invites." }); return; }
+
+    const [contribution] = await db
+      .select()
+      .from(groupContributions)
+      .where(and(eq(groupContributions.id, contributionId), eq(groupContributions.campaignId, id)))
+      .limit(1);
+
+    if (!contribution) { res.status(404).json({ error: "Invite not found" }); return; }
+    if (contribution.status !== "invited") {
+      res.status(409).json({ error: "This invite has already been used and cannot be cancelled." }); return;
+    }
+
+    await db.delete(groupContributions).where(eq(groupContributions.id, contributionId));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[group-gifts] cancel invite error:", err);
+    res.status(500).json({ error: "Failed to cancel invite" });
+  }
+});
+
+// ─── DELETE /gifted/group-gifts/:id/contributors/:contributionId — refund one ─
+router.delete("/gifted/group-gifts/:id/contributors/:contributionId", async (req, res) => {
+  try {
+    const userId = (req as any).user?.id as string | undefined;
+    const { id, contributionId } = req.params;
+    if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
+
+    const [campaign] = await db.select().from(groupCampaigns).where(eq(groupCampaigns.id, id)).limit(1);
+    if (!campaign) { res.status(404).json({ error: "Campaign not found" }); return; }
+    if (userId !== campaign.organizerUserId) { res.status(403).json({ error: "Only the organizer can refund contributors." }); return; }
+    if (campaign.status !== "open") {
+      res.status(409).json({ error: "Cannot refund contributors after the campaign has been sent or cancelled." }); return;
+    }
+
+    const [contribution] = await db
+      .select()
+      .from(groupContributions)
+      .where(and(eq(groupContributions.id, contributionId), eq(groupContributions.campaignId, id)))
+      .limit(1);
+
+    if (!contribution) { res.status(404).json({ error: "Contributor not found" }); return; }
+    if (contribution.status !== "paid") {
+      res.status(409).json({ error: "Can only refund confirmed contributors." }); return;
+    }
+
+    const stripe = getStripe();
+    if (contribution.stripePaymentIntentId) {
+      await stripe.refunds.create({ payment_intent: contribution.stripePaymentIntentId });
+    }
+
+    await db
+      .update(groupContributions)
+      .set({ status: "refunded", refundedAt: new Date() })
+      .where(eq(groupContributions.id, contributionId));
+
+    sendContributionRefundNotice({
+      to: contribution.contributorEmail,
+      contributorName: contribution.contributorName,
+      recipientName: campaign.recipientName,
+      amountCents: contribution.amountCents,
+      reason: "campaign_canceled",
+    }).catch(() => {});
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("[group-gifts] contributor refund error:", err);
+    res.status(500).json({ error: "Failed to refund contributor" });
   }
 });
 
