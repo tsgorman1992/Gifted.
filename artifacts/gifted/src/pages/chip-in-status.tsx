@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import { motion } from "framer-motion";
 import { Loader2, Check, Clock, XCircle } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
 
 interface StatusData {
+  campaignId: string;
   yourAmountCents: number;
   yourStatus: "pending" | "paid" | "refunded" | "failed";
   notifyOnOpen: boolean;
@@ -25,6 +27,7 @@ export default function ChipInStatusPage() {
   const { token } = useParams<{ token: string }>();
   const [status, setStatus] = useState<"loading" | "ready" | "not-found" | "error">("loading");
   const [data, setData] = useState<StatusData | null>(null);
+  const paidEventFiredRef = useRef(false);
 
   useEffect(() => {
     if (!token) return;
@@ -32,8 +35,21 @@ export default function ChipInStatusPage() {
       .then(async r => {
         if (r.status === 404) { setStatus("not-found"); return; }
         if (!r.ok) { setStatus("error"); return; }
-        setData(await r.json());
+        const d: StatusData = await r.json();
+        setData(d);
         setStatus("ready");
+
+        // Fire group_contribution_paid once per contribution, guarded by
+        // sessionStorage so a hard refresh doesn't double-count.
+        const ssKey = `gc_paid_fired_${token}`;
+        if (d.yourStatus === "paid" && !paidEventFiredRef.current && !sessionStorage.getItem(ssKey)) {
+          paidEventFiredRef.current = true;
+          sessionStorage.setItem(ssKey, "1");
+          trackEvent("group_contribution_paid", {
+            campaign_id: d.campaignId,
+            fixed_amount_cents: d.yourAmountCents,
+          });
+        }
       })
       .catch(() => setStatus("error"));
   }, [token]);

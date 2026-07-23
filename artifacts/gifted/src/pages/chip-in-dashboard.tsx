@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Copy, Check, Send, X, UserPlus, ChevronDown, ChevronUp, Trash2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import { trackEvent } from "@/lib/analytics";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
 
@@ -110,9 +111,10 @@ export default function ChipInDashboardPage() {
   }
 
   async function handleSend() {
-    if (!id) return;
+    if (!id || !data) return;
     setActionError(null);
     setSending(true);
+    const { paidCount: snapshotPaidCount, paidTotalCents: snapshotTotalCents, campaign: snapshotCampaign } = data;
     try {
       const res = await fetch(`${BASE}/api/gifted/group-gifts/${id}/send`, {
         method: "POST",
@@ -120,6 +122,11 @@ export default function ChipInDashboardPage() {
       });
       const result = await res.json();
       if (!res.ok) { setActionError(result.error || "Failed to send."); return; }
+      trackEvent("group_campaign_sent", {
+        campaign_id: snapshotCampaign.id,
+        contributor_count: snapshotPaidCount,
+        total_raised_cents: snapshotTotalCents,
+      });
       setLocation(`/open/${result.giftId}?preview=true`);
     } catch {
       setActionError("Unable to connect. Please try again.");
@@ -129,9 +136,10 @@ export default function ChipInDashboardPage() {
   }
 
   async function handleCancel() {
-    if (!id) return;
+    if (!id || !data) return;
     setActionError(null);
     setCancelling(true);
+    const { paidCount: snapshotPaidCount, paidTotalCents: snapshotTotalCents, campaign: snapshotCampaign } = data;
     try {
       const res = await fetch(`${BASE}/api/gifted/group-gifts/${id}/cancel`, {
         method: "POST",
@@ -139,6 +147,11 @@ export default function ChipInDashboardPage() {
       });
       const result = await res.json();
       if (!res.ok) { setActionError(result.error || "Failed to cancel."); return; }
+      trackEvent("group_campaign_cancelled", {
+        campaign_id: snapshotCampaign.id,
+        contributor_count: snapshotPaidCount,
+        total_raised_cents: snapshotTotalCents,
+      });
       setShowCancelConfirm(false);
       load();
     } catch {

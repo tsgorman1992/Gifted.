@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useUpload } from "@workspace/object-storage-web";
 import { EXPERIENCE_LIST, DEFAULT_EXPERIENCE, getSuggestedExperience, type ExperienceId, gradientStyle } from "@/lib/experiences";
+import { trackEvent } from "@/lib/analytics";
 
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/+$/, "");
 const OCCASIONS = ["Birthday", "Anniversary", "Love", "Graduation", "New Baby", "Holiday", "Just Because", "Wedding", "Thank You", "Mother's Day", "Father's Day", "Other"];
@@ -198,6 +199,11 @@ export default function ChipInCreatePage() {
         setSubmitting(false);
         return;
       }
+      trackEvent("group_campaign_created", {
+        occasion,
+        max_contributors: maxContributors ? parseInt(maxContributors, 10) : 20,
+        fixed_amount_cents: Math.round(amountNum * 100),
+      });
       setLocation(`/chip-in/dashboard/${data.id}`);
     } catch {
       setFormError("Unable to connect. Please check your connection and try again.");

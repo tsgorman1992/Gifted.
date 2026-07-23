@@ -669,6 +669,7 @@ router.get("/gifted/group-gifts/contributions/status/:token", async (req, res) =
     const { paidCount, paidTotalCents } = await getCampaignTotals(campaign.id);
 
     res.json({
+      campaignId: campaign.id,
       yourAmountCents: contribution.amountCents,
       yourStatus: contribution.status,
       notifyOnOpen: contribution.notifyOnOpen,
