@@ -166,7 +166,7 @@ interface GroupCampaignRow {
   paidCount: number;
   paidTotalCents: number;
 }
-interface GroupStats { kpi: GroupKpi; monthly: GroupMonthRow[]; campaigns: GroupCampaignRow[]; }
+interface GroupStats { kpi: GroupKpi; monthly: GroupMonthRow[]; campaigns: GroupCampaignRow[]; total: number; page: number; pageSize: number; }
 
 const METHOD_LABELS: Record<string, string> = {
   venmo: "Venmo", cashapp: "Cash App", paypal: "PayPal", zelle: "Zelle",
@@ -639,6 +639,7 @@ export default function AdminPage() {
   const [groupLoading, setGroupLoading]   = useState(false);
   const [groupLoaded, setGroupLoaded]     = useState(false);
   const [groupError, setGroupError]       = useState<string | null>(null);
+  const [groupPage, setGroupPage]         = useState(1);
 
   const [showWipe, setShowWipe]   = useState(false);
   const [wipeInput, setWipeInput] = useState("");
@@ -699,12 +700,12 @@ export default function AdminPage() {
     }
   }, [key, emailLoaded]);
 
-  const loadGroupStats = useCallback(async (force = false) => {
-    if (groupLoaded && !force) return;
+  const loadGroupStats = useCallback(async (targetPage = 1) => {
     setGroupLoading(true);
     setGroupError(null);
+    setGroupPage(targetPage);
     try {
-      const r = await fetch(`${API}/api/admin/group-stats`, { headers });
+      const r = await fetch(`${API}/api/admin/group-stats?page=${targetPage}&pageSize=50`, { headers });
       if (!r.ok) { setGroupError("Failed to load group stats. Try refreshing."); return; }
       const data = await r.json() as GroupStats;
       setGroupStats(data);
@@ -714,7 +715,7 @@ export default function AdminPage() {
     } finally {
       setGroupLoading(false);
     }
-  }, [key, groupLoaded]);
+  }, [key]);
 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -1001,7 +1002,7 @@ export default function AdminPage() {
               </span>
             )}
             <button
-              onClick={() => { load(); loadTrends(true); if (groupLoaded) loadGroupStats(true); }}
+              onClick={() => { load(); loadTrends(true); if (groupLoaded) loadGroupStats(groupPage); }}
               disabled={loading}
               title="Refresh"
               className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground disabled:opacity-40"
@@ -1822,15 +1823,15 @@ export default function AdminPage() {
               </div>
             ) : groupStats ? (
               <>
-                {/* KPI row */}
+                {/* KPI row — status breakdown */}
                 <div>
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Service line overview</p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {([
-                      { label: "Total campaigns", value: String(groupStats.kpi.totalCampaigns), sub: `${groupStats.kpi.activeCount} active`,   color: "text-foreground" },
-                      { label: "Sent",            value: String(groupStats.kpi.sentCount),      sub: `${groupStats.kpi.sendRate}% send rate`,   color: "text-green-600" },
-                      { label: "Total raised",    value: `$${(groupStats.kpi.totalRaisedCents / 100).toFixed(0)}`, sub: `${groupStats.kpi.totalContribs} contributions`, color: "text-primary" },
-                      { label: "Fee revenue",     value: `$${groupStats.kpi.totalFeeRevenue.toFixed(2)}`, sub: "8% of contributions",          color: "text-green-600" },
+                      { label: "Total campaigns",     value: String(groupStats.kpi.totalCampaigns),  sub: "all time (non-test)",           color: "text-foreground"  },
+                      { label: "Active",              value: String(groupStats.kpi.activeCount),     sub: "open or refunding now",         color: "text-violet-600"  },
+                      { label: "Sent",                value: String(groupStats.kpi.sentCount),       sub: `${groupStats.kpi.sendRate}% send rate`, color: "text-green-600" },
+                      { label: "Cancelled / refunded",value: String(groupStats.kpi.cancelledCount), sub: "canceled + refunded",           color: "text-destructive" },
                     ] as const).map(({ label, value, sub, color }) => (
                       <div key={label} className="bg-card border border-border rounded-2xl p-4">
                         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-tight mb-2">{label}</p>
@@ -1839,6 +1840,20 @@ export default function AdminPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* Revenue row */}
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    { label: "Total raised",  value: `$${(groupStats.kpi.totalRaisedCents / 100).toFixed(0)}`, sub: `${groupStats.kpi.totalContribs} contributions`, color: "text-primary"     },
+                    { label: "Fee revenue",   value: `$${groupStats.kpi.totalFeeRevenue.toFixed(2)}`,          sub: "8% of contributions",                          color: "text-green-600"   },
+                  ] as const).map(({ label, value, sub, color }) => (
+                    <div key={label} className="bg-card border border-border rounded-2xl p-4">
+                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide leading-tight mb-2">{label}</p>
+                      <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Funnel row */}
@@ -1876,9 +1891,11 @@ export default function AdminPage() {
 
                 {/* Campaigns table */}
                 <div>
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                    Campaigns ({groupStats.campaigns.length})
-                  </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                      Campaigns {groupStats.total > 0 && `— ${(groupPage - 1) * groupStats.pageSize + 1}–${Math.min(groupPage * groupStats.pageSize, groupStats.total)} of ${groupStats.total}`}
+                    </p>
+                  </div>
                   <div className="overflow-x-auto rounded-2xl border border-border -mx-4 sm:mx-0">
                     <table className="w-full text-sm min-w-[720px]">
                       <thead>
@@ -1932,6 +1949,23 @@ export default function AdminPage() {
                         )}
                       </tbody>
                     </table>
+                    {groupStats.total > groupStats.pageSize && (
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-border/50 text-xs text-muted-foreground">
+                        <span>{(groupPage - 1) * groupStats.pageSize + 1}–{Math.min(groupPage * groupStats.pageSize, groupStats.total)} of {groupStats.total}</span>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => loadGroupStats(groupPage - 1)}
+                            disabled={groupPage <= 1 || groupLoading}
+                            className="px-3 py-1 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-40"
+                          >Prev</button>
+                          <button
+                            onClick={() => loadGroupStats(groupPage + 1)}
+                            disabled={groupPage * groupStats.pageSize >= groupStats.total || groupLoading}
+                            className="px-3 py-1 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-40"
+                          >Next</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </>

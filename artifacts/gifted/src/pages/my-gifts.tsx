@@ -2148,8 +2148,8 @@ export default function MyGiftsPage() {
             )}
           </div>
 
-          {/* Group Moments — active chip-in campaigns */}
-          {activeCampaigns && activeCampaigns.length > 0 && (
+          {/* Group Moments — active chip-in campaigns + lifetime summary */}
+          {((activeCampaigns && activeCampaigns.length > 0) || (groupLifetime && groupLifetime.sentCount > 0)) && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -2158,9 +2158,11 @@ export default function MyGiftsPage() {
             >
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Group Moments</p>
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800/40 px-2 py-0.5 rounded-full">
-                  👥 {activeCampaigns.length} active
-                </span>
+                {activeCampaigns && activeCampaigns.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800/40 px-2 py-0.5 rounded-full">
+                    👥 {activeCampaigns.length} active
+                  </span>
+                )}
               </div>
               {groupLifetime && groupLifetime.sentCount > 0 && (
                 <p className="text-xs text-muted-foreground mb-3">
@@ -2169,6 +2171,7 @@ export default function MyGiftsPage() {
                   {groupLifetime.totalRaisedCents > 0 && ` · $${(groupLifetime.totalRaisedCents / 100).toFixed(0)} raised total`}
                 </p>
               )}
+              {activeCampaigns && activeCampaigns.length > 0 && (
               <div className="border border-border/60 rounded-xl bg-card overflow-hidden divide-y divide-border/40">
                 {activeCampaigns.map((c) => {
                   const progress = c.maxContributors > 0 ? Math.round((c.paidCount / c.maxContributors) * 100) : 0;
@@ -2200,6 +2203,7 @@ export default function MyGiftsPage() {
                   );
                 })}
               </div>
+              )}
             </motion.div>
           )}
 

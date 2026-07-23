@@ -943,7 +943,7 @@ router.get("/admin/group-stats", async (req, res) => {
 
     type Row = Record<string, unknown>;
 
-    const [statusRows, contribAggRaw, sentStatsRaw, monthlyCreatedRaw, monthlySentRaw, campaignsRaw] = await Promise.all([
+    const [statusRows, contribAggRaw, sentStatsRaw, monthlyCreatedRaw, monthlySentRaw, totalCountRaw] = await Promise.all([
       // Campaign counts by status (non-test only)
       db.select({ status: groupCampaigns.status, cnt: count() })
         .from(groupCampaigns)
@@ -990,29 +990,38 @@ router.get("/admin/group-stats", async (req, res) => {
         GROUP BY month ORDER BY month ASC
       `),
 
-      // All non-test campaigns with paid contribution counts (most recent first)
+      // Total count of non-test campaigns (for pagination)
       db.execute(sql`
-        SELECT
-          gcp.id,
-          gcp.organizer_name,
-          gcp.recipient_name,
-          gcp.occasion,
-          gcp.status,
-          gcp.fixed_amount_cents,
-          gcp.max_contributors,
-          gcp.created_at,
-          gcp.sent_at,
-          gcp.share_token,
-          COUNT(*) FILTER (WHERE gc.status = 'paid')                              AS paid_count,
-          COALESCE(SUM(gc.amount_cents) FILTER (WHERE gc.status = 'paid'), 0)     AS paid_total_cents
-        FROM group_campaigns gcp
-        LEFT JOIN group_contributions gc ON gc.campaign_id = gcp.id
-        WHERE gcp.is_test = false
-        GROUP BY gcp.id
-        ORDER BY gcp.created_at DESC
-        LIMIT 100
+        SELECT COUNT(*) AS total FROM group_campaigns WHERE is_test = false
       `),
     ]);
+
+    const page     = Math.max(1, parseInt(String(req.query.page     ?? "1"),  10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(String(req.query.pageSize ?? "50"), 10) || 50));
+    const offset   = (page - 1) * pageSize;
+
+    // Paginated campaigns list — run after we know page/pageSize
+    const campaignsRaw = await db.execute(sql`
+      SELECT
+        gcp.id,
+        gcp.organizer_name,
+        gcp.recipient_name,
+        gcp.occasion,
+        gcp.status,
+        gcp.fixed_amount_cents,
+        gcp.max_contributors,
+        gcp.created_at,
+        gcp.sent_at,
+        gcp.share_token,
+        COUNT(*) FILTER (WHERE gc.status = 'paid')                              AS paid_count,
+        COALESCE(SUM(gc.amount_cents) FILTER (WHERE gc.status = 'paid'), 0)     AS paid_total_cents
+      FROM group_campaigns gcp
+      LEFT JOIN group_contributions gc ON gc.campaign_id = gcp.id
+      WHERE gcp.is_test = false
+      GROUP BY gcp.id
+      ORDER BY gcp.created_at DESC
+      LIMIT ${pageSize} OFFSET ${offset}
+    `);
 
     // Status breakdown
     const statusMap: Record<string, number> = {};
@@ -1061,6 +1070,9 @@ router.get("/admin/group-stats", async (req, res) => {
       paidTotalCents:   Number(r.paid_total_cents),
     }));
 
+    // Total from the dedicated count query (more accurate than summing statusMap which excludes 'sending')
+    const totalFromDB = Number((totalCountRaw.rows as Row[])[0]?.total ?? totalCampaigns);
+
     res.json({
       kpi: {
         totalCampaigns,
@@ -1076,6 +1088,9 @@ router.get("/admin/group-stats", async (req, res) => {
       },
       monthly,
       campaigns,
+      total: totalFromDB,
+      page,
+      pageSize,
     });
   } catch (err) {
     console.error("[admin] group-stats error:", err);
