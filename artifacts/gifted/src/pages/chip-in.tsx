@@ -249,7 +249,7 @@ export default function ChipInPage() {
               <span className="inline-flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5" /> {campaign.contentManifest.photoCount} photo{campaign.contentManifest.photoCount !== 1 ? "s" : ""}</span>
             )}
             {campaign.contentManifest.hasNote && (
-              <span className="inline-flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Personal note</span>
+              <span className="inline-flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Personal note from {campaign.organizerName}</span>
             )}
             {campaign.contentManifest.hasPlaylist && (
               <span className="inline-flex items-center gap-1.5"><Music className="w-3.5 h-3.5" /> Song</span>

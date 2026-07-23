@@ -283,12 +283,24 @@ export default function ChipInDashboardPage() {
           </div>
 
           {isOpen && (
-            <div className="flex items-center gap-2 bg-secondary/50 rounded-xl px-4 py-3">
-              <span className="flex-1 text-xs text-muted-foreground truncate">{shareUrl(campaign.shareToken)}</span>
-              <Button type="button" size="sm" variant="outline" className="rounded-full shrink-0" onClick={handleCopy}>
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? "Copied" : "Copy link"}
-              </Button>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 bg-secondary/50 rounded-xl px-4 py-3">
+                <span className="flex-1 text-xs text-muted-foreground truncate">{shareUrl(campaign.shareToken)}</span>
+                <Button type="button" size="sm" variant="outline" className="rounded-full shrink-0" onClick={handleCopy}>
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? "Copied" : "Copy link"}
+                </Button>
+              </div>
+              {activeSlots < campaign.maxContributors && (
+                <a
+                  href={shareUrl(campaign.shareToken)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border border-primary/25 bg-primary/6 text-primary text-sm font-medium hover:bg-primary/12 transition-colors"
+                >
+                  Chip in yourself
+                </a>
+              )}
             </div>
           )}
 

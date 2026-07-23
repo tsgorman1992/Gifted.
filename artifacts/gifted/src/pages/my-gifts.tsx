@@ -163,6 +163,26 @@ async function fetchPhysicalGifts(): Promise<PhysicalGift[]> {
   return res.json();
 }
 
+interface ActiveCampaign {
+  id: string;
+  shareToken: string;
+  recipientName: string;
+  occasion: string;
+  giftTitle: string;
+  status: string;
+  fixedAmountCents: number;
+  maxContributors: number;
+  paidCount: number;
+  paidTotalCents: number;
+  createdAt: string;
+}
+
+async function fetchActiveCampaigns(): Promise<ActiveCampaign[]> {
+  const res = await fetch(`${BASE}/api/gifted/group-gifts/my-campaigns`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to load campaigns");
+  return res.json();
+}
+
 type GiftStatus = "draft" | "scheduled" | "ready" | "sent" | "opened" | "redeemed";
 
 function hasBalance(gift: GiftSummary): boolean {
@@ -1929,6 +1949,14 @@ export default function MyGiftsPage() {
     staleTime: 30_000,
   });
 
+  const { data: activeCampaigns } = useQuery({
+    queryKey: ["active-campaigns"],
+    queryFn: fetchActiveCampaigns,
+    enabled: isAuthenticated,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -2112,6 +2140,54 @@ export default function MyGiftsPage() {
               <UpcomingOccasionsBanner contacts={upcomingContactsData} onGift={handleGiftContact} />
             )}
           </div>
+
+          {/* Group Moments — active chip-in campaigns */}
+          {activeCampaigns && activeCampaigns.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="mb-7"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Group Moments</p>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-700 dark:text-violet-300 bg-violet-100 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800/40 px-2 py-0.5 rounded-full">
+                  👥 {activeCampaigns.length} active
+                </span>
+              </div>
+              <div className="border border-border/60 rounded-xl bg-card overflow-hidden divide-y divide-border/40">
+                {activeCampaigns.map((c) => {
+                  const progress = c.maxContributors > 0 ? Math.round((c.paidCount / c.maxContributors) * 100) : 0;
+                  const raisedStr = `$${(c.paidTotalCents / 100).toFixed(0)}`;
+                  const amountStr = `$${(c.fixedAmountCents / 100).toFixed(0)}`;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setLocation(`/chip-in/dashboard/${c.id}`)}
+                      className="w-full text-left px-5 py-4 hover:bg-secondary/20 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-1">
+                        <p className="font-medium text-sm leading-snug">{c.giftTitle || `Moment for ${c.recipientName}`}</p>
+                        <span className="text-sm font-semibold shrink-0">{raisedStr} raised</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2.5">
+                        For <span className="text-foreground font-medium">{c.recipientName}</span>
+                        {" · "}{c.occasion.replace(/-/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase())}
+                        {" · "}{c.paidCount} of {c.maxContributors} chipped in {" "}({amountStr} each)
+                      </p>
+                      <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-violet-500 transition-all"
+                          style={{ width: `${Math.min(100, progress)}%` }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
 
           {/* Flat stat strip */}
           {!giftsLoading && totalSent > 0 && (

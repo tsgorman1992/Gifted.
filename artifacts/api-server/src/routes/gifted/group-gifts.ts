@@ -161,10 +161,77 @@ router.post("/gifted/group-gifts", async (req, res) => {
       isTest: isTest === true,
     });
 
+    // Fire-and-forget SMS to the organizer with their private dashboard link.
+    const appOrigin = process.env.APP_ORIGIN ?? process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : "";
+    const dashboardUrl = `${appOrigin}/chip-in/dashboard/${id}`;
+    db.select({ phone: usersTable.phone })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1)
+      .then(([userRow]) => {
+        if (userRow?.phone) {
+          sendInviteSms(
+            userRow.phone,
+            `gifted. Your Group Moment for ${(recipientName as string).trim()} is live! Manage it here: ${dashboardUrl}`,
+          );
+        }
+      })
+      .catch(() => {});
+
     res.status(201).json({ id, shareToken });
   } catch (err) {
     console.error("[group-gifts] create campaign error:", err);
     res.status(500).json({ error: "Failed to create campaign" });
+  }
+});
+
+// ─── GET /gifted/group-gifts/my-campaigns — organizer's active campaigns ──────
+router.get("/gifted/group-gifts/my-campaigns", async (req, res) => {
+  try {
+    const userId = (req as any).user?.id as string | undefined;
+    if (!userId) {
+      res.status(401).json({ error: "Sign in to view your campaigns." });
+      return;
+    }
+
+    const campaigns = await db
+      .select()
+      .from(groupCampaigns)
+      .where(
+        and(
+          eq(groupCampaigns.organizerUserId, userId),
+          sql`${groupCampaigns.status} IN ('open', 'refunding')`,
+        ),
+      );
+
+    const results = await Promise.all(
+      campaigns.map(async (c) => {
+        const { paidCount, paidTotalCents } = await getCampaignTotals(c.id);
+        return {
+          id: c.id,
+          shareToken: c.shareToken,
+          recipientName: c.recipientName,
+          occasion: c.occasion,
+          giftTitle: c.giftTitle,
+          status: c.status,
+          fixedAmountCents: c.fixedAmountCents,
+          maxContributors: c.maxContributors,
+          paidCount,
+          paidTotalCents,
+          createdAt: c.createdAt,
+        };
+      }),
+    );
+
+    // Most recently created first
+    results.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+
+    res.json(results);
+  } catch (err) {
+    console.error("[group-gifts] my-campaigns error:", err);
+    res.status(500).json({ error: "Failed to load campaigns" });
   }
 });
 
