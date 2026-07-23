@@ -162,19 +162,20 @@ router.post("/gifted/group-gifts", async (req, res) => {
     });
 
     // Fire-and-forget SMS to the organizer with their private dashboard link.
-    const appOrigin = process.env.APP_ORIGIN ?? process.env.REPLIT_DEV_DOMAIN
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : "";
+    // APP_ORIGIN is set in production; REPLIT_DEV_DOMAIN is used in dev.
+    const appOrigin = process.env.APP_ORIGIN
+      ?? (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "");
     const dashboardUrl = `${appOrigin}/chip-in/dashboard/${id}`;
     db.select({ phone: usersTable.phone })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1)
       .then(([userRow]) => {
-        if (userRow?.phone) {
+        const phone = userRow?.phone ?? null;
+        if (phone) {
           sendInviteSms(
-            userRow.phone,
-            `gifted. Your Group Moment for ${(recipientName as string).trim()} is live! Manage it here: ${dashboardUrl}`,
+            phone,
+            `gifted. 🎁 Your Group Moment for ${(recipientName as string).trim()} is live! Manage it here: ${dashboardUrl} Reply STOP to opt out.`,
           );
         }
       })
