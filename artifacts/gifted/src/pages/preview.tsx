@@ -122,6 +122,7 @@ export default function PreviewPage() {
   const [rescheduleDate,   setRescheduleDate]   = useState("");
   const [rescheduleTime,   setRescheduleTime]   = useState("09:00");
   const [scheduleSaving,   setScheduleSaving]   = useState(false);
+  const [isGroupMoment,    setIsGroupMoment]    = useState(() => localStorage.getItem("gifted_is_group_moment") === "true");
 
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -361,6 +362,7 @@ export default function PreviewPage() {
         if (gift.personalNote) { localStorage.setItem("gifted_personal_note", gift.personalNote); setPersonalNote(gift.personalNote); }
         if (gift.intent) { localStorage.setItem("gifted_intent", gift.intent); setGiftIntent(gift.intent); }
         if (gift.experience) { localStorage.setItem("gifted_experience", gift.experience); setExperience(gift.experience); }
+        if (gift.isGroup) { localStorage.setItem("gifted_is_group_moment", "true"); setIsGroupMoment(true); }
         if (typeof gift.paid === "boolean" && gift.paid) {
           setPaymentStatus("confirmed");
           localStorage.setItem("gifted_paid_id", gift.id);
@@ -556,13 +558,15 @@ export default function PreviewPage() {
 
         setSaving(false);
 
-        trackEvent("gift_created", {
-          experience:  localStorage.getItem("gifted_experience") || experience,
-          occasion:    localStorage.getItem("gifted_occasion")   || "general",
-          hasBalance:  !!(amt && parseFloat(amt) > 0),
-          hasVideo:    !!(localStorage.getItem("gifted_video_path")),
-          photoCount:  (() => { try { return JSON.parse(localStorage.getItem("gifted_photo_paths") || "[]").length; } catch { return 0; } })(),
-        });
+        if (!isGroupMoment) {
+          trackEvent("gift_created", {
+            experience:  localStorage.getItem("gifted_experience") || experience,
+            occasion:    localStorage.getItem("gifted_occasion")   || "general",
+            hasBalance:  !!(amt && parseFloat(amt) > 0),
+            hasVideo:    !!(localStorage.getItem("gifted_video_path")),
+            photoCount:  (() => { try { return JSON.parse(localStorage.getItem("gifted_photo_paths") || "[]").length; } catch { return 0; } })(),
+          });
+        }
 
         return { id, url };
       } catch {

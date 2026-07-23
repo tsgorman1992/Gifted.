@@ -1732,6 +1732,8 @@ export default function CreatePage() {
 
       const { id } = await res.json() as { id: string };
       localStorage.setItem("gifted_gift_id", id);
+      if (isGroup) localStorage.setItem("gifted_is_group_moment", "true");
+      else localStorage.removeItem("gifted_is_group_moment");
 
       setLocation("/preview");
     } catch (err) {

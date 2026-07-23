@@ -200,6 +200,7 @@ export default function ChipInCreatePage() {
         return;
       }
       trackEvent("group_campaign_created", {
+        campaign_id: data.id,
         occasion,
         max_contributors: maxContributors ? parseInt(maxContributors, 10) : 20,
         fixed_amount_cents: Math.round(amountNum * 100),
